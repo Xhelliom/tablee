@@ -1,0 +1,1125 @@
+{
+ "capturedAt": "2026-09-13T16:49:25.593Z",
+ "url": "https://jow.fr/recipes/tarte-spirale-de-legumes-7vm7ewv135hc03n701ek",
+ "recipe": {
+  "additionalConstituents": [
+   {
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "599215cce9f1de001116bbb5",
+     "id": "599215cce9f1de001116bbb5",
+     "updatedAt": "2021-11-16T11:13:33.964Z",
+     "createdAt": "2017-08-14T21:27:40.521Z",
+     "name": "Cuillère à café",
+     "__v": 2,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "label": "càc",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "5e5fc39240f533a26f0ad3eb",
+       "id": "5e5fc39240f533a26f0ad3eb",
+       "minAmount": 0,
+       "maxAmount": 1
+      },
+      {
+       "label": "càc",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fc39240f533a26f0ad3ea",
+       "id": "5e5fc39240f533a26f0ad3ea",
+       "minAmount": 1
+      }
+     ]
+    },
+    "additionalMeasures": [],
+    "ingredient": {
+     "_id": "598b6185fd078b0011140a18",
+     "id": "598b6185fd078b0011140a18",
+     "naturalUnit": {
+      "_id": "598c237f14246c127285c149",
+      "id": "598c237f14246c127285c149",
+      "updatedAt": "2025-03-26T09:58:44.385Z",
+      "createdAt": "2017-08-10T09:12:31.763Z",
+      "isNatural": true,
+      "name": "Litre",
+      "__v": 6,
+      "measurementSystemCompatibility": {
+       "metric": true,
+       "imperial": false,
+       "us": false
+      },
+      "abbreviations": [
+       {
+        "minAmount": 0,
+        "maxAmount": 1,
+        "digits": 0,
+        "divisor": 1000,
+        "inverse": false,
+        "_id": "65a80cc1221c78000f3943b8",
+        "id": "65a80cc1221c78000f3943b8",
+        "label": "ml"
+       },
+       {
+        "minAmount": 1,
+        "digits": 1,
+        "divisor": 1,
+        "inverse": false,
+        "_id": "5e5fd47ea9d69f51009e1df2",
+        "id": "5e5fd47ea9d69f51009e1df2",
+        "label": "L"
+       }
+      ],
+      "comments": "naturelle"
+     },
+     "imageUrl": "ingredients/0T5ZDQF4B7WxHQ.png.webp",
+     "eatingHabitsCompatibility": {
+      "porkless": false,
+      "fish": false,
+      "vegetarian": true,
+      "vegan": true,
+      "glutenFree": true,
+      "dairyFree": true,
+      "redMeat": false,
+      "whiteMeat": false
+     },
+     "alternativeUnits": [
+      {
+       "unit": {
+        "_id": "599215dde9f1de001116bbb6",
+        "id": "599215dde9f1de001116bbb6",
+        "updatedAt": "2021-11-22T16:18:56.411Z",
+        "createdAt": "2017-08-14T21:27:57.899Z",
+        "name": "Cuillère à soupe",
+        "__v": 4,
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": true,
+         "us": true
+        },
+        "abbreviations": [
+         {
+          "label": "càs",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "619bc2f0934d1027ae7f53fb",
+          "id": "619bc2f0934d1027ae7f53fb",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "càs",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "619bc2f0934d1027ae7f53fc",
+          "id": "619bc2f0934d1027ae7f53fc",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.015,
+       "_id": "5b4e0ca3454ad30014dadc76",
+       "id": "5b4e0ca3454ad30014dadc76"
+      },
+      {
+       "unit": {
+        "_id": "599215cce9f1de001116bbb5",
+        "id": "599215cce9f1de001116bbb5",
+        "updatedAt": "2021-11-16T11:13:33.964Z",
+        "createdAt": "2017-08-14T21:27:40.521Z",
+        "name": "Cuillère à café",
+        "__v": 2,
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": true,
+         "us": true
+        },
+        "abbreviations": [
+         {
+          "label": "càc",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "5e5fc39240f533a26f0ad3eb",
+          "id": "5e5fc39240f533a26f0ad3eb",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "càc",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e5fc39240f533a26f0ad3ea",
+          "id": "5e5fc39240f533a26f0ad3ea",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.005,
+       "_id": "5f49086b83271bc9f9fb081c",
+       "id": "5f49086b83271bc9f9fb081c"
+      },
+      {
+       "unit": {
+        "_id": "5cb881fc5acada2b81b7398a",
+        "id": "5cb881fc5acada2b81b7398a",
+        "name": "Cup",
+        "createdAt": "2019-04-18T13:56:12.571Z",
+        "updatedAt": "2022-03-29T14:03:55.297Z",
+        "__v": 24,
+        "abbreviations": [
+         {
+          "label": "cup",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "624311cb73b88a5edb5dfa1d",
+          "id": "624311cb73b88a5edb5dfa1d",
+          "minAmount": 0,
+          "maxAmount": 1.001
+         },
+         {
+          "label": "cups",
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "624311cb73b88a5edb5dfa1e",
+          "id": "624311cb73b88a5edb5dfa1e",
+          "minAmount": 1.001
+         }
+        ],
+        "measurementSystemCompatibility": {
+         "imperial": false,
+         "metric": false,
+         "us": true
+        }
+       },
+       "quantity": 0.237,
+       "_id": "62f13c8852e3e941815ce80c",
+       "id": "62f13c8852e3e941815ce80c"
+      },
+      {
+       "unit": {
+        "_id": "5d809ab4b982cb6b3d7586ba",
+        "id": "5d809ab4b982cb6b3d7586ba",
+        "measurementSystemCompatibility": {
+         "metric": false,
+         "imperial": true,
+         "us": true
+        },
+        "name": "Once liquide",
+        "createdAt": "2019-09-17T08:35:00.551Z",
+        "updatedAt": "2020-03-05T10:15:19.019Z",
+        "__v": 3,
+        "abbreviations": [
+         {
+          "label": "fl oz",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "5e60d13747401d500e61eb85",
+          "id": "5e60d13747401d500e61eb85",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "fl oz",
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e60d13747401d500e61eb84",
+          "id": "5e60d13747401d500e61eb84",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.03,
+       "_id": "62f13c8852e3e941815ce810",
+       "id": "62f13c8852e3e941815ce810"
+      },
+      {
+       "unit": {
+        "_id": "5d5d5629aa9d522a3f884ae3",
+        "id": "5d5d5629aa9d522a3f884ae3",
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": false,
+         "us": false
+        },
+        "name": "Kilogramme",
+        "createdAt": "2019-08-21T14:33:13.749Z",
+        "updatedAt": "2025-03-26T09:57:59.382Z",
+        "__v": 3,
+        "abbreviations": [
+         {
+          "minAmount": 0,
+          "maxAmount": 0.001,
+          "digits": 0,
+          "divisor": 1000000,
+          "inverse": false,
+          "_id": "5e5fc72840f533a26f0ad476",
+          "id": "5e5fc72840f533a26f0ad476",
+          "label": "mg"
+         },
+         {
+          "minAmount": 0.001,
+          "maxAmount": 1,
+          "digits": 0,
+          "divisor": 1000,
+          "inverse": false,
+          "_id": "5e5fc72840f533a26f0ad475",
+          "id": "5e5fc72840f533a26f0ad475",
+          "label": "g"
+         },
+         {
+          "minAmount": 1,
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e5fd479a9d69f51009e1dee",
+          "id": "5e5fd479a9d69f51009e1dee",
+          "label": "kg"
+         }
+        ],
+        "comments": "alternative"
+       },
+       "quantity": 1,
+       "_id": "63f368309b0e113c174f1267",
+       "id": "63f368309b0e113c174f1267"
+      }
+     ],
+     "isBasicIngredient": true,
+     "editorialData": {
+      "flags": {
+       "fruit": false,
+       "vegetable": false
+      },
+      "nutritionalFacts": [
+       {
+        "code": "ENERC",
+        "amount": 822,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf6",
+        "id": "5f1ec32d0c76c37ee7d2bbf6"
+       },
+       {
+        "code": "PRO",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf7",
+        "id": "5f1ec32d0c76c37ee7d2bbf7"
+       },
+       {
+        "code": "FAT",
+        "amount": 91,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf8",
+        "id": "5f1ec32d0c76c37ee7d2bbf8"
+       },
+       {
+        "code": "CHOAVL",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf9",
+        "id": "5f1ec32d0c76c37ee7d2bbf9"
+       },
+       {
+        "code": "FIBTG",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "623ca12e4d59185816394176",
+        "id": "623ca12e4d59185816394176"
+       }
+      ]
+     },
+     "tastes": [
+      {
+       "_id": "64d39e8d676ace34731d1bda",
+       "id": "64d39e8d676ace34731d1bda",
+       "__v": 0,
+       "availabilityZones": [],
+       "createdAt": "2023-08-09T14:11:25.872Z",
+       "imageUrl": "ingredients/1Fe6mK3D8vos2w.png.webp",
+       "name": "Huile d'olive",
+       "updatedAt": "2023-08-09T14:14:03.841Z"
+      }
+     ],
+     "keywords": "",
+     "measurementThresholds": {
+      "upper": 0.032460379629629374,
+      "lower": 0.00023731990088703483
+     },
+     "availabilityZones": [],
+     "naturalUnitInKg": 1.14,
+     "externalIds": {
+      "etiquettableId": "248"
+     },
+     "name": "Huile d'olive",
+     "seasonality": [
+      {
+       "availabilityZoneId": "US",
+       "months": {
+        "jan": true,
+        "feb": true,
+        "mar": true,
+        "apr": true,
+        "may": true,
+        "jun": true,
+        "jul": true,
+        "aug": true,
+        "sep": true,
+        "oct": true,
+        "nov": true,
+        "dec": true
+       },
+       "_id": "6a6b4c523b69a522e6373fb1",
+       "id": "6a6b4c523b69a522e6373fb1"
+      },
+      {
+       "availabilityZoneId": "FR",
+       "months": {
+        "jan": true,
+        "feb": true,
+        "mar": true,
+        "apr": true,
+        "may": true,
+        "jun": true,
+        "jul": true,
+        "aug": true,
+        "sep": true,
+        "oct": true,
+        "nov": true,
+        "dec": true
+       },
+       "_id": "6a6b4ca9bfffe74be1028475",
+       "id": "6a6b4ca9bfffe74be1028475"
+      }
+     ]
+    },
+    "isVisible": false,
+    "isHidden": false,
+    "alternatives": [],
+    "_id": "60b8cdfbb48dbf0eb0401c01",
+    "id": "60b8cdfbb48dbf0eb0401c01"
+   }
+  ],
+  "aggregateRating": 0.8442396313364056,
+  "author": {
+   "id": "618aa492934d1027ae7e6d26",
+   "imageUrl": "https://static.jow.fr/72x72/authors/B4L7vX7uWoX1MA.jpg.webp",
+   "name": "Camille C."
+  },
+  "backgroundColor": "#83944b",
+  "backgroundPattern": {
+   "color": "#ffc847",
+   "imageUrl": "https://static.jow.fr/304x304/patterns/yolk-01-202309.png",
+   "imageUrlHD": "https://static.jow.fr/550x550/patterns/yolk-01-202309.png",
+   "imageUrlUHD": "https://static.jow.fr/880x880/patterns/yolk-01-202309.png"
+  },
+  "composition": "Pâte, courgettes, carottes, moutarde à l'ancienne, œuf, crème",
+  "constituentIds": [
+   {
+    "id": "59bcfb44dd23e8001273071e",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/00Peuj0b30Di8A.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c23d414246c127285c14b"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59921cc3e9f1de001116bbb9",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/iEufjCnqLmFLsw.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "59aadbd4797a8c0011177854"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59921cf6e9f1de001116bbba",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/YUaixjyeR2w4gA.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "59aadbd4797a8c0011177854"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59bcf8ccdd23e80012730717",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/nv0Qq8FZ3fcgQQ.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c237f14246c127285c149"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59822caadfcf6c00119298a3",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/II4OHUKzp3sEkw.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c23d414246c127285c14b"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59bcfdcbdd23e80012730728",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/4qPV6EgvK96NGA.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "599215dde9f1de001116bbb6"
+    ],
+    "alternatives": []
+   }
+  ],
+  "constituents": [
+   {
+    "id": "59bcfb44dd23e8001273071e",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "598c23d414246c127285c14b",
+     "id": "598c23d414246c127285c14b",
+     "updatedAt": "2025-03-26T09:59:21.516Z",
+     "createdAt": "2017-08-10T09:13:57.000Z",
+     "isNatural": true,
+     "name": "Pièce",
+     "__v": 11,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f8718531a979c77b221f",
+       "id": "6229f8718531a979c77b221f",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "6229f8718531a979c77b2220",
+       "id": "6229f8718531a979c77b2220",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Pâte brisée",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/00Peuj0b30Di8A.png.webp"
+   },
+   {
+    "id": "59921cc3e9f1de001116bbb9",
+    "isOptional": false,
+    "quantityPerCover": 0.5,
+    "unit": {
+     "_id": "59aadbd4797a8c0011177854",
+     "id": "59aadbd4797a8c0011177854",
+     "updatedAt": "2025-03-26T09:59:37.116Z",
+     "createdAt": "2017-09-02T16:27:00.318Z",
+     "name": "Pièce",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f87c8531a979c77b222c",
+       "id": "6229f87c8531a979c77b222c",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "63f4ca979b0e113c174f3f29",
+       "id": "63f4ca979b0e113c174f3f29",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR alternative"
+    },
+    "additionalMeasures": [],
+    "name": "Courgette",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/iEufjCnqLmFLsw.jpg.webp"
+   },
+   {
+    "id": "59921cf6e9f1de001116bbba",
+    "isOptional": false,
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "59aadbd4797a8c0011177854",
+     "id": "59aadbd4797a8c0011177854",
+     "updatedAt": "2025-03-26T09:59:37.116Z",
+     "createdAt": "2017-09-02T16:27:00.318Z",
+     "name": "Pièce",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f87c8531a979c77b222c",
+       "id": "6229f87c8531a979c77b222c",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "63f4ca979b0e113c174f3f29",
+       "id": "63f4ca979b0e113c174f3f29",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR alternative"
+    },
+    "additionalMeasures": [],
+    "name": "Carotte (frais)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/YUaixjyeR2w4gA.jpg.webp"
+   },
+   {
+    "id": "59bcf8ccdd23e80012730717",
+    "isOptional": false,
+    "quantityPerCover": 0.05,
+    "unit": {
+     "_id": "598c237f14246c127285c149",
+     "id": "598c237f14246c127285c149",
+     "updatedAt": "2025-03-26T09:58:44.385Z",
+     "createdAt": "2017-08-10T09:12:31.763Z",
+     "isNatural": true,
+     "name": "Litre",
+     "__v": 6,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "65a80cc1221c78000f3943b8",
+       "id": "65a80cc1221c78000f3943b8",
+       "label": "ml"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd47ea9d69f51009e1df2",
+       "id": "5e5fd47ea9d69f51009e1df2",
+       "label": "L"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Crème liquide",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/nv0Qq8FZ3fcgQQ.jpg.webp"
+   },
+   {
+    "id": "59822caadfcf6c00119298a3",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "598c23d414246c127285c14b",
+     "id": "598c23d414246c127285c14b",
+     "updatedAt": "2025-03-26T09:59:21.516Z",
+     "createdAt": "2017-08-10T09:13:57.000Z",
+     "isNatural": true,
+     "name": "Pièce",
+     "__v": 11,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f8718531a979c77b221f",
+       "id": "6229f8718531a979c77b221f",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "6229f8718531a979c77b2220",
+       "id": "6229f8718531a979c77b2220",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Œuf",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/II4OHUKzp3sEkw.png.webp"
+   },
+   {
+    "id": "59bcfdcbdd23e80012730728",
+    "isOptional": false,
+    "quantityPerCover": 0.5,
+    "unit": {
+     "_id": "599215dde9f1de001116bbb6",
+     "id": "599215dde9f1de001116bbb6",
+     "updatedAt": "2021-11-22T16:18:56.411Z",
+     "createdAt": "2017-08-14T21:27:57.899Z",
+     "name": "Cuillère à soupe",
+     "__v": 4,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "619bc2f0934d1027ae7f53fb",
+       "id": "619bc2f0934d1027ae7f53fb",
+       "minAmount": 0,
+       "maxAmount": 1
+      },
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "619bc2f0934d1027ae7f53fc",
+       "id": "619bc2f0934d1027ae7f53fc",
+       "minAmount": 1
+      }
+     ]
+    },
+    "additionalMeasures": [],
+    "name": "Moutarde à l'ancienne",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/4qPV6EgvK96NGA.jpg.webp"
+   }
+  ],
+  "coversCount": 4,
+  "coversOptions": [
+   4,
+   8,
+   12,
+   16,
+   20,
+   24,
+   28
+  ],
+  "createdAt": "2021-06-03T22:00:00.000Z",
+  "description": "Sa folle allure saura envouter toute la famille.",
+  "badges": [
+   {
+    "type": "text",
+    "value": "Pleine saison"
+   },
+   {
+    "type": "rating",
+    "value": 4.2
+   },
+   {
+    "type": "duration",
+    "preparationTime": 20,
+    "cookingTime": 55,
+    "preparationExtraTimePerCover": 0
+   },
+   {
+    "type": "low-price",
+    "accessibilityLabel": "-2 € par portion",
+    "currency": "EUR"
+   },
+   {
+    "type": "unit-name",
+    "unitName": {
+     "singular": "tarte",
+     "plural": "tartes"
+    },
+    "roundedCoversCount": 4
+   },
+   {
+    "type": "covers-count"
+   }
+  ],
+  "displayVegetarianBadge": false,
+  "eatingHabitsCompatibility": {
+   "porkless": true,
+   "vegetarian": true,
+   "vegan": false,
+   "glutenFree": false,
+   "dairyFree": false,
+   "pescatarian": true
+  },
+  "id": "59bcfa9ddd23e8001273071c",
+  "imageUrl": "https://static.jow.fr/304x304/recipes/dec4xIoHl0QtZg.png",
+  "imageUrlHD": "https://static.jow.fr/550x550/recipes/dec4xIoHl0QtZg.png",
+  "isAvailable": true,
+  "missingIngredients": [],
+  "pricePerPortionTag": {
+   "level": 1,
+   "currency": "EUR",
+   "label": "-2 € par portion"
+  },
+  "requiredNonTrivialToolsAndChildren": [
+   {
+    "_id": "59ccb6a4bb08340012ca6b9a",
+    "id": "59ccb6a4bb08340012ca6b9a",
+    "updatedAt": "2024-10-28T11:06:59.337Z",
+    "createdAt": "2017-09-28T08:45:24.402Z",
+    "imageUrl": "tools/PMq1FjiP805SNQ.png.webp",
+    "name": "Four",
+    "isNotTrivial": true,
+    "__v": 6,
+    "childrenTools": [],
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   }
+  ],
+  "roundedCoversCount": 4,
+  "source": "jow",
+  "tagsEdito": [],
+  "tip": {
+   "description": "Pour varier les plaisirs, on vous conseille de remplacer la moutarde à l'ancienne par du pesto & d'ajouter de la feta dans la tarte. ",
+   "type": {
+    "_id": "6452816316fdf62ab93a2322",
+    "id": "6452816316fdf62ab93a2322",
+    "__v": 0,
+    "createdAt": "2023-05-03T15:44:35.577Z",
+    "name": "gourmet-tip",
+    "title": "😋 Astuce gourmandise",
+    "updatedAt": "2023-05-17T12:19:51.283Z"
+   },
+   "author": {
+    "_id": "6784ed0c480e0c000f1a7d60",
+    "id": "6784ed0c480e0c000f1a7d60",
+    "__v": 0,
+    "createdAt": "2025-01-13T10:38:04.860Z",
+    "imageUrl": "https://static.jow.fr/72x72/recipe-tip-author/mGsccbxP0I0x4w.jpg.webp",
+    "name": "Aurélie",
+    "role": "Créatrice de recettes",
+    "updatedAt": "2025-01-13T10:38:04.860Z"
+   }
+  },
+  "title": "Tarte spirale de légumes",
+  "unitName": {
+   "singular": "tarte",
+   "plural": "tartes"
+  },
+  "updatedAt": "2026-06-30T09:24:36.035Z",
+  "userConstituentsIds": [],
+  "difficulty": 2,
+  "directions": [
+   {
+    "id": "5a6f320ded87b60014de393c",
+    "label": "Lavez puis coupez les courgettes en tagliatelle, à l'aide d'un économe.",
+    "videoTimecodeStart": 9.1,
+    "involvedIngredients": [
+     {
+      "id": "59921cc3e9f1de001116bbb9",
+      "name": "Courgette",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/iEufjCnqLmFLsw.jpg.webp"
+     }
+    ]
+   },
+   {
+    "id": "6895c0ce7911587f9606da5d",
+    "label": "Épluchez puis coupez les carottes en tagliatelle, à l'aide d'un économe.",
+    "videoTimecodeStart": 20.7,
+    "involvedIngredients": [
+     {
+      "id": "59921cf6e9f1de001116bbba",
+      "name": "Carotte (frais)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/YUaixjyeR2w4gA.jpg.webp"
+     }
+    ]
+   },
+   {
+    "id": "5a6f320ded87b60014de393b",
+    "label": "Préchauffez le four à 180°C. Dans un saladier, mélangez la crème et l'œuf. Salez, poivrez et ajoutez les épices de votre choix - ex: thym, origan ou piment d'Espelette.",
+    "videoTimecodeStart": 37.9,
+    "involvedIngredients": [
+     {
+      "id": "59bcf8ccdd23e80012730717",
+      "name": "Crème liquide",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/nv0Qq8FZ3fcgQQ.jpg.webp"
+     },
+     {
+      "id": "59822caadfcf6c00119298a3",
+      "name": "Œuf",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/II4OHUKzp3sEkw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5a6f320ded87b60014de393a",
+    "label": "Disposez la pâte brisée dans un moule à tarte (le nôtre fait 31 cm de diamètre). Piquez la pâte et étalez la moutarde à l'ancienne*. Placez les légumes sur leurs tranches à partir du bord en alternant : un tour de courgettes, un tour de carottes.\n*Consultez nos tips pour cette étape",
+    "videoTimecodeStart": 55.2,
+    "involvedIngredients": [
+     {
+      "id": "59bcfb44dd23e8001273071e",
+      "name": "Pâte brisée",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/00Peuj0b30Di8A.png.webp"
+     },
+     {
+      "id": "59921cc3e9f1de001116bbb9",
+      "name": "Courgette",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/iEufjCnqLmFLsw.jpg.webp"
+     },
+     {
+      "id": "59921cf6e9f1de001116bbba",
+      "name": "Carotte (frais)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/YUaixjyeR2w4gA.jpg.webp"
+     },
+     {
+      "id": "59bcfdcbdd23e80012730728",
+      "name": "Moutarde à l'ancienne",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/4qPV6EgvK96NGA.jpg.webp"
+     }
+    ]
+   },
+   {
+    "id": "5a6f320ded87b60014de3939",
+    "label": "Versez le mélange de crème sur la tarte. Salez, poivrez et enfournez pendant 50 à 55 minutes à 180°C.",
+    "videoTimecodeStart": 107.4,
+    "involvedIngredients": []
+   },
+   {
+    "id": "60b8d0f7b48dbf0eb0401d43",
+    "label": "Sortez la tarte du four et servez, c'est prêt !",
+    "videoTimecodeStart": 119,
+    "involvedIngredients": []
+   }
+  ],
+  "cookingTime": 55,
+  "isVisible": true,
+  "likes": 44022,
+  "negativeFeedbacks": 14,
+  "nutritionalFacts": [
+   {
+    "id": "ENERC",
+    "label": "Calories",
+    "unit": "kcal",
+    "amount": 478
+   },
+   {
+    "id": "FAT",
+    "label": "Matières grasses",
+    "unit": "g",
+    "amount": 30
+   },
+   {
+    "id": "CHOAVL",
+    "label": "Glucides",
+    "unit": "g",
+    "amount": 38
+   },
+   {
+    "id": "PRO",
+    "label": "Protéines",
+    "unit": "g",
+    "amount": 9
+   },
+   {
+    "id": "FIBTG",
+    "label": "Fibres",
+    "unit": "g",
+    "amount": 8
+   }
+  ],
+  "nutritionalRatingScores": [
+   {
+    "id": "nutriscore",
+    "score": "C",
+    "name": "Nutri-score",
+    "label": "Nutri-score C",
+    "description": "Le Nutri-score est un indicateur destiné à la compréhension des informations nutritionnelles. Les recettes ou les produits sont classés de A à E en fonction de leur teneur en aliments à favoriser (fibres, protéines, fruits, légumes, légumineuses…) et en aliments à limiter (énergie, acides gras saturés, sucres, sel…).",
+    "imageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.svg"
+   },
+   {
+    "id": "greenscore",
+    "score": "A+",
+    "name": "Green-score",
+    "description": "Le Green-score est un indicateur représentant l'impact environnemental des produits alimentaires. Les recettes ou les produits sont classés de A+ à F. Il tient compte de plusieurs facteurs sur la pollution de l'air, des eaux, des océans, du sol, ainsi que les impacts sur la biosphère. Ces impacts sont étudiés tout au long du cycle de vie du produit.",
+    "label": "Green-score A+",
+    "imageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.svg"
+   }
+  ],
+  "nutritionalRatingProvider": {
+   "id": "etiquettable",
+   "name": "Etiquettable",
+   "url": "https://etiquettable.eco2initiative.com/",
+   "label": "Scores calculés par",
+   "imageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.png",
+   "vectorImageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.svg"
+  },
+  "positiveFeedbacks": 91,
+  "preparationExtraTimePerCover": 0,
+  "preparationTime": 20,
+  "requiredTools": [
+   {
+    "_id": "59ccb6a4bb08340012ca6b9a",
+    "id": "59ccb6a4bb08340012ca6b9a",
+    "updatedAt": "2024-10-28T11:06:59.337Z",
+    "createdAt": "2017-09-28T08:45:24.402Z",
+    "imageUrl": "tools/PMq1FjiP805SNQ.png.webp",
+    "name": "Four",
+    "isNotTrivial": true,
+    "__v": 6,
+    "childrenTools": [],
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   },
+   {
+    "_id": "5b4f2ce0454ad30014dadd07",
+    "id": "5b4f2ce0454ad30014dadd07",
+    "name": "Économe",
+    "isNotTrivial": false,
+    "childrenTools": [],
+    "createdAt": "2018-07-18T12:04:48.440Z",
+    "updatedAt": "2021-10-27T10:41:10.092Z",
+    "__v": 1,
+    "isDefaultChecked": false,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   },
+   {
+    "_id": "61791825985feb0ee8c4f310",
+    "id": "61791825985feb0ee8c4f310",
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "createdAt": "2021-10-27T09:13:09.384Z",
+    "isDefaultChecked": false,
+    "isNotTrivial": false,
+    "name": "Plat à tarte",
+    "updatedAt": "2022-04-27T15:42:25.648Z"
+   },
+   {
+    "_id": "597b4e5346e4800011d4d4f0",
+    "id": "597b4e5346e4800011d4d4f0",
+    "updatedAt": "2021-10-27T10:29:15.492Z",
+    "createdAt": "2017-07-28T14:46:43.722Z",
+    "name": "Fouet",
+    "imageUrl": "tools/owGs4EQDwb.png",
+    "__v": 2,
+    "childrenTools": [],
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false,
+    "isNotTrivial": false
+   }
+  ],
+  "totalFeedbacks": 217,
+  "videoUrl": "https://static.jow.fr/recipes/PqO4C6tVGs6Uow_high.mp4",
+  "userConstituents": [],
+  "availableLocales": [
+   "fr",
+   "en"
+  ],
+  "family": {
+   "_id": "5fc793dd74ec8da08781a909",
+   "id": "5fc793dd74ec8da08781a909",
+   "createdAt": "2020-12-02T13:28:43.616Z",
+   "name": "Tarte",
+   "updatedAt": "2023-06-09T16:00:48.231Z",
+   "__v": 2,
+   "childrenFamilies": [],
+   "allowedRecipeSources": [
+    "jow"
+   ],
+   "availabilityZonesForUGC": [],
+   "keywords": "tarte salée, tarte fine"
+  },
+  "imageUrlUHD": "https://static.jow.fr/880x880/recipes/dec4xIoHl0QtZg.png",
+  "indexingStatus": "noindex",
+  "keywords": [
+   "enfant",
+   "familial",
+   "famille",
+   "tarte salée",
+   "summer",
+   "été",
+   "sans-porc",
+   "végé",
+   "veggie",
+   "vegie",
+   "végétarien"
+  ],
+  "posterUrl": "https://static.jow.fr/880x880/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+  "slug": "tarte-spirale-de-legumes",
+  "thumbnailUrl": "https://static.jow.fr/550x550/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+  "seoImageUrls": [
+   "https://static.jow.fr/1024x1024/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+   "https://static.jow.fr/1024x768/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+   "https://static.jow.fr/1024x576/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+   "https://static.jow.fr/1024x1024/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg.webp",
+   "https://static.jow.fr/1024x768/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg.webp",
+   "https://static.jow.fr/1024x576/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg.webp"
+  ],
+  "ogImageUrl": "https://static.jow.fr/1200x630/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg",
+  "twitterImageUrl": "https://static.jow.fr/1200x675/patterns/yolk-01-202309.png_merge_recipes/dec4xIoHl0QtZg.png.jpg"
+ }
+}

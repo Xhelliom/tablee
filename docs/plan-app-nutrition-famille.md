@@ -73,6 +73,19 @@ aucune ne modélise « un plat, quatre assiettes, quatre âges ».
 
 ## 3. Tâche 0 — Vérifier le contrat Jow (BLOQUANT)
 
+> ✅ **Faite le 13/09/2026. Résultat : `docs/jow-contract.md`**, qui fait
+> autorité sur tout ce qui suit dans cette section. Deux constats contredisent
+> ce qui était supposé ici :
+> 1. **Le piège des identifiants n'existe pas.** `jow.fr/fr/recipes/<ObjectId>`
+>    redirige vers l'URL canonique : la résolution par titre slugifié décrite
+>    plus bas est inutile et n'est plus le chemin principal.
+> 2. **`?coversCount=` ne change rien** — la page est statique. En revanche
+>    `coversCount` est le nombre de parts prévu par la recette, pas un facteur
+>    d'échelle : les quantités sont par convive et les valeurs par portion.
+>
+> Le reste de la section est conservé tel quel : c'est l'état des hypothèses
+> avant vérification, utile pour comprendre pourquoi le code est écrit ainsi.
+
 Tout le projet repose sur l'hypothèse que les pages publiques Jow sont
 parsables. **Cette hypothèse doit être vérifiée avant d'écrire le reste.**
 
@@ -143,8 +156,8 @@ différentes**. Tant que ce n'est pas le cas, ne pas continuer.
 
 ```json
 {
-  "name": "Table",
-  "short_name": "Table",
+  "name": "Tablée",
+  "short_name": "Tablée",
   "start_url": "/",
   "display": "standalone",
   "share_target": {
@@ -956,11 +969,12 @@ on accumule, on ne juge personne.
 
 ## 15. Roadmap et critères d'acceptation
 
-### Tâche 0 — Contrat Jow (§3) — **bloquant**
-- [ ] `docs/jow-contract.md` écrit, avec échantillon figé
-- [ ] Script : texte partagé → JSON complet, sur 5 recettes différentes
-- [ ] Structure inattendue → `confidence='basse'`, pas de crash
-- [ ] Test de non-régression vert
+### Tâche 0 — Contrat Jow (§3) — **bloquant** — ✅ terminée le 13/09/2026
+- [x] `docs/jow-contract.md` écrit, avec échantillon figé (8 recettes)
+- [x] Script : texte partagé → JSON complet, sur 5 recettes différentes
+      (`npm run jow:resolve`)
+- [x] Structure inattendue → `confidence='basse'`, pas de crash
+- [x] Test de non-régression vert (`npm test`)
 
 ### V1 — Aucune IA
 - [ ] Schéma migré, seed Ciqual chargé (`food` non vide)
@@ -1040,18 +1054,23 @@ multi-tenant, auth individuelle. À décider avant, jamais après.
 
 ## 17. Non tranché — demander, ne pas décider
 
-1. **Structure exacte de `__NEXT_DATA__`** — Tâche 0. À établir, pas à supposer.
-2. **Valeurs de `nutrient_reference`** — §9. À sourcer auprès de l'ANSES.
-3. **Valeurs de `unit_default`** — §6. Chaque ligne exige une `source`.
-4. **Contenu de `seasonal_produce`** — §8bis. Environ 40 produits × leurs mois,
+1. **Valeurs de `nutrient_reference`** — §9. À sourcer auprès de l'ANSES.
+2. **Valeurs de `unit_default`** — §6. Chaque ligne exige une `source`. Les
+   sept unités effectivement utilisées par Jow sont inventoriées au §4 de
+   `docs/jow-contract.md`.
+3. **Contenu de `seasonal_produce`** — §8bis. Environ 40 produits × leurs mois,
    à saisir à la main pour la France. Pas de source automatisable identifiée.
-5. **Nom de l'app** — « Tablée » est le nom de travail des maquettes.
+4. **Base des valeurs nutritionnelles des pages ingrédients Jow** — non
+   documentée dans le payload. Le §5 suppose « /100 g » ; ce n'est pas établi.
+   À confirmer avant d'exploiter ces pages (§5 de `docs/jow-contract.md`).
 
 Les points 1 à 3 sont des **collectes de données**, pas des arbitrages : la
 source existe, il faut aller la chercher. Ne rien inventer à la place (I1).
 
 ### Décidé depuis la v2
 
+- **Nom de l'app** → **Tablée**. Le manifeste du §4 est aligné.
+- **Structure de `__NEXT_DATA__`** → établie, `docs/jow-contract.md` (Tâche 0)
 - **Restes** → 2ᵉ `meal` pointant la même recette (§6bis)
 - **Invités** → `meal.guest_count` (§6bis)
 - **Périmètre V1** → les cinq créneaux, templates livrés en V1 (§6bis)

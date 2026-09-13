@@ -1,0 +1,1032 @@
+{
+ "capturedAt": "2026-09-13T16:48:29.124Z",
+ "url": "https://jow.fr/recipes/galette-vege-puree-de-carotte-et-tzatziki-8vch9drbhyhc03wu0epa",
+ "recipe": {
+  "additionalConstituents": [
+   {
+    "isVisible": true,
+    "isHidden": false,
+    "_id": "650b0b1ea3724c670e919987",
+    "id": "650b0b1ea3724c670e919987",
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "599215dde9f1de001116bbb6",
+     "id": "599215dde9f1de001116bbb6",
+     "updatedAt": "2021-11-22T16:18:56.411Z",
+     "createdAt": "2017-08-14T21:27:57.899Z",
+     "name": "Cuillère à soupe",
+     "__v": 4,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "619bc2f0934d1027ae7f53fb",
+       "id": "619bc2f0934d1027ae7f53fb",
+       "minAmount": 0,
+       "maxAmount": 1
+      },
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "619bc2f0934d1027ae7f53fc",
+       "id": "619bc2f0934d1027ae7f53fc",
+       "minAmount": 1
+      }
+     ]
+    },
+    "ingredient": {
+     "_id": "598b6185fd078b0011140a18",
+     "id": "598b6185fd078b0011140a18",
+     "naturalUnit": {
+      "_id": "598c237f14246c127285c149",
+      "id": "598c237f14246c127285c149",
+      "updatedAt": "2025-03-26T09:58:44.385Z",
+      "createdAt": "2017-08-10T09:12:31.763Z",
+      "isNatural": true,
+      "name": "Litre",
+      "__v": 6,
+      "measurementSystemCompatibility": {
+       "metric": true,
+       "imperial": false,
+       "us": false
+      },
+      "abbreviations": [
+       {
+        "minAmount": 0,
+        "maxAmount": 1,
+        "digits": 0,
+        "divisor": 1000,
+        "inverse": false,
+        "_id": "65a80cc1221c78000f3943b8",
+        "id": "65a80cc1221c78000f3943b8",
+        "label": "ml"
+       },
+       {
+        "minAmount": 1,
+        "digits": 1,
+        "divisor": 1,
+        "inverse": false,
+        "_id": "5e5fd47ea9d69f51009e1df2",
+        "id": "5e5fd47ea9d69f51009e1df2",
+        "label": "L"
+       }
+      ],
+      "comments": "naturelle"
+     },
+     "imageUrl": "ingredients/0T5ZDQF4B7WxHQ.png.webp",
+     "eatingHabitsCompatibility": {
+      "porkless": false,
+      "fish": false,
+      "vegetarian": true,
+      "vegan": true,
+      "glutenFree": true,
+      "dairyFree": true,
+      "redMeat": false,
+      "whiteMeat": false
+     },
+     "alternativeUnits": [
+      {
+       "unit": {
+        "_id": "599215dde9f1de001116bbb6",
+        "id": "599215dde9f1de001116bbb6",
+        "updatedAt": "2021-11-22T16:18:56.411Z",
+        "createdAt": "2017-08-14T21:27:57.899Z",
+        "name": "Cuillère à soupe",
+        "__v": 4,
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": true,
+         "us": true
+        },
+        "abbreviations": [
+         {
+          "label": "càs",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "619bc2f0934d1027ae7f53fb",
+          "id": "619bc2f0934d1027ae7f53fb",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "càs",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "619bc2f0934d1027ae7f53fc",
+          "id": "619bc2f0934d1027ae7f53fc",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.015,
+       "_id": "5b4e0ca3454ad30014dadc76",
+       "id": "5b4e0ca3454ad30014dadc76"
+      },
+      {
+       "unit": {
+        "_id": "599215cce9f1de001116bbb5",
+        "id": "599215cce9f1de001116bbb5",
+        "updatedAt": "2021-11-16T11:13:33.964Z",
+        "createdAt": "2017-08-14T21:27:40.521Z",
+        "name": "Cuillère à café",
+        "__v": 2,
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": true,
+         "us": true
+        },
+        "abbreviations": [
+         {
+          "label": "càc",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "5e5fc39240f533a26f0ad3eb",
+          "id": "5e5fc39240f533a26f0ad3eb",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "càc",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e5fc39240f533a26f0ad3ea",
+          "id": "5e5fc39240f533a26f0ad3ea",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.005,
+       "_id": "5f49086b83271bc9f9fb081c",
+       "id": "5f49086b83271bc9f9fb081c"
+      },
+      {
+       "unit": {
+        "_id": "5cb881fc5acada2b81b7398a",
+        "id": "5cb881fc5acada2b81b7398a",
+        "name": "Cup",
+        "createdAt": "2019-04-18T13:56:12.571Z",
+        "updatedAt": "2022-03-29T14:03:55.297Z",
+        "__v": 24,
+        "abbreviations": [
+         {
+          "label": "cup",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "624311cb73b88a5edb5dfa1d",
+          "id": "624311cb73b88a5edb5dfa1d",
+          "minAmount": 0,
+          "maxAmount": 1.001
+         },
+         {
+          "label": "cups",
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "624311cb73b88a5edb5dfa1e",
+          "id": "624311cb73b88a5edb5dfa1e",
+          "minAmount": 1.001
+         }
+        ],
+        "measurementSystemCompatibility": {
+         "imperial": false,
+         "metric": false,
+         "us": true
+        }
+       },
+       "quantity": 0.237,
+       "_id": "62f13c8852e3e941815ce80c",
+       "id": "62f13c8852e3e941815ce80c"
+      },
+      {
+       "unit": {
+        "_id": "5d809ab4b982cb6b3d7586ba",
+        "id": "5d809ab4b982cb6b3d7586ba",
+        "measurementSystemCompatibility": {
+         "metric": false,
+         "imperial": true,
+         "us": true
+        },
+        "name": "Once liquide",
+        "createdAt": "2019-09-17T08:35:00.551Z",
+        "updatedAt": "2020-03-05T10:15:19.019Z",
+        "__v": 3,
+        "abbreviations": [
+         {
+          "label": "fl oz",
+          "digits": 0,
+          "divisor": 1,
+          "inverse": true,
+          "_id": "5e60d13747401d500e61eb85",
+          "id": "5e60d13747401d500e61eb85",
+          "minAmount": 0,
+          "maxAmount": 1
+         },
+         {
+          "label": "fl oz",
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e60d13747401d500e61eb84",
+          "id": "5e60d13747401d500e61eb84",
+          "minAmount": 1
+         }
+        ]
+       },
+       "quantity": 0.03,
+       "_id": "62f13c8852e3e941815ce810",
+       "id": "62f13c8852e3e941815ce810"
+      },
+      {
+       "unit": {
+        "_id": "5d5d5629aa9d522a3f884ae3",
+        "id": "5d5d5629aa9d522a3f884ae3",
+        "measurementSystemCompatibility": {
+         "metric": true,
+         "imperial": false,
+         "us": false
+        },
+        "name": "Kilogramme",
+        "createdAt": "2019-08-21T14:33:13.749Z",
+        "updatedAt": "2025-03-26T09:57:59.382Z",
+        "__v": 3,
+        "abbreviations": [
+         {
+          "minAmount": 0,
+          "maxAmount": 0.001,
+          "digits": 0,
+          "divisor": 1000000,
+          "inverse": false,
+          "_id": "5e5fc72840f533a26f0ad476",
+          "id": "5e5fc72840f533a26f0ad476",
+          "label": "mg"
+         },
+         {
+          "minAmount": 0.001,
+          "maxAmount": 1,
+          "digits": 0,
+          "divisor": 1000,
+          "inverse": false,
+          "_id": "5e5fc72840f533a26f0ad475",
+          "id": "5e5fc72840f533a26f0ad475",
+          "label": "g"
+         },
+         {
+          "minAmount": 1,
+          "digits": 1,
+          "divisor": 1,
+          "inverse": false,
+          "_id": "5e5fd479a9d69f51009e1dee",
+          "id": "5e5fd479a9d69f51009e1dee",
+          "label": "kg"
+         }
+        ],
+        "comments": "alternative"
+       },
+       "quantity": 1,
+       "_id": "63f368309b0e113c174f1267",
+       "id": "63f368309b0e113c174f1267"
+      }
+     ],
+     "isBasicIngredient": true,
+     "editorialData": {
+      "flags": {
+       "fruit": false,
+       "vegetable": false
+      },
+      "nutritionalFacts": [
+       {
+        "code": "ENERC",
+        "amount": 822,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf6",
+        "id": "5f1ec32d0c76c37ee7d2bbf6"
+       },
+       {
+        "code": "PRO",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf7",
+        "id": "5f1ec32d0c76c37ee7d2bbf7"
+       },
+       {
+        "code": "FAT",
+        "amount": 91,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf8",
+        "id": "5f1ec32d0c76c37ee7d2bbf8"
+       },
+       {
+        "code": "CHOAVL",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "5f1ec32d0c76c37ee7d2bbf9",
+        "id": "5f1ec32d0c76c37ee7d2bbf9"
+       },
+       {
+        "code": "FIBTG",
+        "amount": 0,
+        "portion": 0.1,
+        "_id": "623ca12e4d59185816394176",
+        "id": "623ca12e4d59185816394176"
+       }
+      ]
+     },
+     "tastes": [
+      {
+       "_id": "64d39e8d676ace34731d1bda",
+       "id": "64d39e8d676ace34731d1bda",
+       "__v": 0,
+       "availabilityZones": [],
+       "createdAt": "2023-08-09T14:11:25.872Z",
+       "imageUrl": "ingredients/1Fe6mK3D8vos2w.png.webp",
+       "name": "Huile d'olive",
+       "updatedAt": "2023-08-09T14:14:03.841Z"
+      }
+     ],
+     "keywords": "",
+     "measurementThresholds": {
+      "upper": 0.032460379629629374,
+      "lower": 0.00023731990088703483
+     },
+     "availabilityZones": [],
+     "naturalUnitInKg": 1.14,
+     "externalIds": {
+      "etiquettableId": "248"
+     },
+     "name": "Huile d'olive",
+     "seasonality": [
+      {
+       "availabilityZoneId": "US",
+       "months": {
+        "jan": true,
+        "feb": true,
+        "mar": true,
+        "apr": true,
+        "may": true,
+        "jun": true,
+        "jul": true,
+        "aug": true,
+        "sep": true,
+        "oct": true,
+        "nov": true,
+        "dec": true
+       },
+       "_id": "6a6b4c523b69a522e6373fb1",
+       "id": "6a6b4c523b69a522e6373fb1"
+      },
+      {
+       "availabilityZoneId": "FR",
+       "months": {
+        "jan": true,
+        "feb": true,
+        "mar": true,
+        "apr": true,
+        "may": true,
+        "jun": true,
+        "jul": true,
+        "aug": true,
+        "sep": true,
+        "oct": true,
+        "nov": true,
+        "dec": true
+       },
+       "_id": "6a6b4ca9bfffe74be1028475",
+       "id": "6a6b4ca9bfffe74be1028475"
+      }
+     ]
+    },
+    "additionalMeasures": [],
+    "alternatives": []
+   }
+  ],
+  "aggregateRating": 0.8528,
+  "author": {
+   "id": "63e3ce2eb18da063dc42ff56",
+   "imageUrl": "https://static.jow.fr/72x72/authors/gJ0g4AOVlRB6Zw.jpg.webp",
+   "name": "Domitille"
+  },
+  "backgroundColor": "#394044",
+  "backgroundPattern": {
+   "color": "#ffc847",
+   "imageUrl": "https://static.jow.fr/304x304/patterns/yolk-05-202309.png",
+   "imageUrlHD": "https://static.jow.fr/550x550/patterns/yolk-05-202309.png",
+   "imageUrlUHD": "https://static.jow.fr/880x880/patterns/yolk-05-202309.png"
+  },
+  "composition": "Galette végétarienne, purée de carotte, salade, tzatziki, persil",
+  "constituentIds": [
+   {
+    "id": "59ef3525a959090012a4f945",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/VxKk3Mxt0t66OA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c23d414246c127285c14b"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "63f4c8cc9b0e113c174f3eb0",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/lboQ2jEQsiZBmQ.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "599d98c1b712a20011d11d85",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/ioSYY5esSsNtWg.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "5b55ffdf0efcc6001444cf73"
+    ],
+    "alternatives": [
+     "6390abbecfcaf5271a9ed9f5"
+    ]
+   },
+   {
+    "id": "60db29e794e0640e5fd7046c",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/uWpJ0ktWUGHPWA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "5a442b38c1f5f900143d6448",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/NKp1aacldEPqcA.jpg.webp",
+    "isOptional": true,
+    "preferredUnits": [
+     "59aafb6b797a8c00111778a6"
+    ],
+    "alternatives": []
+   }
+  ],
+  "constituents": [
+   {
+    "id": "59ef3525a959090012a4f945",
+    "isOptional": false,
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "598c23d414246c127285c14b",
+     "id": "598c23d414246c127285c14b",
+     "updatedAt": "2025-03-26T09:59:21.516Z",
+     "createdAt": "2017-08-10T09:13:57.000Z",
+     "isNatural": true,
+     "name": "Pièce",
+     "__v": 11,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f8718531a979c77b221f",
+       "id": "6229f8718531a979c77b221f",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "6229f8718531a979c77b2220",
+       "id": "6229f8718531a979c77b2220",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Steak végétal",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/VxKk3Mxt0t66OA.png.webp"
+   },
+   {
+    "id": "63f4c8cc9b0e113c174f3eb0",
+    "isOptional": false,
+    "quantityPerCover": 0.1,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Purée de carotte (surgelée)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/lboQ2jEQsiZBmQ.png.webp"
+   },
+   {
+    "id": "599d98c1b712a20011d11d85",
+    "isOptional": false,
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "5b55ffdf0efcc6001444cf73",
+     "id": "5b55ffdf0efcc6001444cf73",
+     "name": "Poignée",
+     "createdAt": "2018-07-23T16:18:39.300Z",
+     "updatedAt": "2022-04-29T16:13:08.986Z",
+     "__v": 3,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "label": "poignée",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "626c0e946daa450587ca630b",
+       "id": "626c0e946daa450587ca630b",
+       "minAmount": 0,
+       "maxAmount": 1.001
+      },
+      {
+       "label": "poignées",
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "626c0e946daa450587ca630c",
+       "id": "626c0e946daa450587ca630c",
+       "minAmount": 1.001
+      }
+     ]
+    },
+    "additionalMeasures": [],
+    "name": "Salade (Mélange)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/ioSYY5esSsNtWg.jpg.webp"
+   },
+   {
+    "id": "60db29e794e0640e5fd7046c",
+    "isOptional": false,
+    "quantityPerCover": 0.05,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Tzatziki",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/uWpJ0ktWUGHPWA.png.webp"
+   },
+   {
+    "id": "5a442b38c1f5f900143d6448",
+    "isOptional": true,
+    "quantityPerCover": 0.1,
+    "unit": {
+     "_id": "59aafb6b797a8c00111778a6",
+     "id": "59aafb6b797a8c00111778a6",
+     "updatedAt": "2025-07-09T12:55:12.695Z",
+     "createdAt": "2017-09-02T18:41:47.322Z",
+     "name": "Bouquet",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "label": "bou.",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "686e66993280bae6f96de968",
+       "id": "686e66993280bae6f96de968"
+      },
+      {
+       "minAmount": 1,
+       "label": "bou.",
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "686e66b03280bae6f96de98e",
+       "id": "686e66b03280bae6f96de98e"
+      }
+     ],
+     "comments": ""
+    },
+    "additionalMeasures": [],
+    "name": "Persil (frais)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/NKp1aacldEPqcA.jpg.webp"
+   }
+  ],
+  "coversCount": 1,
+  "coversOptions": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30
+  ],
+  "createdAt": "2023-09-28T22:00:00.000Z",
+  "description": "Optez pour un dîner tout végé, complet & savoureux !",
+  "badges": [
+   {
+    "type": "text",
+    "value": "Express"
+   },
+   {
+    "type": "rating",
+    "value": 4.3
+   },
+   {
+    "type": "duration",
+    "preparationTime": 0,
+    "cookingTime": 7,
+    "preparationExtraTimePerCover": 0
+   },
+   {
+    "type": "covers-count"
+   }
+  ],
+  "displayVegetarianBadge": false,
+  "eatingHabitsCompatibility": {
+   "porkless": true,
+   "vegetarian": true,
+   "vegan": false,
+   "glutenFree": false,
+   "dairyFree": false,
+   "pescatarian": true
+  },
+  "id": "650b16ade7cc8d0013ce4a6e",
+  "imageUrl": "https://static.jow.fr/304x304/recipes/6B7e6iiULiwRdA.png",
+  "imageUrlHD": "https://static.jow.fr/550x550/recipes/6B7e6iiULiwRdA.png",
+  "isAvailable": true,
+  "missingIngredients": [],
+  "pricePerPortionTag": {
+   "level": 2,
+   "currency": "EUR",
+   "label": "2 € et 4 € par portion"
+  },
+  "requiredNonTrivialToolsAndChildren": [
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   }
+  ],
+  "roundedCoversCount": 1,
+  "source": "jow",
+  "tagsEdito": [],
+  "tip": {},
+  "title": "Galette végé, purée de carotte & tzatziki",
+  "updatedAt": "2026-07-31T12:16:41.920Z",
+  "userConstituentsIds": [],
+  "difficulty": 0,
+  "directions": [
+   {
+    "id": "650b0b32a3724c670e919988",
+    "label": "Faites cuire la galette végétale selon les instructions du paquet, jusqu'à ce qu'elle soit bien dorée.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "59ef3525a959090012a4f945",
+      "name": "Steak végétal",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/VxKk3Mxt0t66OA.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "650b0b34a3724c670e919989",
+    "label": "En parallèle, dans une casserole, faites réchauffer la purée de carottes selon le temps indiqué sur le paquet.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "63f4c8cc9b0e113c174f3eb0",
+      "name": "Purée de carotte (surgelée)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/lboQ2jEQsiZBmQ.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "650b0b35a3724c670e91998a",
+    "label": "Dans une assiette, ajoutez : la purée de carottes, la galette végé, le tzatziki et la salade. Salez, poivrez, ajoutez un filet d'huile d'olive et quelques feuilles de persil, si vous en avez. C'est prêt !",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "599d98c1b712a20011d11d85",
+      "name": "Salade (Mélange)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/ioSYY5esSsNtWg.jpg.webp"
+     },
+     {
+      "id": "60db29e794e0640e5fd7046c",
+      "name": "Tzatziki",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/uWpJ0ktWUGHPWA.png.webp"
+     },
+     {
+      "id": "5a442b38c1f5f900143d6448",
+      "name": "Persil (frais)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/NKp1aacldEPqcA.jpg.webp"
+     }
+    ]
+   }
+  ],
+  "cookingTime": 7,
+  "isVisible": true,
+  "likes": 7183,
+  "negativeFeedbacks": 0,
+  "nutritionalFacts": [
+   {
+    "id": "ENERC",
+    "label": "Calories",
+    "unit": "kcal",
+    "amount": 320
+   },
+   {
+    "id": "FAT",
+    "label": "Matières grasses",
+    "unit": "g",
+    "amount": 20
+   },
+   {
+    "id": "CHOAVL",
+    "label": "Glucides",
+    "unit": "g",
+    "amount": 16
+   },
+   {
+    "id": "PRO",
+    "label": "Protéines",
+    "unit": "g",
+    "amount": 18
+   },
+   {
+    "id": "FIBTG",
+    "label": "Fibres",
+    "unit": "g",
+    "amount": 12
+   }
+  ],
+  "nutritionalRatingScores": [
+   {
+    "id": "nutriscore",
+    "score": "B",
+    "name": "Nutri-score",
+    "label": "Nutri-score B",
+    "description": "Le Nutri-score est un indicateur destiné à la compréhension des informations nutritionnelles. Les recettes ou les produits sont classés de A à E en fonction de leur teneur en aliments à favoriser (fibres, protéines, fruits, légumes, légumineuses…) et en aliments à limiter (énergie, acides gras saturés, sucres, sel…).",
+    "imageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-B-horizontal.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-B-horizontal.svg"
+   },
+   {
+    "id": "greenscore",
+    "score": "A+",
+    "name": "Green-score",
+    "description": "Le Green-score est un indicateur représentant l'impact environnemental des produits alimentaires. Les recettes ou les produits sont classés de A+ à F. Il tient compte de plusieurs facteurs sur la pollution de l'air, des eaux, des océans, du sol, ainsi que les impacts sur la biosphère. Ces impacts sont étudiés tout au long du cycle de vie du produit.",
+    "label": "Green-score A+",
+    "imageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.svg"
+   }
+  ],
+  "nutritionalRatingProvider": {
+   "id": "etiquettable",
+   "name": "Etiquettable",
+   "url": "https://etiquettable.eco2initiative.com/",
+   "label": "Scores calculés par",
+   "imageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.png",
+   "vectorImageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.svg"
+  },
+  "positiveFeedbacks": 0,
+  "requiredTools": [
+   {
+    "_id": "598b3ffcfd078b00111409f9",
+    "id": "598b3ffcfd078b00111409f9",
+    "updatedAt": "2021-11-22T14:33:45.727Z",
+    "createdAt": "2017-08-09T17:01:48.901Z",
+    "imageUrl": "tools/w4oVUkDcBN.png",
+    "name": "Casserole",
+    "__v": 2,
+    "childrenTools": [],
+    "isNotTrivial": false,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   },
+   {
+    "_id": "598a05cc5d25fb0011015964",
+    "id": "598a05cc5d25fb0011015964",
+    "updatedAt": "2022-04-27T15:40:47.458Z",
+    "createdAt": "2017-08-08T18:41:16.271Z",
+    "imageUrl": "tools/iv7jIro9Ur.png",
+    "name": "Poêle",
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "isDefaultChecked": false,
+    "isNotTrivial": false
+   },
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   }
+  ],
+  "totalFeedbacks": 125,
+  "userConstituents": [],
+  "availableLocales": [
+   "fr"
+  ],
+  "family": {
+   "_id": "64832262e710f2ffd0a884cc",
+   "id": "64832262e710f2ffd0a884cc",
+   "allowedRecipeSources": [
+    "jow"
+   ],
+   "createdAt": "2023-06-09T13:00:18.567Z",
+   "keywords": "",
+   "name": "Veggie - Veg",
+   "updatedAt": "2023-06-09T13:00:18.567Z"
+  },
+  "imageUrlUHD": "https://static.jow.fr/880x880/recipes/6B7e6iiULiwRdA.png",
+  "indexingStatus": "noindex",
+  "keywords": [
+   "express",
+   "rapide",
+   "facile",
+   "basique",
+   "basic",
+   "healthy",
+   "léger",
+   "sain",
+   "équilibré",
+   "fit",
+   "sans-porc",
+   "végé",
+   "veggie",
+   "vegie",
+   "végétarien",
+   "rapide",
+   "express",
+   "fast"
+  ],
+  "posterUrl": "https://static.jow.fr/880x880/patterns/yolk-05-202309.png_merge_recipes/6B7e6iiULiwRdA.png.jpg",
+  "slug": "galette-vege-puree-de-carotte-et-tzatziki",
+  "thumbnailUrl": "https://static.jow.fr/550x550/patterns/yolk-05-202309.png_merge_recipes/6B7e6iiULiwRdA.png.jpg",
+  "seoImageUrls": [
+   "https://static.jow.fr/1024x1024/recipes/AylYetrenfnFhQ.png",
+   "https://static.jow.fr/1024x768/recipes/AylYetrenfnFhQ.png",
+   "https://static.jow.fr/1024x576/recipes/AylYetrenfnFhQ.png",
+   "https://static.jow.fr/1024x1024/recipes/AylYetrenfnFhQ.png.webp",
+   "https://static.jow.fr/1024x768/recipes/AylYetrenfnFhQ.png.webp",
+   "https://static.jow.fr/1024x576/recipes/AylYetrenfnFhQ.png.webp"
+  ],
+  "ogImageUrl": "https://static.jow.fr/1200x630/recipes/AylYetrenfnFhQ.png",
+  "twitterImageUrl": "https://static.jow.fr/1200x675/recipes/AylYetrenfnFhQ.png"
+ }
+}

@@ -1,0 +1,749 @@
+{
+ "capturedAt": "2026-09-13T16:49:24.548Z",
+ "url": "https://jow.fr/recipes/risotto-aux-poireaux-82yn9cov5b6q4btu1b7i",
+ "recipe": {
+  "additionalConstituents": [],
+  "aggregateRating": 0.9189368770764119,
+  "author": {
+   "id": "618aa483934d1027ae7e6d24",
+   "imageUrl": "https://static.jow.fr/72x72/authors/AxslNx7FApSmIg.jpg.webp",
+   "name": "Victoire"
+  },
+  "backgroundColor": "#868d43",
+  "backgroundPattern": {
+   "color": "#ffc847",
+   "imageUrl": "https://static.jow.fr/304x304/patterns/yolk-02-202309.png",
+   "imageUrlHD": "https://static.jow.fr/550x550/patterns/yolk-02-202309.png",
+   "imageUrlUHD": "https://static.jow.fr/880x880/patterns/yolk-02-202309.png"
+  },
+  "composition": "Riz, poireaux, parmesan",
+  "constituentIds": [
+   {
+    "id": "59fa477ed6de9c00121aa1ef",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AGQfy1uRWlE43g.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59ec940ed2dfbb0012bc5399",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/EjlbNB1DecIorw.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": [
+     "5c34b5cf92f1e919bbc98137",
+     "6470a87c51dd1c58a263fde6"
+    ]
+   },
+   {
+    "id": "59e8aac15c929200124854a8",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/opvGYcbHocNPKg.png.webp",
+    "isOptional": true,
+    "preferredUnits": [
+     "598c237f14246c127285c149"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "5bd995c70d276400042146c2",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/HTSOH60mYB28jA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "59aadbd4797a8c0011177854"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "5b80035d05fcd900044fdfb7",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/HmFH0IM4TS9RbA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "599215dde9f1de001116bbb6"
+    ],
+    "alternatives": []
+   }
+  ],
+  "constituents": [
+   {
+    "id": "59fa477ed6de9c00121aa1ef",
+    "isOptional": false,
+    "quantityPerCover": 0.07,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Riz (Arborio)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AGQfy1uRWlE43g.png.webp"
+   },
+   {
+    "id": "59ec940ed2dfbb0012bc5399",
+    "isOptional": false,
+    "quantityPerCover": 0.15,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Poireau",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/EjlbNB1DecIorw.png.webp"
+   },
+   {
+    "id": "59e8aac15c929200124854a8",
+    "isOptional": true,
+    "quantityPerCover": 0.02,
+    "unit": {
+     "_id": "598c237f14246c127285c149",
+     "id": "598c237f14246c127285c149",
+     "updatedAt": "2025-03-26T09:58:44.385Z",
+     "createdAt": "2017-08-10T09:12:31.763Z",
+     "isNatural": true,
+     "name": "Litre",
+     "__v": 6,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "65a80cc1221c78000f3943b8",
+       "id": "65a80cc1221c78000f3943b8",
+       "label": "ml"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd47ea9d69f51009e1df2",
+       "id": "5e5fd47ea9d69f51009e1df2",
+       "label": "L"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Vin blanc",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/opvGYcbHocNPKg.png.webp"
+   },
+   {
+    "id": "5bd995c70d276400042146c2",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "59aadbd4797a8c0011177854",
+     "id": "59aadbd4797a8c0011177854",
+     "updatedAt": "2025-03-26T09:59:37.116Z",
+     "createdAt": "2017-09-02T16:27:00.318Z",
+     "name": "Pièce",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f87c8531a979c77b222c",
+       "id": "6229f87c8531a979c77b222c",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "63f4ca979b0e113c174f3f29",
+       "id": "63f4ca979b0e113c174f3f29",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR alternative"
+    },
+    "additionalMeasures": [],
+    "name": "Bouillon de légumes (cube)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/HTSOH60mYB28jA.png.webp"
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "isOptional": false,
+    "quantityPerCover": 0.01,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Beurre",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+   },
+   {
+    "id": "5b80035d05fcd900044fdfb7",
+    "isOptional": false,
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "599215dde9f1de001116bbb6",
+     "id": "599215dde9f1de001116bbb6",
+     "updatedAt": "2021-11-22T16:18:56.411Z",
+     "createdAt": "2017-08-14T21:27:57.899Z",
+     "name": "Cuillère à soupe",
+     "__v": 4,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "619bc2f0934d1027ae7f53fb",
+       "id": "619bc2f0934d1027ae7f53fb",
+       "minAmount": 0,
+       "maxAmount": 1
+      },
+      {
+       "label": "càs",
+       "digits": 0,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "619bc2f0934d1027ae7f53fc",
+       "id": "619bc2f0934d1027ae7f53fc",
+       "minAmount": 1
+      }
+     ]
+    },
+    "additionalMeasures": [],
+    "name": "Parmesan (râpé)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/HmFH0IM4TS9RbA.png.webp"
+   }
+  ],
+  "coversCount": 1,
+  "coversOptions": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30
+  ],
+  "createdAt": "2018-12-11T17:40:56.398Z",
+  "description": "Tellement bon que plus on en fait, plus on en refait.",
+  "badges": [
+   {
+    "type": "rating",
+    "value": 4.6
+   },
+   {
+    "type": "duration",
+    "preparationTime": 5,
+    "cookingTime": 30,
+    "preparationExtraTimePerCover": 1
+   },
+   {
+    "type": "low-price",
+    "accessibilityLabel": "-2 € par portion",
+    "currency": "EUR"
+   },
+   {
+    "type": "covers-count"
+   }
+  ],
+  "displayVegetarianBadge": false,
+  "eatingHabitsCompatibility": {
+   "porkless": true,
+   "vegetarian": true,
+   "vegan": false,
+   "glutenFree": false,
+   "dairyFree": false,
+   "pescatarian": true
+  },
+  "id": "5c0ff6a87f3c7e2314e2eefe",
+  "imageUrl": "https://static.jow.fr/304x304/recipes/R5KPUdQPrD.png",
+  "imageUrlHD": "https://static.jow.fr/550x550/recipes/R5KPUdQPrD.png",
+  "isAvailable": true,
+  "missingIngredients": [],
+  "pricePerPortionTag": {
+   "level": 1,
+   "currency": "EUR",
+   "label": "-2 € par portion"
+  },
+  "requiredNonTrivialToolsAndChildren": [
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   }
+  ],
+  "roundedCoversCount": 1,
+  "source": "jow",
+  "tagsEdito": [],
+  "tip": {
+   "author": {
+    "_id": "64536f48ad85324a719cb499",
+    "id": "64536f48ad85324a719cb499",
+    "__v": 0,
+    "createdAt": "2023-05-04T08:39:36.135Z",
+    "name": "Un client astucieux",
+    "updatedAt": "2023-05-04T08:39:36.135Z",
+    "imageUrl": null
+   },
+   "description": "Pour un repas zéro-déchet, utilisez les verts de poireaux pour faire une soupe ! Rincez-les bien, puis retirez les parties abimées, séchées & jaunies avant de les ajouter dans une casserole avec les ingrédients de votre choix.",
+   "type": {
+    "_id": "645123f770ae101d47660e48",
+    "id": "645123f770ae101d47660e48",
+    "__v": 0,
+    "createdAt": "2023-05-02T14:53:43.188Z",
+    "name": "zero-waste-tip",
+    "title": "♻️ Astuce anti-gaspi",
+    "updatedAt": "2023-05-17T12:19:42.963Z"
+   }
+  },
+  "title": "Risotto aux poireaux",
+  "updatedAt": "2026-04-24T10:07:43.021Z",
+  "userConstituentsIds": [],
+  "difficulty": 1,
+  "directions": [
+   {
+    "id": "5c10e7b1dfc71302916fdfb3",
+    "label": "Faire bouillir 25cl d'eau par personne et y dissoudre le bouillon de légumes.",
+    "videoTimecodeStart": 9.1,
+    "involvedIngredients": [
+     {
+      "id": "5bd995c70d276400042146c2",
+      "name": "Bouillon de légumes (cube)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/HTSOH60mYB28jA.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5c10e7b1dfc71302916fdfb1",
+    "label": "Coupez les extrémités des poireaux* pour ne gardez que le blanc puis émincez finement. Placez dans une passoire et rincez abondamment pour retirer les impuretés. \n*Consultez nos tips pour cette étape",
+    "videoTimecodeStart": 14.4,
+    "involvedIngredients": [
+     {
+      "id": "59ec940ed2dfbb0012bc5399",
+      "name": "Poireau",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/EjlbNB1DecIorw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5c10e7b1dfc71302916fdfb0",
+    "label": "Dans une grande poêle, ajoutez les poireaux égouttés à sec (sans matière grasse) et faire revenir à feu vif pendant 2 minutes en remuant. Ajoutez l'équivalent d'une louche du bouillon et laissez cuire 2 minutes de plus. ",
+    "videoTimecodeStart": 27.9,
+    "involvedIngredients": [
+     {
+      "id": "59ec940ed2dfbb0012bc5399",
+      "name": "Poireau",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/EjlbNB1DecIorw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5c10e7b1dfc71302916fdfaf",
+    "label": "Ajoutez 1 louche de bouillon, le riz et le vin blanc (optionnel). Laissez évaporer puis ajoutez une nouvelle louche de bouillon.",
+    "videoTimecodeStart": 32.5,
+    "involvedIngredients": [
+     {
+      "id": "59fa477ed6de9c00121aa1ef",
+      "name": "Riz (Arborio)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/AGQfy1uRWlE43g.png.webp"
+     },
+     {
+      "id": "59e8aac15c929200124854a8",
+      "name": "Vin blanc",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/opvGYcbHocNPKg.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5f43ecb00a8f77102f4dc375",
+    "label": "Faire de même jusqu'à ce qu'il n'y ai plus de bouillon de légumes. Au bout de 18/20 minutes, le riz doit être cuit. ",
+    "videoTimecodeStart": 45.5,
+    "involvedIngredients": []
+   },
+   {
+    "id": "5c10e7b1dfc71302916fdfae",
+    "label": "Si au bout de 20 minutes le riz n'est pas encore assez cuit, rajouter encore un peu d'eau et prolonger la cuisson. Une fois la cuisson terminée, ajoutez le parmesan, le beurre, (optionnel : un peu de crème pour les gourmands), sel, poivre et mélangez le tout.",
+    "videoTimecodeStart": 74.7,
+    "involvedIngredients": [
+     {
+      "id": "5b80035d05fcd900044fdfb7",
+      "name": "Parmesan (râpé)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/HmFH0IM4TS9RbA.png.webp"
+     },
+     {
+      "id": "59eb9e2440250c00129d9819",
+      "name": "Beurre",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5c110d6538a077302959ef51",
+    "label": "Servir le risotto dans les assiettes, salez, poivrez, c'est prêt !",
+    "videoTimecodeStart": 98.4,
+    "involvedIngredients": []
+   }
+  ],
+  "cookingTime": 30,
+  "isVisible": true,
+  "likes": 132243,
+  "negativeFeedbacks": 6,
+  "nutritionalFacts": [
+   {
+    "id": "ENERC",
+    "label": "Calories",
+    "unit": "kcal",
+    "amount": 403
+   },
+   {
+    "id": "FAT",
+    "label": "Matières grasses",
+    "unit": "g",
+    "amount": 12
+   },
+   {
+    "id": "CHOAVL",
+    "label": "Glucides",
+    "unit": "g",
+    "amount": 62
+   },
+   {
+    "id": "PRO",
+    "label": "Protéines",
+    "unit": "g",
+    "amount": 10
+   },
+   {
+    "id": "FIBTG",
+    "label": "Fibres",
+    "unit": "g",
+    "amount": 4
+   }
+  ],
+  "nutritionalRatingScores": [
+   {
+    "id": "nutriscore",
+    "score": "C",
+    "name": "Nutri-score",
+    "label": "Nutri-score C",
+    "description": "Le Nutri-score est un indicateur destiné à la compréhension des informations nutritionnelles. Les recettes ou les produits sont classés de A à E en fonction de leur teneur en aliments à favoriser (fibres, protéines, fruits, légumes, légumineuses…) et en aliments à limiter (énergie, acides gras saturés, sucres, sel…).",
+    "imageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.svg"
+   },
+   {
+    "id": "greenscore",
+    "score": "A+",
+    "name": "Green-score",
+    "description": "Le Green-score est un indicateur représentant l'impact environnemental des produits alimentaires. Les recettes ou les produits sont classés de A+ à F. Il tient compte de plusieurs facteurs sur la pollution de l'air, des eaux, des océans, du sol, ainsi que les impacts sur la biosphère. Ces impacts sont étudiés tout au long du cycle de vie du produit.",
+    "label": "Green-score A+",
+    "imageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.svg"
+   }
+  ],
+  "nutritionalRatingProvider": {
+   "id": "etiquettable",
+   "name": "Etiquettable",
+   "url": "https://etiquettable.eco2initiative.com/",
+   "label": "Scores calculés par",
+   "imageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.png",
+   "vectorImageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.svg"
+  },
+  "positiveFeedbacks": 190,
+  "preparationExtraTimePerCover": 1,
+  "preparationTime": 5,
+  "requiredTools": [
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   },
+   {
+    "_id": "617a643e9496700f33b089f8",
+    "id": "617a643e9496700f33b089f8",
+    "__v": 0,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "createdAt": "2021-10-28T08:50:06.994Z",
+    "isDefaultChecked": false,
+    "isNotTrivial": false,
+    "name": "Bouilloire",
+    "updatedAt": "2021-10-28T08:50:06.994Z"
+   },
+   {
+    "_id": "598a05cc5d25fb0011015964",
+    "id": "598a05cc5d25fb0011015964",
+    "updatedAt": "2022-04-27T15:40:47.458Z",
+    "createdAt": "2017-08-08T18:41:16.271Z",
+    "imageUrl": "tools/iv7jIro9Ur.png",
+    "name": "Poêle",
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "isDefaultChecked": false,
+    "isNotTrivial": false
+   }
+  ],
+  "totalFeedbacks": 903,
+  "videoUrl": "https://static.jow.fr/recipes/rvZ3t61XYrE45g_high.mp4",
+  "userConstituents": [],
+  "availableLocales": [
+   "fr",
+   "en"
+  ],
+  "family": {
+   "_id": "64832262e710f2ffd0a884ce",
+   "id": "64832262e710f2ffd0a884ce",
+   "allowedRecipeSources": [
+    "jow"
+   ],
+   "createdAt": "2023-06-09T13:00:18.567Z",
+   "keywords": "",
+   "name": "Veggie - grain",
+   "updatedAt": "2023-06-09T13:00:18.567Z"
+  },
+  "imageUrlUHD": "https://static.jow.fr/880x880/recipes/R5KPUdQPrD.png",
+  "indexingStatus": "noindex",
+  "keywords": [
+   "italien",
+   "one pan",
+   "winter",
+   "hiver",
+   "automn",
+   "automne",
+   "automnal",
+   "sans-porc",
+   "végé",
+   "veggie",
+   "vegie",
+   "végétarien"
+  ],
+  "origin": {
+   "_id": "5989fb1d5d25fb001101594f",
+   "id": "5989fb1d5d25fb001101594f",
+   "updatedAt": "2022-06-01T18:56:05.726Z",
+   "createdAt": "2017-08-08T17:55:41.888Z",
+   "name": "Italienne",
+   "__v": 0,
+   "keywords": ""
+  },
+  "posterUrl": "https://static.jow.fr/880x880/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+  "slug": "risotto-aux-poireaux",
+  "thumbnailUrl": "https://static.jow.fr/550x550/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+  "seoImageUrls": [
+   "https://static.jow.fr/1024x1024/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+   "https://static.jow.fr/1024x768/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+   "https://static.jow.fr/1024x576/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+   "https://static.jow.fr/1024x1024/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg.webp",
+   "https://static.jow.fr/1024x768/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg.webp",
+   "https://static.jow.fr/1024x576/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg.webp"
+  ],
+  "ogImageUrl": "https://static.jow.fr/1200x630/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg",
+  "twitterImageUrl": "https://static.jow.fr/1200x675/patterns/yolk-02-202309.png_merge_recipes/R5KPUdQPrD.png.jpg"
+ }
+}

@@ -23,7 +23,7 @@ besoins différents. Aucune app du marché ne modélise ça.
 |---|---|
 | `docs/plan-app-nutrition-famille.md` | **La spec.** Fait autorité sur le modèle de données, l'API, la roadmap, les règles. |
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
-| `docs/jow-contract.md` | À créer en Tâche 0. Contrat de parsing des pages Jow. |
+| `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
 
 En cas de contradiction entre ce fichier et la spec, **la spec gagne** — sauf sur
 les interdits ci-dessous, qui ne se négocient pas.
@@ -88,24 +88,22 @@ Le reste est tranché dans la spec. Les décisions y sont motivées pour pouvoir
 
 ## Ordre de travail
 
-### Tâche 0 — Contrat Jow (BLOQUANT)
+### Tâche 0 — Contrat Jow — ✅ faite le 13/09/2026
 
-Rien ne démarre avant. Voir §3 de la spec.
+Résultat dans `docs/jow-contract.md`, code dans `server/jow/`. Trois points à
+ne pas réintroduire par habitude :
 
-Objectif : un script qui prend le texte d'un partage Jow et ressort
-`{ title, servings, ingredients[], nutrition{} }`, validé sur **5 recettes
-différentes**.
+- **La résolution par titre slugifié est inutile.** `jow.fr/fr/recipes/<ObjectId>`
+  redirige vers l'URL canonique : le `recipeId` du lien de partage suffit.
+- **`coversCount` n'est pas un facteur d'échelle.** Les quantités sont par
+  convive, les valeurs nutritionnelles par portion, quel que soit son contenu.
+  C'est `recipe.base_servings`, rien de plus.
+- **Le parseur ne convertit que les unités de masse.** `Poignée`, `Pièce`,
+  `Cuillère à soupe`, `Litre` ressortent à `null` : ces conversions sont dans
+  `unit_default`, qui exige une source.
 
-Points connus :
-- Les pages `jow.fr/fr/recipes/<slug>` sont publiques et contiennent ingrédients
-  avec quantités, valeurs par portion, Nutri-Score.
-- Le site est en Next.js → chercher `__NEXT_DATA__` ou les payloads RSC dans le
-  HTML brut (`curl`, pas un extracteur de texte).
-- **Piège** : le `recipeId` du lien de partage (ObjectId Mongo) n'est pas le
-  suffixe de l'URL web. Résoudre par le titre slugifié, puis mettre en cache
-  dans `recipe.jow_slug`.
-- Le parseur doit être tolérant : structure inattendue → `confidence='basse'` et
-  bascule en saisie manuelle, jamais un crash.
+Avant de toucher à `server/jow/`, lire le contrat. Les échantillons figés se
+recapturent (`npm run jow:capture`), ne se modifient pas à la main.
 
 ### Ensuite
 

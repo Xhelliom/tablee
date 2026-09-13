@@ -1,0 +1,703 @@
+{
+ "capturedAt": "2026-09-13T16:49:23.094Z",
+ "url": "https://jow.fr/recipes/poulet-roti-et-duo-de-patates-825a7810aqog00z5118g",
+ "recipe": {
+  "additionalConstituents": [],
+  "aggregateRating": 0.9538461538461538,
+  "author": {
+   "id": "618aa483934d1027ae7e6d24",
+   "imageUrl": "https://static.jow.fr/72x72/authors/AxslNx7FApSmIg.jpg.webp",
+   "name": "Victoire"
+  },
+  "backgroundColor": "#4b303f",
+  "backgroundPattern": {
+   "color": "#fcb2b0",
+   "imageUrl": "https://static.jow.fr/304x304/patterns/raddish-04-202309.png",
+   "imageUrlHD": "https://static.jow.fr/550x550/patterns/raddish-04-202309.png",
+   "imageUrlUHD": "https://static.jow.fr/880x880/patterns/raddish-04-202309.png"
+  },
+  "composition": "Poulet, pommes de terres, patate douce, beurre, échalote",
+  "constituentIds": [
+   {
+    "id": "59eb9d2640250c00129d980e",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/lnc28T3dsuTvrQ.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c23d414246c127285c14b"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59b851d18b98250012a9b613",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/txHTcHrfHiLusA.jpg.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "59aadbd4797a8c0011177854"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "5bcde30b647a590004f1bc7c",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/R1ClzDkNDX7OqA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c23d414246c127285c14b"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59aadc42797a8c0011177856",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59aadbbd797a8c0011177853",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/BygC1XvHAKxQzg.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": [
+     "5d5fefda6ab6c9534943520f"
+    ]
+   }
+  ],
+  "constituents": [
+   {
+    "id": "59eb9d2640250c00129d980e",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "598c23d414246c127285c14b",
+     "id": "598c23d414246c127285c14b",
+     "updatedAt": "2025-03-26T09:59:21.516Z",
+     "createdAt": "2017-08-10T09:13:57.000Z",
+     "isNatural": true,
+     "name": "Pièce",
+     "__v": 11,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f8718531a979c77b221f",
+       "id": "6229f8718531a979c77b221f",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "6229f8718531a979c77b2220",
+       "id": "6229f8718531a979c77b2220",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Poulet (entier)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/lnc28T3dsuTvrQ.png.webp"
+   },
+   {
+    "id": "59b851d18b98250012a9b613",
+    "isOptional": false,
+    "quantityPerCover": 1,
+    "unit": {
+     "_id": "59aadbd4797a8c0011177854",
+     "id": "59aadbd4797a8c0011177854",
+     "updatedAt": "2025-03-26T09:59:37.116Z",
+     "createdAt": "2017-09-02T16:27:00.318Z",
+     "name": "Pièce",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f87c8531a979c77b222c",
+       "id": "6229f87c8531a979c77b222c",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "63f4ca979b0e113c174f3f29",
+       "id": "63f4ca979b0e113c174f3f29",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR alternative"
+    },
+    "additionalMeasures": [],
+    "name": "Échalote",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/txHTcHrfHiLusA.jpg.webp"
+   },
+   {
+    "id": "5bcde30b647a590004f1bc7c",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "598c23d414246c127285c14b",
+     "id": "598c23d414246c127285c14b",
+     "updatedAt": "2025-03-26T09:59:21.516Z",
+     "createdAt": "2017-08-10T09:13:57.000Z",
+     "isNatural": true,
+     "name": "Pièce",
+     "__v": 11,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f8718531a979c77b221f",
+       "id": "6229f8718531a979c77b221f",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "6229f8718531a979c77b2220",
+       "id": "6229f8718531a979c77b2220",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Bouquet garni",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/R1ClzDkNDX7OqA.png.webp"
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "isOptional": false,
+    "quantityPerCover": 0.02,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Beurre",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+   },
+   {
+    "id": "59aadc42797a8c0011177856",
+    "isOptional": false,
+    "quantityPerCover": 0.1,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Pommes de terre",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp"
+   },
+   {
+    "id": "59aadbbd797a8c0011177853",
+    "isOptional": false,
+    "quantityPerCover": 0.1,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Patate douce",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/BygC1XvHAKxQzg.png.webp"
+   }
+  ],
+  "coversCount": 4,
+  "coversOptions": [
+   4,
+   8,
+   12,
+   16,
+   20,
+   24,
+   28
+  ],
+  "createdAt": "2018-10-22T14:56:36.000Z",
+  "description": "Le poulet rôti du dimanche midi se fait beau pour vous et s'accessoirise d'un duo de pommes de terre fondantes et colorées.",
+  "badges": [
+   {
+    "type": "rating",
+    "value": 4.8
+   },
+   {
+    "type": "duration",
+    "preparationTime": 15,
+    "cookingTime": 90,
+    "preparationExtraTimePerCover": 0
+   },
+   {
+    "type": "unit-name",
+    "unitName": {
+     "singular": "poulet",
+     "plural": "poulets"
+    },
+    "roundedCoversCount": 4
+   },
+   {
+    "type": "covers-count"
+   }
+  ],
+  "displayVegetarianBadge": false,
+  "eatingHabitsCompatibility": {
+   "porkless": true,
+   "vegetarian": false,
+   "vegan": false,
+   "glutenFree": true,
+   "dairyFree": false,
+   "pescatarian": false
+  },
+  "id": "5bcde524647a590004f1bc80",
+  "imageUrl": "https://static.jow.fr/304x304/recipes/Tk8wfeLJo3.png",
+  "imageUrlHD": "https://static.jow.fr/550x550/recipes/Tk8wfeLJo3.png",
+  "isAvailable": true,
+  "missingIngredients": [],
+  "pricePerPortionTag": {
+   "level": 2,
+   "currency": "EUR",
+   "label": "2 € et 4 € par portion"
+  },
+  "requiredNonTrivialToolsAndChildren": [
+   {
+    "_id": "59ccb6a4bb08340012ca6b9a",
+    "id": "59ccb6a4bb08340012ca6b9a",
+    "updatedAt": "2024-10-28T11:06:59.337Z",
+    "createdAt": "2017-09-28T08:45:24.402Z",
+    "imageUrl": "tools/PMq1FjiP805SNQ.png.webp",
+    "name": "Four",
+    "isNotTrivial": true,
+    "__v": 6,
+    "childrenTools": [],
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   }
+  ],
+  "roundedCoversCount": 4,
+  "source": "jow",
+  "tagsEdito": [],
+  "tip": {},
+  "title": "Poulet rôti & duo de patates",
+  "unitName": {
+   "singular": "poulet",
+   "plural": "poulets"
+  },
+  "updatedAt": "2026-04-24T10:07:43.021Z",
+  "userConstituentsIds": [],
+  "difficulty": 1,
+  "directions": [
+   {
+    "id": "59ebab7040250c00129d9830",
+    "label": "Préchauffer le four à 200°C. Lavez, puis épluchez les pommes de terre et les patates douces, coupez les en cubes de 2-3 cm environ.",
+    "videoTimecodeStart": 9.1,
+    "involvedIngredients": [
+     {
+      "id": "59aadc42797a8c0011177856",
+      "name": "Pommes de terre",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp"
+     },
+     {
+      "id": "59aadbbd797a8c0011177853",
+      "name": "Patate douce",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/BygC1XvHAKxQzg.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5f3d36453baafc106452191f",
+    "label": "Épluchez et coupez les échalotes en 2. ",
+    "videoTimecodeStart": 19.8,
+    "involvedIngredients": [
+     {
+      "id": "59b851d18b98250012a9b613",
+      "name": "Échalote",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/txHTcHrfHiLusA.jpg.webp"
+     }
+    ]
+   },
+   {
+    "id": "59ebab7040250c00129d982f",
+    "label": "Dans un plat allant au four, disposez le poulet, les pommes de terre et les patates douces, les échalotes, le bouquet garni.",
+    "videoTimecodeStart": 26,
+    "involvedIngredients": [
+     {
+      "id": "59eb9d2640250c00129d980e",
+      "name": "Poulet (entier)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/lnc28T3dsuTvrQ.png.webp"
+     },
+     {
+      "id": "5bcde30b647a590004f1bc7c",
+      "name": "Bouquet garni",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/R1ClzDkNDX7OqA.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5f3d36453baafc1064521939",
+    "label": " Ajoutez le beurre en tranches sur le poulet. Salez, poivrez le tout et ajoutez un filet d'huile d'olive.",
+    "videoTimecodeStart": 33,
+    "involvedIngredients": [
+     {
+      "id": "59eb9e2440250c00129d9819",
+      "name": "Beurre",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "59ebab7040250c00129d982e",
+    "label": "Enfournez à 200°C pendant 10 minutes puis baissez à 180°C et laissez cuire 1h20 en remuant les pommes de terres de temps en temps (en fonction de la taille du poulet, comptez environ une demi-heure par 500 g). ",
+    "videoTimecodeStart": 42.1,
+    "involvedIngredients": []
+   },
+   {
+    "id": "5f3d36453baafc106452193c",
+    "label": "A mi-cuisson ajoutez un demi verre d'eau sur le poulet. C'est prêt !",
+    "videoTimecodeStart": 46.7,
+    "involvedIngredients": []
+   }
+  ],
+  "cookingTime": 90,
+  "isVisible": true,
+  "likes": 31801,
+  "negativeFeedbacks": 1,
+  "nutritionalFacts": [
+   {
+    "id": "ENERC",
+    "label": "Calories",
+    "unit": "kcal",
+    "amount": 868
+   },
+   {
+    "id": "FAT",
+    "label": "Matières grasses",
+    "unit": "g",
+    "amount": 48
+   },
+   {
+    "id": "CHOAVL",
+    "label": "Glucides",
+    "unit": "g",
+    "amount": 41
+   },
+   {
+    "id": "PRO",
+    "label": "Protéines",
+    "unit": "g",
+    "amount": 65
+   },
+   {
+    "id": "FIBTG",
+    "label": "Fibres",
+    "unit": "g",
+    "amount": 7
+   }
+  ],
+  "nutritionalRatingScores": [
+   {
+    "id": "nutriscore",
+    "score": "A",
+    "name": "Nutri-score",
+    "label": "Nutri-score A",
+    "description": "Le Nutri-score est un indicateur destiné à la compréhension des informations nutritionnelles. Les recettes ou les produits sont classés de A à E en fonction de leur teneur en aliments à favoriser (fibres, protéines, fruits, légumes, légumineuses…) et en aliments à limiter (énergie, acides gras saturés, sucres, sel…).",
+    "imageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-A-horizontal.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-A-horizontal.svg"
+   },
+   {
+    "id": "greenscore",
+    "score": "B",
+    "name": "Green-score",
+    "description": "Le Green-score est un indicateur représentant l'impact environnemental des produits alimentaires. Les recettes ou les produits sont classés de A+ à F. Il tient compte de plusieurs facteurs sur la pollution de l'air, des eaux, des océans, du sol, ainsi que les impacts sur la biosphère. Ces impacts sont étudiés tout au long du cycle de vie du produit.",
+    "label": "Green-score B",
+    "imageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-B-picto.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-B-picto.svg"
+   }
+  ],
+  "nutritionalRatingProvider": {
+   "id": "etiquettable",
+   "name": "Etiquettable",
+   "url": "https://etiquettable.eco2initiative.com/",
+   "label": "Scores calculés par",
+   "imageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.png",
+   "vectorImageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.svg"
+  },
+  "positiveFeedbacks": 91,
+  "preparationExtraTimePerCover": 0,
+  "preparationTime": 15,
+  "requiredTools": [
+   {
+    "_id": "59ccb6a4bb08340012ca6b9a",
+    "id": "59ccb6a4bb08340012ca6b9a",
+    "updatedAt": "2024-10-28T11:06:59.337Z",
+    "createdAt": "2017-09-28T08:45:24.402Z",
+    "imageUrl": "tools/PMq1FjiP805SNQ.png.webp",
+    "name": "Four",
+    "isNotTrivial": true,
+    "__v": 6,
+    "childrenTools": [],
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   },
+   {
+    "_id": "61791839985feb0ee8c4f312",
+    "id": "61791839985feb0ee8c4f312",
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "createdAt": "2021-10-27T09:13:29.792Z",
+    "isDefaultChecked": false,
+    "isNotTrivial": false,
+    "name": "Plat à gratin",
+    "updatedAt": "2022-04-27T15:39:10.876Z"
+   },
+   {
+    "_id": "5b4f2ce0454ad30014dadd07",
+    "id": "5b4f2ce0454ad30014dadd07",
+    "name": "Économe",
+    "isNotTrivial": false,
+    "childrenTools": [],
+    "createdAt": "2018-07-18T12:04:48.440Z",
+    "updatedAt": "2021-10-27T10:41:10.092Z",
+    "__v": 1,
+    "isDefaultChecked": false,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   }
+  ],
+  "totalFeedbacks": 104,
+  "videoUrl": "https://static.jow.fr/recipes/kIqdKfXNouxClg_high.mp4",
+  "userConstituents": [],
+  "availableLocales": [
+   "fr",
+   "en"
+  ],
+  "family": {
+   "_id": "64832262e710f2ffd0a884b2",
+   "id": "64832262e710f2ffd0a884b2",
+   "allowedRecipeSources": [
+    "jow"
+   ],
+   "createdAt": "2023-06-09T13:00:18.567Z",
+   "keywords": "repas protéiné",
+   "name": "Protéines Animales + Féculent",
+   "updatedAt": "2023-07-06T13:56:50.091Z",
+   "__v": 1,
+   "availabilityZonesForUGC": [],
+   "childrenFamilies": []
+  },
+  "imageUrlUHD": "https://static.jow.fr/880x880/recipes/Tk8wfeLJo3.png",
+  "indexingStatus": "noindex",
+  "keywords": [
+   "familial",
+   "famille",
+   "au four",
+   "comfort",
+   "gras",
+   "graisse",
+   "confort",
+   "réconfortante",
+   "rassasiant",
+   "rassasiante",
+   "pornfood",
+   "réconfort",
+   "foodporn",
+   "gras",
+   "sans-porc",
+   "sans-gluten",
+   "gluten",
+   "viande",
+   "viandard",
+   "saignant"
+  ],
+  "posterUrl": "https://static.jow.fr/880x880/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+  "slug": "poulet-roti-et-duo-de-patates",
+  "thumbnailUrl": "https://static.jow.fr/550x550/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+  "seoImageUrls": [
+   "https://static.jow.fr/1024x1024/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+   "https://static.jow.fr/1024x768/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+   "https://static.jow.fr/1024x576/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+   "https://static.jow.fr/1024x1024/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg.webp",
+   "https://static.jow.fr/1024x768/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg.webp",
+   "https://static.jow.fr/1024x576/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg.webp"
+  ],
+  "ogImageUrl": "https://static.jow.fr/1200x630/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg",
+  "twitterImageUrl": "https://static.jow.fr/1200x675/patterns/raddish-04-202309.png_merge_recipes/Tk8wfeLJo3.png.jpg"
+ }
+}

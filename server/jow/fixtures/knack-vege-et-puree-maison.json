@@ -1,0 +1,598 @@
+{
+ "capturedAt": "2026-09-13T16:48:34.081Z",
+ "url": "https://jow.fr/recipes/knack-vege-et-puree-maison-8rfp9w3k0vvqizac0v4l",
+ "recipe": {
+  "additionalConstituents": [],
+  "aggregateRating": 0.852,
+  "author": {
+   "id": "62851986e7f1b84128b55a68",
+   "imageUrl": "https://static.jow.fr/72x72/authors/jqEd10UD4uBVkA.jpg.webp",
+   "name": "Camille U."
+  },
+  "backgroundColor": "#ffffff",
+  "backgroundPattern": {
+   "color": "#ffc847",
+   "imageUrl": "https://static.jow.fr/304x304/patterns/yolk-01-202309.png",
+   "imageUrlHD": "https://static.jow.fr/550x550/patterns/yolk-01-202309.png",
+   "imageUrlUHD": "https://static.jow.fr/880x880/patterns/yolk-01-202309.png"
+  },
+  "composition": "Knack veggie, pommes de terre, lait, beurre",
+  "constituentIds": [
+   {
+    "id": "59aadc42797a8c0011177856",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "63dbbff0bf5a6233d3d66adc",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/P2V3erd81jVRQA.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "59aadbd4797a8c0011177854"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59aaf918797a8c00111778a2",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/UbHoDpGIcLY0AQ.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c237f14246c127285c149"
+    ],
+    "alternatives": []
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp",
+    "isOptional": false,
+    "preferredUnits": [
+     "598c239e14246c127285c14a"
+    ],
+    "alternatives": []
+   }
+  ],
+  "constituents": [
+   {
+    "id": "59aadc42797a8c0011177856",
+    "isOptional": false,
+    "quantityPerCover": 0.25,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Pommes de terre",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp"
+   },
+   {
+    "id": "63dbbff0bf5a6233d3d66adc",
+    "isOptional": false,
+    "quantityPerCover": 2,
+    "unit": {
+     "_id": "59aadbd4797a8c0011177854",
+     "id": "59aadbd4797a8c0011177854",
+     "updatedAt": "2025-03-26T09:59:37.116Z",
+     "createdAt": "2017-09-02T16:27:00.318Z",
+     "name": "Pièce",
+     "__v": 8,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": true,
+      "us": true
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1,
+       "inverse": true,
+       "_id": "6229f87c8531a979c77b222c",
+       "id": "6229f87c8531a979c77b222c",
+       "label": " "
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "63f4ca979b0e113c174f3f29",
+       "id": "63f4ca979b0e113c174f3f29",
+       "label": " "
+      }
+     ],
+     "comments": "taille FR alternative"
+    },
+    "additionalMeasures": [],
+    "name": "Saucisse knack (veggie)",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/P2V3erd81jVRQA.png.webp"
+   },
+   {
+    "id": "59aaf918797a8c00111778a2",
+    "isOptional": false,
+    "quantityPerCover": 0.05,
+    "unit": {
+     "_id": "598c237f14246c127285c149",
+     "id": "598c237f14246c127285c149",
+     "updatedAt": "2025-03-26T09:58:44.385Z",
+     "createdAt": "2017-08-10T09:12:31.763Z",
+     "isNatural": true,
+     "name": "Litre",
+     "__v": 6,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "65a80cc1221c78000f3943b8",
+       "id": "65a80cc1221c78000f3943b8",
+       "label": "ml"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd47ea9d69f51009e1df2",
+       "id": "5e5fd47ea9d69f51009e1df2",
+       "label": "L"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Lait",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/UbHoDpGIcLY0AQ.png.webp"
+   },
+   {
+    "id": "59eb9e2440250c00129d9819",
+    "isOptional": false,
+    "quantityPerCover": 0.02,
+    "unit": {
+     "_id": "598c239e14246c127285c14a",
+     "id": "598c239e14246c127285c14a",
+     "updatedAt": "2025-03-26T09:57:46.671Z",
+     "createdAt": "2017-08-10T09:13:02.818Z",
+     "isNatural": true,
+     "name": "Kilogramme",
+     "__v": 17,
+     "measurementSystemCompatibility": {
+      "metric": true,
+      "imperial": false,
+      "us": false
+     },
+     "abbreviations": [
+      {
+       "minAmount": 0,
+       "maxAmount": 0.001,
+       "digits": 0,
+       "divisor": 1000000,
+       "inverse": false,
+       "_id": "5e60d30747401d500e61eb8d",
+       "id": "5e60d30747401d500e61eb8d",
+       "label": "mg"
+      },
+      {
+       "minAmount": 0.001,
+       "maxAmount": 1,
+       "digits": 0,
+       "divisor": 1000,
+       "inverse": false,
+       "_id": "5e5fc70840f533a26f0ad471",
+       "id": "5e5fc70840f533a26f0ad471",
+       "label": "g"
+      },
+      {
+       "minAmount": 1,
+       "digits": 1,
+       "divisor": 1,
+       "inverse": false,
+       "_id": "5e5fd473a9d69f51009e1dea",
+       "id": "5e5fd473a9d69f51009e1dea",
+       "label": "kg"
+      }
+     ],
+     "comments": "naturelle"
+    },
+    "additionalMeasures": [],
+    "name": "Beurre",
+    "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+   }
+  ],
+  "coversCount": 1,
+  "coversOptions": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30
+  ],
+  "createdAt": "2023-02-02T23:00:00.000Z",
+  "description": "Le classique knack purée mais en version végé !",
+  "badges": [
+   {
+    "type": "rating",
+    "value": 4.3
+   },
+   {
+    "type": "duration",
+    "preparationTime": 3,
+    "cookingTime": 15,
+    "preparationExtraTimePerCover": 2
+   },
+   {
+    "type": "low-price",
+    "accessibilityLabel": "-2 € par portion",
+    "currency": "EUR"
+   },
+   {
+    "type": "covers-count"
+   }
+  ],
+  "displayVegetarianBadge": false,
+  "eatingHabitsCompatibility": {
+   "porkless": true,
+   "vegetarian": true,
+   "vegan": false,
+   "glutenFree": false,
+   "dairyFree": false,
+   "pescatarian": true
+  },
+  "id": "63ce570ac00a166d83249d95",
+  "imageUrl": "https://static.jow.fr/304x304/recipes/5F906ddAJkiAZA.png",
+  "imageUrlHD": "https://static.jow.fr/550x550/recipes/5F906ddAJkiAZA.png",
+  "isAvailable": true,
+  "missingIngredients": [],
+  "pricePerPortionTag": {
+   "level": 1,
+   "currency": "EUR",
+   "label": "-2 € par portion"
+  },
+  "requiredNonTrivialToolsAndChildren": [
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   }
+  ],
+  "roundedCoversCount": 1,
+  "source": "jow",
+  "tagsEdito": [],
+  "tip": {},
+  "title": "Knack végé & purée maison",
+  "updatedAt": "2026-04-24T13:59:35.811Z",
+  "userConstituentsIds": [],
+  "difficulty": 0,
+  "directions": [
+   {
+    "id": "5a6f2f32ed87b60014de3923",
+    "label": "Épluchez les pommes de terre et coupez-les en dés.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "59aadc42797a8c0011177856",
+      "name": "Pommes de terre",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/AAfLEEPhsvb8lQ.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5a6f2f32ed87b60014de3922",
+    "label": "Faites bouillir une casserole d'eau chaude, versez-y les pommes de terre et laissez cuire 15 minutes.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": []
+   },
+   {
+    "id": "5f74894d0646b50cbf97304f",
+    "label": "Faites cuire les knacks selon les instructions du paquet.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "63dbbff0bf5a6233d3d66adc",
+      "name": "Saucisse knack (veggie)",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/P2V3erd81jVRQA.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5f74894d0646b50cbf973051",
+    "label": "Stoppez la cuisson des pommes de terre. À l'aide d'une fourchette, écrasez les pommes de terre, ajoutez le lait et le beurre, salez et poivrez.",
+    "videoTimecodeStart": null,
+    "involvedIngredients": [
+     {
+      "id": "59aaf918797a8c00111778a2",
+      "name": "Lait",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/UbHoDpGIcLY0AQ.png.webp"
+     },
+     {
+      "id": "59eb9e2440250c00129d9819",
+      "name": "Beurre",
+      "imageUrl": "https://static.jow.fr/160x160/ingredients/enheudgtrxVpfw.png.webp"
+     }
+    ]
+   },
+   {
+    "id": "5f74894d0646b50cbf973055",
+    "label": "Servez les knack et la purée. Ajoutez quelques herbes fraîches si vous en avez. C'est prêt !",
+    "videoTimecodeStart": null,
+    "involvedIngredients": []
+   }
+  ],
+  "cookingTime": 15,
+  "isVisible": true,
+  "likes": 11895,
+  "negativeFeedbacks": 1,
+  "nutritionalFacts": [
+   {
+    "id": "ENERC",
+    "label": "Calories",
+    "unit": "kcal",
+    "amount": 550
+   },
+   {
+    "id": "FAT",
+    "label": "Matières grasses",
+    "unit": "g",
+    "amount": 25
+   },
+   {
+    "id": "CHOAVL",
+    "label": "Glucides",
+    "unit": "g",
+    "amount": 48
+   },
+   {
+    "id": "PRO",
+    "label": "Protéines",
+    "unit": "g",
+    "amount": 26
+   },
+   {
+    "id": "FIBTG",
+    "label": "Fibres",
+    "unit": "g",
+    "amount": 8
+   }
+  ],
+  "nutritionalRatingScores": [
+   {
+    "id": "nutriscore",
+    "score": "C",
+    "name": "Nutri-score",
+    "label": "Nutri-score C",
+    "description": "Le Nutri-score est un indicateur destiné à la compréhension des informations nutritionnelles. Les recettes ou les produits sont classés de A à E en fonction de leur teneur en aliments à favoriser (fibres, protéines, fruits, légumes, légumineuses…) et en aliments à limiter (énergie, acides gras saturés, sucres, sel…).",
+    "imageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/nutri-scores/nutri-score-C-horizontal.svg"
+   },
+   {
+    "id": "greenscore",
+    "score": "A+",
+    "name": "Green-score",
+    "description": "Le Green-score est un indicateur représentant l'impact environnemental des produits alimentaires. Les recettes ou les produits sont classés de A+ à F. Il tient compte de plusieurs facteurs sur la pollution de l'air, des eaux, des océans, du sol, ainsi que les impacts sur la biosphère. Ces impacts sont étudiés tout au long du cycle de vie du produit.",
+    "label": "Green-score A+",
+    "imageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.png",
+    "vectorImageUrl": "https://static.jow.fr/product-scores/green-scores/green-score-A-plus-picto.svg"
+   }
+  ],
+  "nutritionalRatingProvider": {
+   "id": "etiquettable",
+   "name": "Etiquettable",
+   "url": "https://etiquettable.eco2initiative.com/",
+   "label": "Scores calculés par",
+   "imageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.png",
+   "vectorImageUrl": "https://static.jow.fr/product-scores/etiquettable/etiquettable.svg"
+  },
+  "positiveFeedbacks": 6,
+  "preparationExtraTimePerCover": 2,
+  "preparationTime": 3,
+  "requiredTools": [
+   {
+    "_id": "5a85c3bd7e086300146d8761",
+    "id": "5a85c3bd7e086300146d8761",
+    "updatedAt": "2024-10-28T11:09:56.435Z",
+    "createdAt": "2018-02-15T17:30:37.172Z",
+    "imageUrl": "tools/KwLdRqoUnt9ipw.png.webp",
+    "name": "Plaques de cuisson",
+    "isDefaultChecked": true,
+    "childrenTools": [],
+    "isNotTrivial": true,
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   },
+   {
+    "_id": "5b4f2ce0454ad30014dadd07",
+    "id": "5b4f2ce0454ad30014dadd07",
+    "name": "Économe",
+    "isNotTrivial": false,
+    "childrenTools": [],
+    "createdAt": "2018-07-18T12:04:48.440Z",
+    "updatedAt": "2021-10-27T10:41:10.092Z",
+    "__v": 1,
+    "isDefaultChecked": false,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ]
+   },
+   {
+    "_id": "598b3ffcfd078b00111409f9",
+    "id": "598b3ffcfd078b00111409f9",
+    "updatedAt": "2021-11-22T14:33:45.727Z",
+    "createdAt": "2017-08-09T17:01:48.901Z",
+    "imageUrl": "tools/w4oVUkDcBN.png",
+    "name": "Casserole",
+    "__v": 2,
+    "childrenTools": [],
+    "isNotTrivial": false,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "isDefaultChecked": false
+   },
+   {
+    "_id": "598a05cc5d25fb0011015964",
+    "id": "598a05cc5d25fb0011015964",
+    "updatedAt": "2022-04-27T15:40:47.458Z",
+    "createdAt": "2017-08-08T18:41:16.271Z",
+    "imageUrl": "tools/iv7jIro9Ur.png",
+    "name": "Poêle",
+    "__v": 1,
+    "availabilityZones": [
+     "FR",
+     "US"
+    ],
+    "childrenTools": [],
+    "isDefaultChecked": false,
+    "isNotTrivial": false
+   }
+  ],
+  "totalFeedbacks": 150,
+  "userConstituents": [],
+  "availableLocales": [
+   "fr"
+  ],
+  "family": {
+   "_id": "64832262e710f2ffd0a884ce",
+   "id": "64832262e710f2ffd0a884ce",
+   "allowedRecipeSources": [
+    "jow"
+   ],
+   "createdAt": "2023-06-09T13:00:18.567Z",
+   "keywords": "",
+   "name": "Veggie - grain",
+   "updatedAt": "2023-06-09T13:00:18.567Z"
+  },
+  "imageUrlUHD": "https://static.jow.fr/880x880/recipes/5F906ddAJkiAZA.png",
+  "indexingStatus": "noindex",
+  "keywords": [
+   "knack",
+   "knacki",
+   "saucisse végégtale",
+   "veg",
+   "végé",
+   "veggie",
+   "végétarien",
+   "vegetarian",
+   "purée",
+   "purée maison",
+   "pommes de terre",
+   "pdt",
+   "healthy",
+   "léger",
+   "sain",
+   "équilibré",
+   "fit",
+   "sans-porc",
+   "végé",
+   "veggie",
+   "vegie",
+   "végétarien"
+  ],
+  "posterUrl": "https://static.jow.fr/880x880/patterns/yolk-01-202309.png_merge_recipes/5F906ddAJkiAZA.png.jpg",
+  "slug": "knack-vege-et-puree-maison",
+  "thumbnailUrl": "https://static.jow.fr/550x550/patterns/yolk-01-202309.png_merge_recipes/5F906ddAJkiAZA.png.jpg",
+  "seoImageUrls": [
+   "https://static.jow.fr/1024x1024/recipes/Uf98YLNIWL5IiA.jpg",
+   "https://static.jow.fr/1024x768/recipes/Uf98YLNIWL5IiA.jpg",
+   "https://static.jow.fr/1024x576/recipes/Uf98YLNIWL5IiA.jpg",
+   "https://static.jow.fr/1024x1024/recipes/Uf98YLNIWL5IiA.jpg.webp",
+   "https://static.jow.fr/1024x768/recipes/Uf98YLNIWL5IiA.jpg.webp",
+   "https://static.jow.fr/1024x576/recipes/Uf98YLNIWL5IiA.jpg.webp"
+  ],
+  "ogImageUrl": "https://static.jow.fr/1200x630/recipes/Uf98YLNIWL5IiA.jpg",
+  "twitterImageUrl": "https://static.jow.fr/1200x675/recipes/Uf98YLNIWL5IiA.jpg"
+ }
+}
