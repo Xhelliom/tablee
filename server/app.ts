@@ -14,6 +14,7 @@ import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { COOKIE_NAME, findSession, type Session } from './auth/session.ts';
+import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
 import { authRoutes } from './routes/auth.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
@@ -43,7 +44,23 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
   const app = Fastify({
     // Silencieux par défaut : l'app tourne chez l'utilisateur, un log par
     // requête ne sert à personne. `TABLEE_LOG=1` le rallume pour diagnostiquer.
-    logger: process.env['TABLEE_LOG'] === '1',
+    logger:
+      process.env['TABLEE_LOG'] === '1'
+        ? {
+            serializers: {
+              /**
+               * I6 — le share target arrive en GET, et le texte partagé par
+               * Jow atterrit donc **dans l'URL**, percent-encodé, jetons `key`
+               * et `userId` compris. Le journal de requêtes les écrirait tels
+               * quels sur le disque : ils sont expurgés avant d'y entrer.
+               */
+              req: (request: { method: string; url: string }) => ({
+                method: request.method,
+                url: redactRequestUrl(request.url),
+              }),
+            },
+          }
+        : false,
     // Un partage Jow arrive en GET avec un texte long dans la query.
     routerOptions: { maxParamLength: 500 },
   });
