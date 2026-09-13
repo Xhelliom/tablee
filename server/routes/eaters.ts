@@ -7,7 +7,7 @@ import { ApiError } from '../http/errors.ts';
 import {
   body, isoDate, num, optionalStr, sex, str, stringArray, uuid,
 } from '../http/validate.ts';
-import { createMember, listMembers, updateMember, type Member } from '../repo/members.ts';
+import { createEater, listEaters, updateEater, type Eater } from '../repo/eaters.ts';
 import type { AppContext } from '../app.ts';
 
 /**
@@ -17,19 +17,19 @@ import type { AppContext } from '../app.ts';
  * âge de son côté : aucun objectif chiffré de calories ni de poids sur un
  * profil mineur, nulle part.
  */
-function present(member: Member): Member & { age: number; minor: boolean } {
-  return { ...member, age: ageAt(member.birthDate), minor: isMinor(member.birthDate) };
+function present(eater: Eater): Eater & { age: number; minor: boolean } {
+  return { ...eater, age: ageAt(eater.birthDate), minor: isMinor(eater.birthDate) };
 }
 
-export function memberRoutes(app: FastifyInstance, ctx: AppContext): void {
-  app.get('/api/members', async (request) => {
-    const members = await listMembers(ctx.pool, request.householdId());
-    return { members: members.map(present) };
+export function eaterRoutes(app: FastifyInstance, ctx: AppContext): void {
+  app.get('/api/eaters', async (request) => {
+    const eaters = await listEaters(ctx.pool, request.householdId());
+    return { eaters: eaters.map(present) };
   });
 
-  app.post('/api/members', async (request, reply) => {
+  app.post('/api/eaters', async (request, reply) => {
     const input = body(request.body);
-    const member = await createMember(ctx.pool, request.householdId(), {
+    const eater = await createEater(ctx.pool, request.householdId(), {
       firstName: str(input['firstName'], 'firstName', { max: 80 }),
       birthDate: isoDate(input['birthDate'], 'birthDate'),
       sex: sex(input['sex']),
@@ -41,7 +41,7 @@ export function memberRoutes(app: FastifyInstance, ctx: AppContext): void {
       color: optionalStr(input['color'], 'color', { max: 20 }),
     });
     reply.code(201);
-    return { member: present(member) };
+    return { eater: present(eater) };
   });
 
   /**
@@ -51,11 +51,11 @@ export function memberRoutes(app: FastifyInstance, ctx: AppContext): void {
    * demain ; ce qu'il a mangé hier ne change pas. Le repas garde la part qui a
    * été figée au moment où il a été enregistré.
    */
-  app.patch<{ Params: { id: string } }>('/api/members/:id', async (request) => {
+  app.patch<{ Params: { id: string } }>('/api/eaters/:id', async (request) => {
     const id = uuid(request.params.id, 'id');
     const input = body(request.body);
 
-    const member = await updateMember(ctx.pool, request.householdId(), id, {
+    const eater = await updateEater(ctx.pool, request.householdId(), id, {
       ...(input['firstName'] !== undefined && { firstName: str(input['firstName'], 'firstName', { max: 80 }) }),
       ...(input['birthDate'] !== undefined && { birthDate: isoDate(input['birthDate'], 'birthDate') }),
       ...(input['sex'] !== undefined && { sex: sex(input['sex']) }),
@@ -67,7 +67,7 @@ export function memberRoutes(app: FastifyInstance, ctx: AppContext): void {
       ...(input['active'] !== undefined && { active: input['active'] === true }),
     });
 
-    if (member === null) throw ApiError.notFound('membre introuvable');
-    return { member: present(member) };
+    if (eater === null) throw ApiError.notFound('membre introuvable');
+    return { eater: present(eater) };
   });
 }

@@ -19,7 +19,7 @@ describe('calculerShares', () => {
     ];
     for (const coefs of familles) {
       const shares = calculerShares(
-        coefs.map((portionCoef, i) => ({ memberId: `m${i}`, portionCoef })),
+        coefs.map((portionCoef, i) => ({ eaterId: `m${i}`, portionCoef })),
         0,
       );
       assert.equal(sum(shares), 1, `coefs ${coefs.join('/')} → Σ = ${sum(shares)}`);
@@ -28,21 +28,21 @@ describe('calculerShares', () => {
 
   it('répartit proportionnellement aux coefficients', () => {
     const shares = calculerShares([
-      { memberId: 'adulte', portionCoef: 1 },
-      { memberId: 'enfant', portionCoef: 0.5 },
+      { eaterId: 'adulte', portionCoef: 1 },
+      { eaterId: 'enfant', portionCoef: 0.5 },
     ]);
     assert.deepEqual(shares, [
-      { memberId: 'adulte', share: 0.667 },
-      { memberId: 'enfant', share: 0.333 },
+      { eaterId: 'adulte', share: 0.667 },
+      { eaterId: 'enfant', share: 0.333 },
     ]);
   });
 
   // ── Test structurant n° 2 (§15) ────────────────────────────────────────────
   it('avec des invités, Σ < 1 et les assiettes du foyer ne gonflent pas', () => {
     const foyer = [
-      { memberId: 'adulte-1', portionCoef: 1 },
-      { memberId: 'adulte-2', portionCoef: 1 },
-      { memberId: 'enfant', portionCoef: 0.5 },
+      { eaterId: 'adulte-1', portionCoef: 1 },
+      { eaterId: 'adulte-2', portionCoef: 1 },
+      { eaterId: 'enfant', portionCoef: 0.5 },
     ];
     const sans = calculerShares(foyer, 0);
     const avec = calculerShares(foyer, 2);
@@ -56,14 +56,14 @@ describe('calculerShares', () => {
     for (const [i, part] of avec.entries()) {
       const reference = sans[i];
       assert.ok(reference !== undefined);
-      assert.equal(part.memberId, reference.memberId);
-      assert.ok(part.share < reference.share, `${part.memberId} a gonflé`);
+      assert.equal(part.eaterId, reference.eaterId);
+      assert.ok(part.share < reference.share, `${part.eaterId} a gonflé`);
     }
   });
 
   it('un invité compte pour un adulte de référence', () => {
-    const seul = calculerShares([{ memberId: 'adulte', portionCoef: 1 }], 1);
-    assert.deepEqual(seul, [{ memberId: 'adulte', share: 0.5 }]);
+    const seul = calculerShares([{ eaterId: 'adulte', portionCoef: 1 }], 1);
+    assert.deepEqual(seul, [{ eaterId: 'adulte', share: 0.5 }]);
   });
 
   it('ne rend rien quand personne n’était à table', () => {
@@ -72,17 +72,17 @@ describe('calculerShares', () => {
   });
 
   it('refuse un coefficient ou un nombre d’invités absurde', () => {
-    assert.throws(() => calculerShares([{ memberId: 'x', portionCoef: 0 }]));
-    assert.throws(() => calculerShares([{ memberId: 'x', portionCoef: -1 }]));
-    assert.throws(() => calculerShares([{ memberId: 'x', portionCoef: 1 }], -1));
-    assert.throws(() => calculerShares([{ memberId: 'x', portionCoef: 1 }], 1.5));
+    assert.throws(() => calculerShares([{ eaterId: 'x', portionCoef: 0 }]));
+    assert.throws(() => calculerShares([{ eaterId: 'x', portionCoef: -1 }]));
+    assert.throws(() => calculerShares([{ eaterId: 'x', portionCoef: 1 }], -1));
+    assert.throws(() => calculerShares([{ eaterId: 'x', portionCoef: 1 }], 1.5));
   });
 
   it('ne dépend pas de l’ordre des convives à reste égal', () => {
     const a = calculerShares([
-      { memberId: 'a', portionCoef: 1 },
-      { memberId: 'b', portionCoef: 1 },
-      { memberId: 'c', portionCoef: 1 },
+      { eaterId: 'a', portionCoef: 1 },
+      { eaterId: 'b', portionCoef: 1 },
+      { eaterId: 'c', portionCoef: 1 },
     ]);
     // Le millième surnuméraire va au premier entré, de façon déterministe.
     assert.deepEqual(a.map((s) => s.share), [0.334, 0.333, 0.333]);
@@ -91,8 +91,8 @@ describe('calculerShares', () => {
 
   it('tient dans numeric(4,3)', () => {
     for (const shares of [
-      calculerShares([{ memberId: 'a', portionCoef: 2 }, { memberId: 'b', portionCoef: 0.05 }]),
-      calculerShares([{ memberId: 'a', portionCoef: 1 }], 99),
+      calculerShares([{ eaterId: 'a', portionCoef: 2 }, { eaterId: 'b', portionCoef: 0.05 }]),
+      calculerShares([{ eaterId: 'a', portionCoef: 1 }], 99),
     ]) {
       for (const { share } of shares) {
         assert.ok(share >= 0 && share <= 9.999);

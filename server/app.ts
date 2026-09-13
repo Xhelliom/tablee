@@ -13,32 +13,58 @@ import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
-import { COOKIE_NAME, findSession, type Session } from './auth/session.ts';
+import type { Auth } from './auth/auth.ts';
+import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
 import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
 import { authRoutes } from './routes/auth.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
 import { mealRoutes } from './routes/meals.ts';
-import { memberRoutes } from './routes/members.ts';
+import { eaterRoutes } from './routes/eaters.ts';
 import { recipeRoutes } from './routes/recipes.ts';
 import { templateRoutes } from './routes/templates.ts';
 
 export interface AppContext {
   pool: pg.Pool;
+  auth: Auth;
+  /** Origine publique du service. Sert à better-auth et aux liens d'invitation. */
+  baseURL: string;
 }
 
 declare module 'fastify' {
   interface FastifyRequest {
-    /** Session résolue par le hook, ou `null` si le cookie est absent ou mort. */
-    session: Session | null;
-    /** Le foyer de la session. Lève 401 s'il n'y en a pas. */
+    /**
+     * Ce que le hook a pu établir : anonyme, connecté sans foyer, ou actif.
+     * Toujours renseigné une fois `onRequest` passé.
+     */
+    auth: AuthState;
+    /** Le compte et son foyer actif. Lève 401 s'il n'y en a pas. */
+    identity(): Identity;
+    /** Le foyer actif. Lève 401 s'il n'y en a pas. */
     householdId(): string;
   }
 }
 
-/** Routes accessibles sans session. Tout le reste en exige une. */
-const PUBLIC_API = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/session']);
+/**
+ * Routes accessibles sans foyer actif.
+ *
+ * `/api/auth/*` est servi par better-auth et se garde lui-même. `/api/me` doit
+ * répondre à un anonyme — c'est précisément ce qu'il sert à savoir. Tout le
+ * reste exige un compte **et** un foyer.
+ */
+const isPublicApi = (path: string): boolean =>
+  path === '/api/me' || path.startsWith('/api/auth/');
+
+/** Les en-têtes Fastify sous la forme que better-auth sait lire. */
+function toWebHeaders(raw: Record<string, string | string[] | undefined>): Headers {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(raw)) {
+    if (value === undefined) continue;
+    for (const v of Array.isArray(value) ? value : [value]) headers.append(key, v);
+  }
+  return headers;
+}
 
 export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): FastifyInstance {
   const app = Fastify({
@@ -65,18 +91,40 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
     routerOptions: { maxParamLength: 500 },
   });
 
-  app.decorateRequest('session', null);
-  app.decorateRequest('householdId', function (this: { session: Session | null }): string {
-    if (this.session === null) throw ApiError.unauthorized();
-    return this.session.householdId;
+  // `null` et non l'état anonyme : Fastify refuse un décorateur objet, qui
+  // serait partagé par référence entre toutes les requêtes. Le hook ci-dessous
+  // affecte une valeur propre à chacune, avant toute route.
+  app.decorateRequest<AuthState | null>('auth', null);
+  app.decorateRequest('identity', function (this: { auth: AuthState | null }): Identity {
+    if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();
+    return this.auth.identity;
+  });
+  app.decorateRequest('householdId', function (this: { auth: AuthState | null }): string {
+    if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();
+    return this.auth.identity.householdId;
   });
 
   app.register(cookie);
 
+  /**
+   * L'état d'authentification est résolu une fois par requête, et seulement
+   * pour `/api/*` : les pages et les fichiers statiques n'ont rien à y gagner,
+   * et le partage Android ouvre `/share` en navigation — le faire passer par
+   * une lecture de session retarderait le chemin critique pour rien.
+   */
   app.addHook('onRequest', async (request) => {
-    request.session = await findSession(ctx.pool, request.cookies[COOKIE_NAME]);
-    const url = request.url.split('?')[0] ?? '';
-    if (url.startsWith('/api/') && !PUBLIC_API.has(url) && request.session === null) {
+    request.auth = { kind: 'anonyme' };
+
+    const path = request.url.split('?')[0] ?? '';
+    if (!path.startsWith('/api/')) return;
+
+    // better-auth se garde lui-même ; le résoudre ici en plus ferait une
+    // lecture de session inutile sur chaque connexion.
+    if (path.startsWith('/api/auth/')) return;
+
+    request.auth = await readAuthState(ctx.auth, ctx.pool, toWebHeaders(request.headers));
+
+    if (!isPublicApi(path) && request.auth.kind !== 'actif') {
       throw ApiError.unauthorized();
     }
   });
@@ -95,7 +143,7 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
   });
 
   authRoutes(app, ctx);
-  memberRoutes(app, ctx);
+  eaterRoutes(app, ctx);
   recipeRoutes(app, ctx);
   foodRoutes(app, ctx);
   mealRoutes(app, ctx);

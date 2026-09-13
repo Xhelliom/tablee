@@ -4,7 +4,7 @@
  */
 import type { Db } from '../db.ts';
 
-export interface Member {
+export interface Eater {
   id: string;
   firstName: string;
   /** `YYYY-MM-DD`. L'âge se calcule, il ne se stocke pas (§10). */
@@ -21,7 +21,7 @@ interface Row {
   portion_coef: number; diets: string[]; color: string | null; active: boolean;
 }
 
-const toMember = (row: Row): Member => ({
+const toEater = (row: Row): Eater => ({
   id: row.id,
   firstName: row.first_name,
   birthDate: row.birth_date,
@@ -34,28 +34,28 @@ const toMember = (row: Row): Member => ({
 
 const SELECT = `
   select id, first_name, birth_date, sex, portion_coef, diets, color, active
-  from member`;
+  from eater`;
 
-export async function listMembers(
+export async function listEaters(
   db: Db,
   householdId: string,
   { includeInactive = false } = {},
-): Promise<Member[]> {
+): Promise<Eater[]> {
   const { rows } = await db.query<Row>(
     `${SELECT} where household_id = $1 ${includeInactive ? '' : 'and active'}
      order by birth_date asc, first_name asc`,
     [householdId],
   );
-  return rows.map(toMember);
+  return rows.map(toEater);
 }
 
-export async function findMembers(db: Db, householdId: string, ids: string[]): Promise<Member[]> {
+export async function findMembers(db: Db, householdId: string, ids: string[]): Promise<Eater[]> {
   if (ids.length === 0) return [];
   const { rows } = await db.query<Row>(
     `${SELECT} where household_id = $1 and id = any($2::uuid[])`,
     [householdId, ids],
   );
-  return rows.map(toMember);
+  return rows.map(toEater);
 }
 
 export interface MemberInput {
@@ -67,13 +67,13 @@ export interface MemberInput {
   color?: string | null;
 }
 
-export async function createMember(
+export async function createEater(
   db: Db,
   householdId: string,
   input: MemberInput,
-): Promise<Member> {
+): Promise<Eater> {
   const { rows } = await db.query<Row>(
-    `insert into member (household_id, first_name, birth_date, sex, portion_coef, diets, color)
+    `insert into eater (household_id, first_name, birth_date, sex, portion_coef, diets, color)
      values ($1, $2, $3::date, $4, coalesce($5::numeric, 1.00), coalesce($6::text[], '{}'), $7)
      returning id, first_name, birth_date, sex, portion_coef, diets, color, active`,
     [
@@ -83,7 +83,7 @@ export async function createMember(
   );
   const row = rows[0];
   if (row === undefined) throw new Error('membre non créé');
-  return toMember(row);
+  return toEater(row);
 }
 
 export type MemberPatch = Partial<MemberInput> & { active?: boolean };
@@ -93,15 +93,15 @@ export type MemberPatch = Partial<MemberInput> & { active?: boolean };
  *
  * R2 : **aucun repas passé n'est touché.** Les `share` ont été figés à
  * l'écriture de chaque repas ; un enfant qui grandit change ce qu'il mangera,
- * pas ce qu'il a mangé. Cette fonction n'écrit que dans `member`, et c'est
+ * pas ce qu'il a mangé. Cette fonction n'écrit que dans `eater`, et c'est
  * volontairement tout ce qu'elle sait faire.
  */
-export async function updateMember(
+export async function updateEater(
   db: Db,
   householdId: string,
   id: string,
   patch: MemberPatch,
-): Promise<Member | null> {
+): Promise<Eater | null> {
   const sets: string[] = [];
   const params: unknown[] = [householdId, id];
   const set = (column: string, value: unknown): void => {
@@ -123,11 +123,11 @@ export async function updateMember(
   }
 
   const { rows } = await db.query<Row>(
-    `update member set ${sets.join(', ')}
+    `update eater set ${sets.join(', ')}
      where household_id = $1 and id = $2
      returning id, first_name, birth_date, sex, portion_coef, diets, color, active`,
     params,
   );
   const row = rows[0];
-  return row === undefined ? null : toMember(row);
+  return row === undefined ? null : toEater(row);
 }

@@ -16,12 +16,12 @@ const SCALE = 3;
 const FACTOR = 10 ** SCALE;
 
 export interface SharePerson {
-  memberId: string;
+  eaterId: string;
   portionCoef: number;
 }
 
 export interface ComputedShare {
-  memberId: string;
+  eaterId: string;
   share: number;
 }
 
@@ -54,7 +54,7 @@ export function calculerShares(
   }
   for (const person of present) {
     if (!(person.portionCoef > 0)) {
-      throw new Error(`portion_coef invalide pour ${person.memberId}`);
+      throw new Error(`portion_coef invalide pour ${person.eaterId}`);
     }
   }
 
@@ -64,7 +64,7 @@ export function calculerShares(
   // de nulle part.
   const total = householdCoefs + guestCount;
 
-  const exact = present.map((p) => ({ memberId: p.memberId, value: p.portionCoef / total }));
+  const exact = present.map((p) => ({ eaterId: p.eaterId, value: p.portionCoef / total }));
   const target = Math.round((householdCoefs / total) * FACTOR);
 
   return largestRemainder(exact, target);
@@ -78,13 +78,13 @@ export function calculerShares(
  * ne dépend donc que des données, jamais de l'ordre d'itération d'une Map.
  */
 function largestRemainder(
-  exact: { memberId: string; value: number }[],
+  exact: { eaterId: string; value: number }[],
   target: number,
 ): ComputedShare[] {
   const scaled = exact.map((e, index) => {
     const raw = e.value * FACTOR;
     const floor = Math.floor(raw);
-    return { memberId: e.memberId, floor, remainder: raw - floor, index };
+    return { eaterId: e.eaterId, floor, remainder: raw - floor, index };
   });
 
   let left = target - scaled.reduce((sum, s) => sum + s.floor, 0);
@@ -97,5 +97,5 @@ function largestRemainder(
     left -= 1;
   }
 
-  return scaled.map((s) => ({ memberId: s.memberId, share: s.floor / FACTOR }));
+  return scaled.map((s) => ({ eaterId: s.eaterId, share: s.floor / FACTOR }));
 }

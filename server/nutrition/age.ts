@@ -1,5 +1,5 @@
 /**
- * L'âge se calcule, il ne se stocke pas (§10) : `member.birth_date` est la
+ * L'âge se calcule, il ne se stocke pas (§10) : `eater.birth_date` est la
  * seule vérité, et un âge stocké serait faux dès le lendemain.
  */
 

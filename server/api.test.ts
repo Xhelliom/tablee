@@ -11,13 +11,15 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import type pg from 'pg';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.ts';
-import { hashPassword } from './auth/password.ts';
+import type { Auth } from './auth/auth.ts';
+import { buildTestAuth, signUp, signUpWithHousehold, TEST_BASE_URL } from './test-support/auth.ts';
 import { closeTestPool, resetDatabase, SKIP_MESSAGE, testDatabaseUrl, testPool } from './test-support/db.ts';
 
 const enabled = testDatabaseUrl() !== null;
 
 describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   let pool: pg.Pool;
+  let auth: Auth;
   let app: FastifyInstance;
   let cookie: string;
   let householdId: string;
@@ -39,7 +41,8 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   before(async () => {
     pool = await testPool();
-    app = buildApp({ pool }, { webDir: '/dev/null/absent' });
+    auth = buildTestAuth(pool);
+    app = buildApp({ pool, auth, baseURL: TEST_BASE_URL }, { webDir: '/dev/null/absent' });
     await app.ready();
   });
 
@@ -50,78 +53,112 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   beforeEach(async () => {
     await resetDatabase(pool);
-    const { rows } = await pool.query<{ id: string }>(
-      `insert into household (name, login, password_hash) values ('Foyer test', 'test', $1)
-       returning id`,
-      [await hashPassword('motdepasse')],
-    );
-    householdId = rows[0]!.id;
-
-    const login = await app.inject({
-      method: 'POST', url: '/api/auth/login',
-      payload: { login: 'test', password: 'motdepasse' },
-    });
-    cookie = login.headers['set-cookie'] as string;
+    const foyer = await signUpWithHousehold(auth, pool, 'parent@exemple.test');
+    householdId = foyer.householdId;
+    cookie = foyer.cookie;
   });
 
   // ── auth ──────────────────────────────────────────────────────────────────
 
-  describe('session de foyer', () => {
-    it('refuse un mot de passe faux sans dire lequel des deux est faux', async () => {
-      const mauvaisMotDePasse = await app.inject({
-        method: 'POST', url: '/api/auth/login',
-        payload: { login: 'test', password: 'nonnonnon' },
+  describe('session', () => {
+    it('pose un cookie httpOnly, SameSite=Lax', async () => {
+      // `SameSite=Lax` n'est pas un détail : le partage Android ouvre `/share`
+      // par une navigation de haut niveau venue d'une autre application, et
+      // `Strict` bloquerait le cookie — donc le chemin critique du produit.
+      const response = await app.inject({
+        method: 'POST', url: '/api/auth/sign-in/email',
+        headers: { origin: TEST_BASE_URL },
+        payload: { email: 'parent@exemple.test', password: 'motdepasse-de-test-long' },
       });
-      const loginInconnu = await app.inject({
-        method: 'POST', url: '/api/auth/login',
-        payload: { login: 'inexistant', password: 'motdepasse' },
-      });
-      assert.equal(mauvaisMotDePasse.statusCode, 401);
-      assert.equal(loginInconnu.statusCode, 401);
-      assert.deepEqual(mauvaisMotDePasse.json(), loginInconnu.json());
+      assert.equal(response.statusCode, 200);
+      const posé = String(response.headers['set-cookie']);
+      assert.match(posé, /better-auth\.session_token=/);
+      assert.match(posé, /HttpOnly/i);
+      assert.match(posé, /SameSite=Lax/i);
     });
 
-    it('pose un cookie httpOnly, SameSite=Lax', async () => {
-      assert.match(cookie, /tablee_session=/);
-      assert.match(cookie, /HttpOnly/i);
-      assert.match(cookie, /SameSite=Lax/i);
+    it('refuse un mot de passe faux', async () => {
+      const response = await app.inject({
+        method: 'POST', url: '/api/auth/sign-in/email',
+        headers: { origin: TEST_BASE_URL },
+        payload: { email: 'parent@exemple.test', password: 'ce-n-est-pas-le-bon' },
+      });
+      assert.equal(response.statusCode, 401);
     });
 
     it('ferme l’API sans session', async () => {
-      const response = await app.inject({ method: 'GET', url: '/api/members' });
+      const response = await app.inject({ method: 'GET', url: '/api/eaters' });
       assert.equal(response.statusCode, 401);
       assert.equal(response.json().error.code, 'non_authentifie');
     });
 
     it('invalide la session à la déconnexion', async () => {
-      await call('POST', '/api/auth/logout');
-      const { status } = await call('GET', '/api/members');
+      // `Origin` est exigé par la protection CSRF de better-auth sur toute
+      // requête qui change l'état. Un navigateur en envoie un d'office ;
+      // `app.inject` non, d'où sa présence ici et non dans le code client.
+      const out = await app.inject({
+        method: 'POST', url: '/api/auth/sign-out',
+        headers: { cookie, origin: TEST_BASE_URL },
+      });
+      assert.equal(out.statusCode, 200);
+      const { status } = await call('GET', '/api/eaters');
       assert.equal(status, 401);
+    });
+
+    /**
+     * Trois états, et les confondre coûterait cher : un compte tout neuf est
+     * **connecté** mais sans foyer. Le renvoyer vers l'écran de connexion
+     * serait lui redemander un mot de passe qu'il vient de saisir.
+     */
+    it('distingue « pas connecté » de « connecté sans foyer »', async () => {
+      const anonyme = await app.inject({ method: 'GET', url: '/api/me' });
+      assert.equal(anonyme.json().state, 'anonyme');
+
+      const seul = await signUp(auth, 'sans-foyer@exemple.test');
+      const réponse = await app.inject({
+        method: 'GET', url: '/api/me', headers: { cookie: seul.cookie },
+      });
+      assert.equal(réponse.statusCode, 200);
+      assert.equal(réponse.json().state, 'sans_foyer');
+      assert.deepEqual(réponse.json().households, []);
+
+      // Et il n'a accès à rien tant qu'il n'a pas de foyer.
+      const eaters = await app.inject({
+        method: 'GET', url: '/api/eaters', headers: { cookie: seul.cookie },
+      });
+      assert.equal(eaters.statusCode, 401);
+    });
+
+    it('donne le foyer actif et le rôle', async () => {
+      const { body } = await call('GET', '/api/me');
+      assert.equal(body.state, 'actif');
+      assert.equal(body.household.id, householdId);
+      assert.equal(body.role, 'parent', 'celui qui crée le foyer en est parent');
     });
   });
 
   // ── membres ───────────────────────────────────────────────────────────────
 
-  const addMember = async (
+  const addEater = async (
     firstName: string, birthDate: string, portionCoef = 1, sex: 'F' | 'M' = 'F',
   ): Promise<string> => {
-    const { body } = await call('POST', '/api/members', { firstName, birthDate, sex, portionCoef });
-    return body.member.id;
+    const { body } = await call('POST', '/api/eaters', { firstName, birthDate, sex, portionCoef });
+    return body.eater.id;
   };
 
   describe('membres', () => {
     it('crée un membre et calcule son âge sans le stocker', async () => {
-      const { status, body } = await call('POST', '/api/members', {
+      const { status, body } = await call('POST', '/api/eaters', {
         firstName: 'Camille', birthDate: '2016-03-01', sex: 'F', portionCoef: 0.75,
       });
       assert.equal(status, 201);
-      assert.equal(body.member.portionCoef, 0.75);
-      assert.equal(body.member.minor, true);
-      assert.ok(body.member.age >= 9);
+      assert.equal(body.eater.portionCoef, 0.75);
+      assert.equal(body.eater.minor, true);
+      assert.ok(body.eater.age >= 9);
     });
 
     it('refuse un coefficient hors bornes', async () => {
-      const { status } = await call('POST', '/api/members', {
+      const { status } = await call('POST', '/api/eaters', {
         firstName: 'X', birthDate: '2000-01-01', sex: 'M', portionCoef: 5,
       });
       assert.equal(status, 400);
@@ -132,21 +169,21 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('repas', () => {
     it('calcule les parts côté serveur, et refuse celles du client', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
-      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
 
       const refuse = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ member_id: adulte, share: 0.9 }],
+        participants: [{ eater_id: adulte, share: 0.9 }],
       });
       assert.equal(refuse.status, 400);
 
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }, { memberId: enfant }],
+        participants: [{ eaterId: adulte }, { eaterId: enfant }],
       });
       const shares = Object.fromEntries(
-        body.meal.participants.map((p: { memberId: string; share: number }) => [p.memberId, p.share]),
+        body.meal.participants.map((p: { eaterId: string; share: number }) => [p.eaterId, p.share]),
       );
       assert.equal(shares[adulte], 0.667);
       assert.equal(shares[enfant], 0.333);
@@ -155,17 +192,17 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
-      const adulte2 = await addMember('Adulte deux', '1987-01-01', 1);
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const adulte2 = await addEater('Adulte deux', '1987-01-01', 1);
 
       const sans = await call('POST', '/api/meals', {
         eaten_at: '2026-09-12T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }, { memberId: adulte2 }],
+        participants: [{ eaterId: adulte }, { eaterId: adulte2 }],
       });
       const avec = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
         guest_count: 2,
-        participants: [{ memberId: adulte }, { memberId: adulte2 }],
+        participants: [{ eaterId: adulte }, { eaterId: adulte2 }],
       });
 
       const total = (b: any): number =>
@@ -178,41 +215,41 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
     // ── Test structurant n° 3 (§15) — R2 ────────────────────────────────────
     it('modifier un portion_coef ne change aucun repas passé', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
-      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
 
       const { body: avant } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }, { memberId: enfant }],
+        participants: [{ eaterId: adulte }, { eaterId: enfant }],
       });
       const mealId = avant.meal.id;
-      const partsAvant = avant.meal.participants.map((p: any) => [p.memberId, p.share]).sort();
+      const partsAvant = avant.meal.participants.map((p: any) => [p.eaterId, p.share]).sort();
 
       // L'enfant grandit : son coefficient passe de 0,5 à 1.
-      const patch = await call('PATCH', `/api/members/${enfant}`, { portionCoef: 1 });
+      const patch = await call('PATCH', `/api/eaters/${enfant}`, { portionCoef: 1 });
       assert.equal(patch.status, 200);
-      assert.equal(patch.body.member.portionCoef, 1);
+      assert.equal(patch.body.eater.portionCoef, 1);
 
       const { body: apres } = await call('GET', `/api/meals/${mealId}`);
-      const partsApres = apres.meal.participants.map((p: any) => [p.memberId, p.share]).sort();
+      const partsApres = apres.meal.participants.map((p: any) => [p.eaterId, p.share]).sort();
       assert.deepEqual(partsApres, partsAvant, 'les parts d’un repas passé ont bougé');
 
       // Et le repas suivant, lui, prend bien le nouveau coefficient.
       const { body: suivant } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-14T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }, { memberId: enfant }],
+        participants: [{ eaterId: adulte }, { eaterId: enfant }],
       });
       for (const p of suivant.meal.participants) assert.equal(p.share, 0.5);
     });
 
     it('recalcule la nutrition à la modification, sans toucher aux parts', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
-      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
       const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
 
       const { body: creation } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
-        participants: [{ memberId: adulte }, { memberId: enfant }],
+        participants: [{ eaterId: adulte }, { eaterId: enfant }],
         items: [{ foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 }],
       });
       assert.equal(creation.meal.nutrition.kcal, 130);
@@ -226,10 +263,10 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('n’écrit jamais le jeton d’un lien de partage dans raw_input (I6)', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
         raw_input:
           'Galette végé https://jow.fr/r?recipeId=650b16ade7cc8d0013ce4a6e&key=SECRET42&userId=abc123',
       });
@@ -243,20 +280,17 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne rend que les repas du foyer de la session', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
       });
 
-      const { rows } = await pool.query<{ id: string }>(
-        `insert into household (name, login, password_hash) values ('Voisins', 'voisin', 'x')
-         returning id`,
-      );
+      const voisins = await signUpWithHousehold(auth, pool, 'voisin@exemple.test', 'Voisins');
       await pool.query(
         `insert into meal (household_id, eaten_at, slot, source)
          values ($1, '2026-09-13T19:30:00+02:00', 'diner', 'manuel')`,
-        [rows[0]!.id],
+        [voisins.householdId],
       );
 
       const { body } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
@@ -269,13 +303,13 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('templates et restes', () => {
     it('rejoue un template avec les coefficients du jour, pas ceux d’hier', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
-      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250, protein: 9 }, true);
 
       const { body: origine } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
-        participants: [{ memberId: adulte }, { memberId: enfant }],
+        participants: [{ eaterId: adulte }, { eaterId: enfant }],
         items: [{ foodId: pain, label: 'Pain', quantity: 100, unit: 'g', quantityG: 100 }],
       });
 
@@ -286,7 +320,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(cree.template.useCount, 0);
 
       // L'enfant grandit entre la création du template et son usage.
-      await call('PATCH', `/api/members/${enfant}`, { portionCoef: 1 });
+      await call('PATCH', `/api/eaters/${enfant}`, { portionCoef: 1 });
 
       const applique = await call('POST', `/api/templates/${cree.template.id}/apply`, {
         slot: 'petit_dej',
@@ -299,7 +333,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       // Le repas d'origine, lui, n'a pas bougé (R2).
       const { body: inchange } = await call('GET', `/api/meals/${origine.meal.id}`);
       const parts = Object.fromEntries(
-        inchange.meal.participants.map((p: any) => [p.memberId, p.share]),
+        inchange.meal.participants.map((p: any) => [p.eaterId, p.share]),
       );
       assert.equal(parts[adulte], 0.667);
       assert.equal(parts[enfant], 0.333);
@@ -309,7 +343,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne propose en restes que les plats à recette des 3 derniers jours', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const { rows } = await pool.query<{ id: string }>(
         `insert into recipe (source, jow_recipe_id, title, base_servings)
          values ('jow', '650b16ade7cc8d0013ce4a6e', 'Gratin de courgettes', 4) returning id`,
@@ -320,12 +354,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const hier = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const { body: source } = await call('POST', '/api/meals', {
         eaten_at: hier, slot: 'diner', source: 'jow', recipe_id: recipeId, servings: 4,
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
       });
       // Un repas sans recette : jamais proposé, il n'y a rien à resservir.
       await call('POST', '/api/meals', {
         eaten_at: hier, slot: 'dejeuner', source: 'texte',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
       });
       // Un plat d'il y a dix jours : hors fenêtre.
       await pool.query(
@@ -343,7 +377,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { body: restes } = await call('POST', '/api/meals', {
         eaten_at: new Date().toISOString(), slot: 'dejeuner', source: 'jow',
         recipe_id: recipeId, servings: 1.5, leftover_of: source.meal.id,
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
       });
       assert.ok(restes.meal !== undefined, JSON.stringify(restes));
       assert.equal(restes.meal.leftoverOf, source.meal.id);
@@ -355,13 +389,13 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('repère un repas qui revient trois fois, et se tait après le template', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
 
       for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
-          participants: [{ memberId: adulte }],
+          participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
       }
@@ -381,12 +415,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne suggère rien pour deux occurrences', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
       for (const day of ['2026-09-12', '2026-09-13']) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
-          participants: [{ memberId: adulte }],
+          participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
       }
@@ -400,7 +434,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('bornes de quantification', () => {
     it('encadre un total plutôt que de le déclarer inconnu', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       // La banane : Ciqual publie « < 0,5 » pour les lipides — un majorant.
       const banane = await insertFood(
         pool, 'Banane, pulpe, crue',
@@ -413,7 +447,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
         items: [
           { foodId: banane, label: 'Banane', quantity: 100, unit: 'g', quantityG: 100 },
           { foodId: beurre, label: 'Beurre', quantity: 10, unit: 'g', quantityG: 10 },
@@ -428,7 +462,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
       const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
       const lipides = bilan.dashboard
-        .find((d: any) => d.member.id === adulte)
+        .find((d: any) => d.eater.id === adulte)
         .balance.bars.find((b: any) => b.nutrient === 'fatG');
       assert.equal(lipides.state, 'encadre');
       assert.equal(lipides.consumed, 8.29);
@@ -436,12 +470,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('garde ce qui est su quand un aliment échappe au référentiel', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7 }, true);
 
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'texte',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
         items: [
           { foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 },
           { label: 'Plat de la cantine', quantity: 200, unit: 'g', quantityG: 200 },
@@ -455,7 +489,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
       const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
       const proteines = bilan.dashboard
-        .find((d: any) => d.member.id === adulte)
+        .find((d: any) => d.eater.id === adulte)
         .balance.bars.find((b: any) => b.nutrient === 'proteinG');
       assert.equal(proteines.state, 'partiel');
       assert.equal(proteines.consumed, 2.7);
@@ -538,13 +572,13 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('recalcule la part végétale des repas concernés', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const { a, ingredientA } = await deuxRecettes();
       const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);
 
       const { body: avant } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
-        recipe_id: a, servings: 2, participants: [{ memberId: adulte }],
+        recipe_id: a, servings: 2, participants: [{ eaterId: adulte }],
       });
       // Aucun ingrédient rattaché : pas de part végétale, et surtout pas 0 %.
       assert.equal(avant.meal.nutrition.plantRatio, null);
@@ -590,7 +624,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     };
 
     it('rattache un repas de fin de mois au mois du foyer, pas à celui d’UTC', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const foodId = await courgette();
       const { rows } = await pool.query<{ id: string }>(
         `insert into recipe (source, jow_recipe_id, title, base_servings)
@@ -606,7 +640,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       // Les deux tombent en août, donc le badge doit compter la courgette.
       const { body: aout } = await call('POST', '/api/meals', {
         eaten_at: '2026-08-31T23:30:00+02:00', slot: 'diner', source: 'jow',
-        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+        recipe_id: rows[0]!.id, participants: [{ eaterId: adulte }],
       });
       assert.equal(aout.meal.seasonalCount, 1, 'août : la courgette est de saison');
 
@@ -614,7 +648,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       // C'est septembre pour le foyer, et la courgette l'est encore.
       const { body: septembre } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-01T00:30:00+02:00', slot: 'collation', source: 'jow',
-        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+        recipe_id: rows[0]!.id, participants: [{ eaterId: adulte }],
       });
       assert.equal(septembre.meal.seasonalCount, 1);
 
@@ -622,7 +656,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       // Lu en UTC, la courgette serait encore de saison ; pour le foyer, non.
       const { body: octobre } = await call('POST', '/api/meals', {
         eaten_at: '2026-10-01T00:30:00+02:00', slot: 'collation', source: 'jow',
-        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+        recipe_id: rows[0]!.id, participants: [{ eaterId: adulte }],
       });
       assert.equal(
         octobre.meal.seasonalCount, 0,
@@ -631,11 +665,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('coche ce qui a été mangé le mois demandé, pas le mois courant', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const foodId = await courgette();
       await call('POST', '/api/meals', {
         eaten_at: '2026-07-15T12:30:00+02:00', slot: 'dejeuner', source: 'texte',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
         items: [{ foodId, label: 'Courgette', quantity: 200, unit: 'g', quantityG: 200 }],
       });
 
@@ -652,17 +686,17 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('tables livrées vides (§17)', () => {
     it('affiche « repère indisponible » plutôt que 0 tant que nutrient_reference est vide', async () => {
-      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
       const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
       await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
-        participants: [{ memberId: enfant }],
+        participants: [{ eaterId: enfant }],
         items: [{ foodId: riz, label: 'Riz', quantity: 150, unit: 'g', quantityG: 150 }],
       });
 
       const { body } = await call('GET', '/api/dashboard?date=2026-09-13');
       assert.equal(body.referencesLoaded, false);
-      const balance = body.dashboard.find((d: any) => d.member.id === enfant).balance;
+      const balance = body.dashboard.find((d: any) => d.eater.id === enfant).balance;
       for (const bar of balance.bars) {
         assert.equal(bar.reference, null, `${bar.nutrient} devrait être sans repère`);
         assert.equal(bar.percent, null, `${bar.nutrient} ne devrait pas avoir de pourcentage`);
@@ -674,11 +708,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('demande l’unité plutôt que de la deviner tant que unit_default est vide', async () => {
-      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const salade = await insertFood(pool, 'Salade verte', { kcal: 15 }, true);
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: adulte }],
+        participants: [{ eaterId: adulte }],
         items: [{ foodId: salade, label: 'Salade', quantity: 1, unit: 'Poignée', quantityG: null }],
       });
       assert.equal(body.meal.items[0].quantityG, null);

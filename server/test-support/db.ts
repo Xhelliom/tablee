@@ -66,9 +66,12 @@ async function appliedMigrations(db: pg.Pool): Promise<Set<string>> {
  * suites.
  */
 export async function resetDatabase(db: pg.Pool): Promise<void> {
+  // `"user"` entraîne en cascade session, account, member et invitation ;
+  // `organization` entraîne household, et household le reste du domaine.
   await db.query(`
-    truncate household, member, food, recipe, meal, meal_template,
-             nutrient_reference, unit_default, seasonal_produce, session
+    truncate household, eater, food, recipe, meal, meal_template,
+             nutrient_reference, unit_default, seasonal_produce,
+             "user", "organization"
     restart identity cascade`);
 }
 

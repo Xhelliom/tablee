@@ -110,7 +110,7 @@ export function stringArray(value: unknown, field: string): string[] {
 }
 
 /** Convives : le client envoie `present`, jamais `share` (§12). */
-export function participants(value: unknown): { memberId: string; present: boolean }[] {
+export function participants(value: unknown): { eaterId: string; present: boolean }[] {
   return array(value, 'participants').map((raw, i) => {
     const item = isRecord(raw) ? raw : {};
     if ('share' in item) {
@@ -119,7 +119,7 @@ export function participants(value: unknown): { memberId: string; present: boole
       throw ApiError.badRequest('les parts sont calculées par le serveur, pas envoyées par le client');
     }
     return {
-      memberId: uuid(item['memberId'], `participants[${i}].memberId`),
+      eaterId: uuid(item['eaterId'], `participants[${i}].eaterId`),
       present: item['present'] !== false,
     };
   });

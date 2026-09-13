@@ -1,79 +1,122 @@
 /**
- * §7 — connexion du foyer.
+ * Montage de better-auth, et les quelques routes que Tablée ajoute par-dessus.
  *
- * Un compte, un mot de passe, une session de 30 jours. Pas de PIN par membre :
- * le sélecteur « c'est moi » de l'app dit qui saisit, il ne protège rien, et
- * c'est exactement ce qu'on veut — chaque barrière de plus est une saisie de
- * moins.
+ * better-auth sert tout `/api/auth/*` : inscription, connexion, déconnexion,
+ * foyers, invitations, rôles. Les routes ci-dessous ne font que ce qu'il ne
+ * fait pas — dire au front où il en est, et lui rendre le lien d'invitation à
+ * transmettre.
  */
 import type { FastifyInstance } from 'fastify';
-import { verifyPassword } from '../auth/password.ts';
-import { COOKIE_NAME, createSession, destroySession, SESSION_DAYS } from '../auth/session.ts';
-import { ApiError } from '../http/errors.ts';
-import { body, str } from '../http/validate.ts';
 import type { AppContext } from '../app.ts';
+import { ApiError } from '../http/errors.ts';
+import { listHouseholdsForUser } from '../repo/households.ts';
 
 /**
- * `Secure` par défaut : le share target Android **exige** HTTPS (§4), donc la
- * production est en HTTPS de toute façon. `TABLEE_INSECURE_COOKIE=1` existe
- * pour le développement en local sur http://localhost, et nulle part ailleurs.
+ * Traduit une requête Fastify en `Request` du web, que better-auth attend.
+ *
+ * Le corps est réassemblé depuis `request.body` déjà analysé par Fastify plutôt
+ * que lu brut : toutes les routes d'authentification parlent JSON, et ajouter
+ * un analyseur de contenu global pour garder le corps brut changerait le
+ * comportement de **toutes** les autres routes pour le confort d'une seule.
  */
-function cookieOptions(maxAgeSeconds: number): Record<string, unknown> {
-  return {
-    path: '/',
-    httpOnly: true,
-    secure: process.env['TABLEE_INSECURE_COOKIE'] !== '1',
-    sameSite: 'lax' as const,
-    maxAge: maxAgeSeconds,
-  };
+function toWebRequest(request: {
+  method: string;
+  url: string;
+  headers: Record<string, string | string[] | undefined>;
+  body?: unknown;
+}, baseURL: string): Request {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (value === undefined) continue;
+    for (const v of Array.isArray(value) ? value : [value]) headers.append(key, v);
+  }
+
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+  const body = hasBody && request.body !== undefined ? JSON.stringify(request.body) : undefined;
+  if (body !== undefined) headers.set('content-type', 'application/json');
+
+  return new Request(new URL(request.url, baseURL), {
+    method: request.method,
+    headers,
+    ...(body === undefined ? {} : { body }),
+  });
 }
 
 export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
-  app.post('/api/auth/login', async (request, reply) => {
-    const input = body(request.body);
-    const login = str(input['login'], 'login', { max: 120 });
-    const password = str(input['password'], 'password', { max: 200 });
+  // Toutes les méthodes, tout le sous-arbre : c'est better-auth qui route
+  // à l'intérieur.
+  app.route({
+    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    url: '/api/auth/*',
+    handler: async (request, reply) => {
+      const response = await ctx.auth.handler(toWebRequest(request, ctx.baseURL));
 
-    const { rows } = await ctx.pool.query<{ id: string; password_hash: string; name: string }>(
-      'select id, password_hash, name from household where login = $1',
-      [login],
-    );
-    const household = rows[0];
+      reply.status(response.status);
+      response.headers.forEach((value, key) => {
+        // `set-cookie` peut apparaître plusieurs fois ; `append` les conserve
+        // toutes, là où `header` écraserait les précédentes.
+        if (key.toLowerCase() === 'set-cookie') reply.raw.appendHeader('set-cookie', value);
+        else reply.header(key, value);
+      });
 
-    // Même message et même coût pour un identifiant inconnu que pour un mot de
-    // passe faux : sinon la page de connexion devient un annuaire.
-    const ok =
-      household !== undefined && (await verifyPassword(household.password_hash, password));
-    if (!ok || household === undefined) {
-      throw new ApiError(401, 'identifiants_invalides', 'identifiant ou mot de passe incorrect');
-    }
-
-    const session = await createSession(ctx.pool, household.id);
-    reply.setCookie(COOKIE_NAME, session.token, cookieOptions(SESSION_DAYS * 24 * 3600));
-    return { household: { id: household.id, name: household.name } };
-  });
-
-  app.post('/api/auth/logout', async (request, reply) => {
-    const token = request.cookies[COOKIE_NAME];
-    if (token !== undefined) await destroySession(ctx.pool, token);
-    reply.clearCookie(COOKIE_NAME, { path: '/' });
-    return { ok: true };
+      return reply.send(response.body === null ? null : Buffer.from(await response.arrayBuffer()));
+    },
   });
 
   /**
-   * Sert au front à savoir s'il doit afficher l'écran de connexion. Absent du
-   * tableau du §12, mais une PWA qui ouvre sur un formulaire alors que la
-   * session est valide, c'est un tap perdu à chaque lancement.
+   * Où en est le client.
+   *
+   * Trois états, et les confondre coûterait cher : `anonyme` amène l'écran de
+   * connexion, `sans_foyer` l'écran « crée ou rejoins un foyer » — pas le
+   * login, la personne est connectée —, `actif` l'app elle-même.
    */
-  app.get('/api/auth/session', async (request) => {
-    const session = request.session;
-    if (session === null) return { authenticated: false };
-    const { rows } = await ctx.pool.query<{ id: string; name: string; timezone: string }>(
-      'select id, name, timezone from household where id = $1',
-      [session.householdId],
-    );
-    const household = rows[0];
-    if (household === undefined) return { authenticated: false };
-    return { authenticated: true, household };
+  app.get('/api/me', async (request) => {
+    const state = request.auth;
+    if (state.kind === 'anonyme') return { state: 'anonyme' };
+
+    const userId = state.kind === 'actif' ? state.identity.userId : state.userId;
+    const households = await listHouseholdsForUser(ctx.pool, userId);
+
+    if (state.kind === 'sans_foyer') {
+      return {
+        state: 'sans_foyer',
+        user: { id: state.userId, email: state.email, name: state.name },
+        households,
+      };
+    }
+
+    const { identity } = state;
+    return {
+      state: 'actif',
+      user: { id: identity.userId, email: identity.email, name: identity.name },
+      household: {
+        id: identity.householdId,
+        name: identity.householdName,
+        timezone: identity.timezone,
+        organizationId: identity.organizationId,
+      },
+      role: identity.role,
+      households,
+    };
+  });
+
+  /**
+   * Le lien d'invitation à transmettre.
+   *
+   * Il n'y a pas de serveur SMTP, et c'est un choix : installer un relais mail
+   * pour deux invitations par décennie coûte plus cher que ça ne rapporte. La
+   * création de l'invitation elle-même reste celle de better-auth
+   * (`POST /api/auth/organization/invite-member`) — cette route ne fait que
+   * rendre l'URL correspondante, pour que le front n'ait pas à la fabriquer et
+   * que sa forme reste décidée au même endroit que la route qui la reçoit.
+   */
+  app.get('/api/invitations/:id/lien', async (request) => {
+    const state = request.auth;
+    if (state.kind !== 'actif') throw ApiError.unauthorized();
+    if (state.identity.role !== 'parent') {
+      throw new ApiError(403, 'droits_insuffisants', 'seul un parent peut inviter');
+    }
+    const { id } = request.params as { id: string };
+    return { url: new URL(`/invitation/${encodeURIComponent(id)}`, ctx.baseURL).toString() };
   });
 }

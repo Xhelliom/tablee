@@ -21,7 +21,7 @@ export interface TemplatePayload {
   servings: number;
   guestCount: number;
   items: MealItemInput[];
-  participants: { memberId: string; present: boolean }[];
+  participants: { eaterId: string; present: boolean }[];
 }
 
 export interface MealTemplate {
@@ -102,8 +102,8 @@ export async function createTemplateFromMeal(
      from meal_item where meal_id = $1 order by position`,
     [mealId],
   );
-  const { rows: participants } = await db.query<{ member_id: string }>(
-    'select member_id from meal_participant where meal_id = $1',
+  const { rows: participants } = await db.query<{ eater_id: string }>(
+    'select eater_id from meal_participant where meal_id = $1',
     [mealId],
   );
 
@@ -118,7 +118,7 @@ export async function createTemplateFromMeal(
       foodId: i.food_id, label: i.label, quantity: i.quantity,
       unit: i.unit, quantityG: i.quantity_g,
     })),
-    participants: participants.map((p) => ({ memberId: p.member_id, present: true })),
+    participants: participants.map((p) => ({ eaterId: p.eater_id, present: true })),
   };
 
   const { rows } = await db.query<Row>(
@@ -143,7 +143,7 @@ export interface ApplyOptions {
   eatenAt?: string;
   slot?: Slot;
   /** Permet de corriger qui est là sans défaire le template. */
-  participants?: { memberId: string; present: boolean }[];
+  participants?: { eaterId: string; present: boolean }[];
   guestCount?: number;
 }
 

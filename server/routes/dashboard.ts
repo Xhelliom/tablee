@@ -10,7 +10,7 @@ import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
 import { ApiError } from '../http/errors.ts';
-import { listMembers } from '../repo/members.ts';
+import { listEaters } from '../repo/eaters.ts';
 import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
   householdPlantAverage, householdTimezone, mealsForDay, weekGrid,
@@ -28,8 +28,8 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw ApiError.badRequest('« date » doit être une date AAAA-MM-JJ');
     }
 
-    const [members, references, meals, plantAverage] = await Promise.all([
-      listMembers(ctx.pool, householdId),
+    const [eaters, references, meals, plantAverage] = await Promise.all([
+      listEaters(ctx.pool, householdId),
       loadReferences(ctx.pool),
       mealsForDay(ctx.pool, householdId, date, timezone),
       householdPlantAverage(ctx.pool, householdId, 7),
@@ -37,23 +37,23 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
 
     const byMember = new Map<string, typeof meals>();
     for (const meal of meals) {
-      byMember.set(meal.memberId, [...(byMember.get(meal.memberId) ?? []), meal]);
+      byMember.set(meal.eaterId, [...(byMember.get(meal.eaterId) ?? []), meal]);
     }
 
-    const dashboard = members.map((member) => ({
-      member: {
-        id: member.id,
-        firstName: member.firstName,
-        color: member.color,
-        age: ageAt(member.birthDate),
+    const dashboard = eaters.map((eater) => ({
+      eater: {
+        id: eater.id,
+        firstName: eater.firstName,
+        color: eater.color,
+        age: ageAt(eater.birthDate),
         // I5 : le front s'en sert pour n'afficher aucun objectif chiffré de
         // calories ni de poids sur un profil mineur.
-        minor: isMinor(member.birthDate),
+        minor: isMinor(eater.birthDate),
       },
       balance: bilanJournalier({
-        sex: member.sex,
-        age: ageAt(member.birthDate, new Date(`${date}T12:00:00Z`)),
-        meals: byMember.get(member.id) ?? [],
+        sex: eater.sex,
+        age: ageAt(eater.birthDate, new Date(`${date}T12:00:00Z`)),
+        meals: byMember.get(eater.id) ?? [],
         references,
         householdPlantAverage7d: plantAverage,
       }),
@@ -89,14 +89,14 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [members, cells] = await Promise.all([
-      listMembers(ctx.pool, householdId),
+    const [eaters, cells] = await Promise.all([
+      listEaters(ctx.pool, householdId),
       weekGrid(ctx.pool, householdId, from, days, timezone),
     ]);
     return {
       from,
       days,
-      members: members.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
+      eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
     };
   });

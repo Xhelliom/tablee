@@ -32,7 +32,7 @@ export async function currentMonth(
 
 export interface DayMealForMember extends DailyMeal {
   mealId: string;
-  memberId: string;
+  eaterId: string;
 }
 
 /**
@@ -46,14 +46,14 @@ export async function mealsForDay(
   timezone: string,
 ): Promise<DayMealForMember[]> {
   const { rows } = await db.query<{
-    meal_id: string; member_id: string; share: number;
+    meal_id: string; eater_id: string; share: number;
     kcal: number | null; protein_g: number | null; carb_g: number | null;
     fat_g: number | null; fiber_g: number | null;
     kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
     fat_g_max: number | null; fiber_g_max: number | null;
     grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
   }>(
-    `select m.id as meal_id, mp.member_id, mp.share,
+    `select m.id as meal_id, mp.eater_id, mp.share,
             n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
             n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
             n.grams_total, n.grams_plant, n.grams_classified
@@ -68,7 +68,7 @@ export async function mealsForDay(
 
   return rows.map((r) => ({
     mealId: r.meal_id,
-    memberId: r.member_id,
+    eaterId: r.eater_id,
     share: r.share,
     kcal: r.kcal, proteinG: r.protein_g, carbG: r.carb_g,
     fatG: r.fat_g, fiberG: r.fiber_g,
@@ -109,7 +109,7 @@ export async function householdPlantAverage(
 
 export interface WeekCell {
   date: string;
-  memberId: string;
+  eaterId: string;
   /** Nombre de repas de la journée pour cette personne. */
   meals: number;
   plantRatio: number | null;
@@ -129,11 +129,11 @@ export async function weekGrid(
   timezone: string,
 ): Promise<WeekCell[]> {
   const { rows } = await db.query<{
-    date: string; member_id: string; meals: number;
+    date: string; eater_id: string; meals: number;
     plant: number | null; total: number | null; classified: number | null;
   }>(
     `select (m.eaten_at at time zone $4)::date::text as date,
-            mp.member_id,
+            mp.eater_id,
             count(*)::int as meals,
             -- Même règle que bilanJournalier : un repas dont aucun gramme
             -- n'est classé est écarté du rapport, pas compté comme non
@@ -157,7 +157,7 @@ export async function weekGrid(
 
   return rows.map((r) => ({
     date: r.date,
-    memberId: r.member_id,
+    eaterId: r.eater_id,
     meals: r.meals,
     plantRatio:
       r.total === null || r.total === 0 || r.plant === null || (r.classified ?? 0) === 0

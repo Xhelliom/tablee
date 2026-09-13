@@ -46,7 +46,7 @@ export interface CreateMealInput {
   guestCount?: number;
   items?: MealItemInput[];
   /** Le client envoie `present`, **jamais** `share` (§12). */
-  participants: { memberId: string; present: boolean }[];
+  participants: { eaterId: string; present: boolean }[];
   note?: string | null;
   rawInput?: string | null;
   createdBy?: string | null;
@@ -60,7 +60,7 @@ export interface MealItem extends MealItemInput {
 }
 
 export interface MealParticipant {
-  memberId: string;
+  eaterId: string;
   firstName: string;
   share: number;
 }
@@ -170,15 +170,15 @@ async function writeShares(
   client: pg.PoolClient,
   householdId: string,
   mealId: string,
-  participants: { memberId: string; present: boolean }[],
+  participants: { eaterId: string; present: boolean }[],
   guestCount: number,
 ): Promise<void> {
-  const presentIds = participants.filter((p) => p.present).map((p) => p.memberId);
+  const presentIds = participants.filter((p) => p.present).map((p) => p.eaterId);
   await client.query('delete from meal_participant where meal_id = $1', [mealId]);
   if (presentIds.length === 0) return;
 
   const { rows } = await client.query<{ id: string; portion_coef: number }>(
-    'select id, portion_coef from member where household_id = $1 and id = any($2::uuid[])',
+    'select id, portion_coef from eater where household_id = $1 and id = any($2::uuid[])',
     [householdId, presentIds],
   );
   if (rows.length !== presentIds.length) {
@@ -186,13 +186,13 @@ async function writeShares(
   }
 
   const shares = calculerShares(
-    rows.map((r) => ({ memberId: r.id, portionCoef: r.portion_coef })),
+    rows.map((r) => ({ eaterId: r.id, portionCoef: r.portion_coef })),
     guestCount,
   );
-  for (const { memberId, share } of shares) {
+  for (const { eaterId, share } of shares) {
     await client.query(
-      'insert into meal_participant (meal_id, member_id, share) values ($1, $2, $3)',
-      [mealId, memberId, share],
+      'insert into meal_participant (meal_id, eater_id, share) values ($1, $2, $3)',
+      [mealId, eaterId, share],
     );
   }
 }
@@ -205,7 +205,7 @@ export interface MealPatch {
   note?: string | null;
   recipeId?: string | null;
   items?: MealItemInput[];
-  participants?: { memberId: string; present: boolean }[];
+  participants?: { eaterId: string; present: boolean }[];
 }
 
 /**
@@ -253,7 +253,7 @@ export async function updateMeal(
   if (patch.participants !== undefined || patch.guestCount !== undefined) {
     const participants =
       patch.participants ??
-      (await currentParticipants(client, mealId)).map((memberId) => ({ memberId, present: true }));
+      (await currentParticipants(client, mealId)).map((eaterId) => ({ eaterId, present: true }));
     const guestCount = patch.guestCount ?? (await currentGuestCount(client, mealId));
     await writeShares(client, householdId, mealId, participants, guestCount);
   }
@@ -263,11 +263,11 @@ export async function updateMeal(
 }
 
 async function currentParticipants(client: pg.PoolClient, mealId: string): Promise<string[]> {
-  const { rows } = await client.query<{ member_id: string }>(
-    'select member_id from meal_participant where meal_id = $1',
+  const { rows } = await client.query<{ eater_id: string }>(
+    'select eater_id from meal_participant where meal_id = $1',
     [mealId],
   );
-  return rows.map((r) => r.member_id);
+  return rows.map((r) => r.eater_id);
 }
 
 async function currentGuestCount(client: pg.PoolClient, mealId: string): Promise<number> {
@@ -523,11 +523,11 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
   const seasonal = new Map(seasonRows.map((r) => [r.meal_id, r.count]));
 
   const { rows: partRows } = await db.query<{
-    meal_id: string; member_id: string; first_name: string; share: number;
+    meal_id: string; eater_id: string; first_name: string; share: number;
   }>(
-    `select mp.meal_id, mp.member_id, mb.first_name, mp.share
+    `select mp.meal_id, mp.eater_id, mb.first_name, mp.share
      from meal_participant mp
-     join member mb on mb.id = mp.member_id
+     join eater mb on mb.id = mp.eater_id
      where mp.meal_id = any($1::uuid[])
      order by mb.birth_date`,
     [ids],
@@ -547,7 +547,7 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
   const partsByMeal = new Map<string, MealParticipant[]>();
   for (const row of partRows) {
     const list = partsByMeal.get(row.meal_id) ?? [];
-    list.push({ memberId: row.member_id, firstName: row.first_name, share: row.share });
+    list.push({ eaterId: row.eater_id, firstName: row.first_name, share: row.share });
     partsByMeal.set(row.meal_id, list);
   }
 
