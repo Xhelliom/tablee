@@ -1,0 +1,33 @@
+# Ce qui n'a rien à faire dans le contexte de build.
+#
+# Chaque entrée ici est du temps de transfert économisé à chaque `docker build`,
+# et surtout une occasion de moins de faire entrer dans une image publiée
+# quelque chose qui n'aurait pas dû en sortir.
+
+node_modules/
+web/dist/
+
+# Secrets. Ils viennent de l'environnement, jamais de l'image.
+.env
+.env.*
+!.env.example
+
+# Données du foyer — prénoms, dates de naissance, allergènes, photos de repas.
+# Le `.gitignore` les couvre déjà côté dépôt ; les répéter ici évite qu'un
+# fichier oublié en local se retrouve dans une couche d'image publique.
+uploads/
+photos/
+*.dump
+*.sql.gz
+db/backups/
+db/seed-foyer*.sql
+
+# Export Ciqual : 57 Mo de XML, rejouables depuis la source de l'ANSES. Le seed
+# est un geste d'opérateur, pas une couche d'image.
+data/
+
+.git/
+.github/
+deploy/
+docs/
+*.md

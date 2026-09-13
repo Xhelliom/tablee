@@ -198,6 +198,29 @@ devient atteignable par un identifiant venu du client.
 
 ---
 
+## 9bis. Les manifestes Kubernetes n'ont jamais tourné dans un cluster
+
+**Où** — `deploy/k8s/`, `.github/workflows/image.yml`.
+
+L'image est construite, lancée et vérifiée pour de vrai — elle sert, elle
+migre, elle s'arrête proprement, et son garde-fou d'étanchéité fonctionne. Le
+script d'initialisation de Postgres est testé contre un Postgres réel, avec un
+mot de passe piégeux.
+
+Les **manifestes**, eux, sont écrits selon les spécifications et validés
+syntaxiquement, jamais appliqués : il n'y a pas de cluster ici. Le workflow
+GitHub Actions n'a pas non plus tourné une seule fois.
+
+**Ce que ça coûte.** Les erreurs qui restent sont celles qu'une validation YAML
+ne voit pas : une classe d'Ingress qui n'existe pas, un `ClusterIssuer` mal
+nommé, un `storageClassName` absent, un paquet GHCR privé que le cluster ne
+peut pas tirer. Toutes se voient au premier `apply`, aucune n'est silencieuse.
+
+**Ce qui le lèverait.** Un premier déploiement, et la correction des valeurs
+propres au cluster. La passation les liste comme étant à remplacer.
+
+---
+
 ## 9. Le calcul des repas n'est pas concurrent-safe
 
 **Où** — `server/repo/meals.ts`, `withHousehold` dans `server/db.ts`.

@@ -25,7 +25,8 @@ besoins différents. Aucune app du marché ne modélise ça.
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
 | `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
 | `docs/dette-technique.md` | Ce qui est su, assumé, et à reprendre. À lire avant de « corriger » une approximation : elle y est peut-être déjà expliquée. |
-| `docs/mise-en-service.md` | Déploiement et **séquence de vérification sur un vrai téléphone**. Le share target est le chemin critique du produit. |
+| `docs/mise-en-service.md` | **Séquence de vérification sur un vrai téléphone.** Le share target est le chemin critique du produit. |
+| `docs/deploiement-kubernetes.md` | Passation pour la mise en service sur un cluster. À lire avant de toucher au `Dockerfile` ou à `deploy/k8s/`. |
 
 En cas de contradiction entre ce fichier et la spec, **la spec gagne** — sauf sur
 les interdits ci-dessous, qui ne se négocient pas.
@@ -192,6 +193,9 @@ l'invérifiable.
 │   ├── plan-app-nutrition-famille.md
 │   ├── mockups-tablee.html
 │   └── jow-contract.md
+├── .github/workflows/  image publiée sur ghcr.io, tests d'abord
+├── deploy/k8s/       manifestes de déploiement
+├── Dockerfile
 ├── db/migrations/
 ├── scripts/          seed-food.ts, seed-seasonal.ts
 ├── server/
@@ -213,6 +217,10 @@ Conventions :
 - Une route du domaine lit et écrit par **`request.db`**, le client marqué au
   foyer courant — jamais `ctx.pool`, qui n'en porte aucun et que la RLS ne
   filtre donc pas.
+- L'image ne contient **ni secret, ni export Ciqual** : les premiers viennent
+  de l'environnement, le second d'un seed joué une fois. Et `tsx` est une
+  dépendance de service, pas de développement — le serveur exécute du
+  TypeScript directement.
 
 ---
 

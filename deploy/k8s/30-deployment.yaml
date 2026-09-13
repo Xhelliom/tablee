@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tablee
+  namespace: tablee
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tablee
+  template:
+    metadata:
+      labels:
+        app: tablee
+    spec:
+      # ── Les migrations avant le service ──────────────────────────────────
+      #
+      # Un `initContainer` et non un `Job` : le pod ne démarre pas tant que le
+      # schéma n'est pas à jour, ce qui est exactement la garantie voulue, et
+      # il n'y a rien à relancer à la main à chaque déploiement.
+      #
+      # Deux pods qui migreraient en même temps — un `maxSurge`, un
+      # redémarrage — ne se marchent pas dessus : `scripts/migrate.ts` prend un
+      # verrou consultatif Postgres, et le second attend que le premier ait
+      # fini. Monter les répliques au-delà de 1 est donc sûr de ce côté-là.
+      initContainers:
+        - name: migrate
+          image: ghcr.io/xhelliom/tablee:latest
+          command: ['node', '--import', 'tsx', 'scripts/migrate.ts']
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: tablee, key: DATABASE_URL }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { memory: 512Mi }
+
+      containers:
+        - name: tablee
+          image: ghcr.io/xhelliom/tablee:latest
+          ports:
+            - name: http
+              containerPort: 3000
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: tablee, key: DATABASE_URL }
+            - name: TABLEE_SECRET
+              valueFrom:
+                secretKeyRef: { name: tablee, key: TABLEE_SECRET }
+
+            # ⚠️ L'origine **publique**, telle que le navigateur la voit.
+            #
+            # better-auth valide l'origine des requêtes avec, et les liens
+            # d'invitation en sortent. Une valeur fausse ici donne une app qui
+            # refuse les connexions sans dire pourquoi, et des liens
+            # d'invitation qui ne mènent nulle part. À remplacer.
+            - name: TABLEE_BASE_URL
+              value: https://tablee.example.net
+
+            # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
+            - name: TABLEE_LOG
+              value: '0'
+
+          # `/api/me` répond 200 à un anonyme : c'est précisément ce qu'il sert
+          # à dire. Il touche la base — donc une sonde qui passe prouve que
+          # l'app **et** Postgres répondent, ce qu'une page statique ne dirait
+          # pas.
+          readinessProbe:
+            httpGet: { path: /api/me, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: { path: /api/me, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          # Le démarrage inclut la vérification d'étanchéité et l'ouverture du
+          # pool ; laisser jusqu'à 60 s évite qu'une base lente à se réveiller
+          # fasse tuer le pod en boucle.
+          startupProbe:
+            httpGet: { path: /api/me, port: http }
+            periodSeconds: 5
+            failureThreshold: 12
+
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits:   { memory: 512Mi }
+
+          # Rien n'est écrit sur le disque : tout l'état est en base. Le
+          # système de fichiers peut donc être en lecture seule, ce qui retire
+          # une classe entière de mauvaises surprises.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}

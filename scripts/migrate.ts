@@ -26,10 +26,26 @@ if (url === undefined || url.length === 0) {
 const sha = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 
+/** Clé arbitraire mais stable : « tablee » en chiffres. Toute autre ferait. */
+const MIGRATION_LOCK = 828_533;
+
 const client = new pg.Client({ connectionString: url });
 await client.connect();
 
 try {
+  /**
+   * Un seul migrateur à la fois.
+   *
+   * En Kubernetes, les migrations tournent dans un `initContainer` : un
+   * redéploiement, un redémarrage de pod ou un `maxSurge` à 1 peut en lancer
+   * deux en même temps. Sans verrou, les deux lisent `schema_migration` vide,
+   * appliquent le même fichier, et le second échoue sur la clé primaire — au
+   * mieux. Le verrou consultatif est tenu jusqu'à la fermeture de la
+   * connexion, et l'attente est ce qu'on veut : le second démarre quand le
+   * premier a fini.
+   */
+  await client.query('select pg_advisory_lock($1)', [MIGRATION_LOCK]);
+
   await client.query(`
     create table if not exists schema_migration (
       filename    text primary key,
