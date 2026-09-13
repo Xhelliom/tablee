@@ -5,7 +5,8 @@ surtout en les partageant depuis Jow — et l'app montre, **pour chaque
 personne**, un bilan réparti selon son âge et son coefficient de portion.
 
 La spec fait autorité : [`docs/plan-app-nutrition-famille.md`](docs/plan-app-nutrition-famille.md).
-Les règles permanentes sont dans [`CLAUDE.md`](CLAUDE.md).
+Les règles permanentes sont dans [`CLAUDE.md`](CLAUDE.md). Ce qui est su,
+assumé et à reprendre est dans [`docs/dette-technique.md`](docs/dette-technique.md).
 
 ---
 
@@ -113,7 +114,8 @@ tranche est reprise, pour qu'un repère existe quel que soit l'âge. Ces lignes
 portent une `source` qui le dit, et ce texte remonte à l'écran — l'app ne fait
 jamais dire à l'ANSES ce qu'elle ne dit pas. Le besoin énergétique baissant
 avec l'âge, ces cibles sont probablement un peu hautes ; une valeur plus juste
-existe sans doute dans le rapport annexe Anses 2017d, non consulté.
+existe sans doute dans le rapport annexe Anses 2017d, non consulté —
+[dette n° 1](docs/dette-technique.md).
 
 **Tranche non couverte** : 0 à 3 ans. Pas de prolongation vers le bas — les
 besoins d'un nourrisson ne sont pas ceux d'un enfant de 4 ans en plus petit, et

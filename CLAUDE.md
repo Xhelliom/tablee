@@ -24,6 +24,7 @@ besoins différents. Aucune app du marché ne modélise ça.
 | `docs/plan-app-nutrition-famille.md` | **La spec.** Fait autorité sur le modèle de données, l'API, la roadmap, les règles. |
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
 | `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
+| `docs/dette-technique.md` | Ce qui est su, assumé, et à reprendre. À lire avant de « corriger » une approximation : elle y est peut-être déjà expliquée. |
 
 En cas de contradiction entre ce fichier et la spec, **la spec gagne** — sauf sur
 les interdits ci-dessous, qui ne se négocient pas.
