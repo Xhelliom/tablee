@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseShareText, redactShareText, redactUrl, slugify } from './share.ts';
+import { parseShareText, redactShareText, redactUrl, slugify, redactRequestUrl } from './share.ts';
 
 /** Forme observée d'un partage Jow : une phrase, le titre, puis le lien. */
 const SHARE_TEXT = [
@@ -54,5 +54,32 @@ describe('slugify', () => {
       slugify('Galette végé, purée de carotte & tzatziki'),
       'galette-vege-puree-de-carotte-et-tzatziki',
     );
+  });
+});
+
+describe('redactRequestUrl', () => {
+  it('expurge un jeton percent-encodé dans la query du share target', () => {
+    // Le cas réel : Android ouvre /share?text=<texte partagé encodé>, et le
+    // texte contient l'URL Jow avec son `key`. C'est la forme sous laquelle le
+    // jeton atteint un journal de requêtes.
+    const raw =
+      '/share?text=Galette%20https%3A%2F%2Fapp.jow.com%2FEC0U%3FrecipeId%3D650b16ade7cc8d0013ce4a6e%26key%3DSECRET42%26userId%3Dabc';
+    const redacted = redactRequestUrl(raw);
+    assert.doesNotMatch(redacted, /SECRET42/);
+    assert.doesNotMatch(redacted, /abc/);
+    assert.match(decodeURIComponent(redacted), /recipeId=650b16ade7cc8d0013ce4a6e/);
+  });
+
+  it('retire un paramètre secret posé directement sur la requête', () => {
+    assert.doesNotMatch(redactRequestUrl('/share?key=SECRET42&text=Bonjour'), /SECRET42/);
+    assert.match(decodeURIComponent(redactRequestUrl('/share?key=SECRET42&text=Bonjour')), /text=Bonjour/);
+  });
+
+  it('laisse passer une URL sans query', () => {
+    assert.equal(redactRequestUrl('/api/members'), '/api/members');
+  });
+
+  it('ne rend pas une query vide accrochée à un point d’interrogation', () => {
+    assert.equal(redactRequestUrl('/share?key=SECRET42'), '/share');
   });
 });

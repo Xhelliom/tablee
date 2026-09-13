@@ -1,0 +1,32 @@
+# kubectl apply -k deploy/k8s/
+#
+# Le Secret n'y figure pas : `10-secret.example.yaml` est un gabarit, et le
+# vrai se crée à la main (voir sa tête de fichier). Un secret appliqué depuis
+# un dépôt finit toujours par y être committé.
+#
+# `job-seed.yaml` non plus : il se joue une fois, pas à chaque `apply`.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tablee
+
+resources:
+  - 00-namespace.yaml
+  # Retirer la ligne suivante si votre Postgres est ailleurs.
+  - 20-postgres.yaml
+  - 30-deployment.yaml
+  - 40-service.yaml
+  - 50-ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/name: tablee
+  app.kubernetes.io/part-of: tablee
+
+# Épingler une version plutôt que `latest` : `latest` ne dit pas ce qui tourne,
+# et un redémarrage de pod peut changer la version sans que rien ne le montre.
+# Les tags publiés par le workflow incluent le SHA complet du commit.
+#
+# images:
+#   - name: ghcr.io/xhelliom/tablee
+#     newTag: sha-0000000000000000000000000000000000000000

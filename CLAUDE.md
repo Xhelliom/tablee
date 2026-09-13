@@ -24,6 +24,9 @@ besoins différents. Aucune app du marché ne modélise ça.
 | `docs/plan-app-nutrition-famille.md` | **La spec.** Fait autorité sur le modèle de données, l'API, la roadmap, les règles. |
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
 | `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
+| `docs/dette-technique.md` | Ce qui est su, assumé, et à reprendre. À lire avant de « corriger » une approximation : elle y est peut-être déjà expliquée. |
+| `docs/mise-en-service.md` | **Séquence de vérification sur un vrai téléphone.** Le share target est le chemin critique du produit. |
+| `docs/deploiement-kubernetes.md` | Passation pour la mise en service sur un cluster. À lire avant de toucher au `Dockerfile` ou à `deploy/k8s/`. |
 
 En cas de contradiction entre ce fichier et la spec, **la spec gagne** — sauf sur
 les interdits ci-dessous, qui ne se négocient pas.
@@ -75,11 +78,21 @@ sont pas des préférences de style.
 
 Sur ces points, demander plutôt que choisir :
 
-1. **Contenu de `nutrient_reference`** — à sourcer auprès de l'ANSES. Ne pas
-   générer les valeurs.
-2. **Contenu de `unit_default`** — chaque ligne exige une `source`.
-3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits.
+1. ~~**Contenu de `nutrient_reference`**~~ — fait le 13/09/2026, en partie. Les
+   fibres viennent de l'ANSES ; protéines, lipides et glucides sont **dérivés**
+   d'intervalles en % de l'apport énergétique, faute d'être publiés en grammes.
+   Lire l'encart du §9 de la spec avant d'y toucher. Restent découverts : les
+   0-3 ans, et les tranches prolongées au-delà de 69/59 ans.
+2. **Contenu de `unit_default`** — chaque ligne exige une `source`. Toujours
+   vide. Gabarit commenté dans `db/seeds/unit-default.csv`.
+3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
+   vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
 4. Toute modification des règles ci-dessus.
+
+Les valeurs se chargent depuis `db/seeds/*.csv`, versionnés, avec une colonne
+`source` **obligatoire sur chaque ligne** — le chargeur refuse un fichier qui
+en manque une. Rien n'est téléchargé au démarrage : un fichier versionné se
+relit en diff, un fetch au boot ne se relit pas.
 
 Le reste est tranché dans la spec. Les décisions y sont motivées pour pouvoir
 être contestées en connaissance de cause, pas pour être réouvertes par défaut.
@@ -105,11 +118,60 @@ ne pas réintroduire par habitude :
 Avant de toucher à `server/jow/`, lire le contrat. Les échantillons figés se
 recapturent (`npm run jow:capture`), ne se modifient pas à la main.
 
+### V1 et V2 — ✅ écrites le 13/09/2026
+
+Toutes les cases du §15 passent, sauf la saisie de `seasonal_produce`. 176
+tests, typecheck vert. Le détail de ce qui a été décidé en chemin est dans les
+encarts datés des §6, §9, §10, §11 et §12 de la spec — le texte d'origine y est
+conservé, comme au §3.
+
+**Avant d'aller plus loin, deux choses ne se remplacent pas par du code :**
+
+1. Installer la PWA sur un téléphone et partager une vraie recette depuis Jow.
+   Le share target est le chemin critique du produit et n'a jamais tourné
+   ailleurs que dans un Chromium de test. La séquence est dans
+   `docs/mise-en-service.md` ; les pièges vérifiables à froid le sont déjà.
+2. Savoir si la famille logue encore trois semaines plus tard. C'est l'objectif
+   du jalon V1, et aucune ligne de code n'y répond.
+
+### Auth multi-comptes et multi-foyers — ✅ écrite le 13/09/2026
+
+Le §7 (« un compte par foyer ») est **renversé** et le §16 (« si l'app sort du
+foyer ») est **tranché** : plusieurs adultes avec leur propre compte, plusieurs
+foyers étanches sur une instance. Lire les deux encarts datés avant d'y toucher.
+
+better-auth 1.7.4 (plugin `organization`), migrations 007 et 008. Quatre choses
+à ne pas défaire par habitude :
+
+- **`eater` est une assiette, `"user"` est un compte, et les deux ensembles ne
+  coïncident pas.** Les enfants sont des convives sans compte ; une nounou est
+  un compte sans convive. Tout ce qui désigne « qui a agi » — `meal.created_by`,
+  `jow_food_link.confirmed_by` — pointe vers un compte. Ne jamais les
+  refusionner « pour simplifier » : c'est l'erreur que la 007 répare.
+- **Le schéma de better-auth est figé dans la 007**, recopié de son générateur.
+  Ne jamais lancer son CLI en écriture sur cette base : une migration appliquée
+  ne se modifie plus, et le lanceur le vérifie par empreinte. Une montée de
+  version = une migration de plus.
+- **Le rôle Postgres ne doit pas être superutilisateur**, sinon la RLS est
+  contournée *en silence*. Le serveur refuse de démarrer dans cet état, et un
+  test vérifie que la RLS est effective et pas seulement déclarée. Ne pas
+  désarmer l'un ni l'autre : 178 tests sont passés au vert avec une isolation
+  entièrement décorative avant qu'on s'en aperçoive.
+- **La version chiffrée par foyer a été écartée en connaissance de cause.**
+  L'hébergeur a le root ; l'app ne montre rien, la machine reste la sienne, et
+  ça se dit tel quel aux familles invitées. Ne pas rouvrir sans relire le §16.
+
+Deux rôles : `parent` (gère les accès) et `adulte` (saisit et lit). `jeune`
+est une valeur réservée **sans écran** — un enfant qui a un compte est un autre
+produit, soumis à I5, et ça se décidera le jour venu.
+
 ### Ensuite
 
-V1 → V2 → V3 → V4, dans l'ordre, avec les critères d'acceptation du §15 de la
-spec. Ne pas anticiper l'IA : un assistant diététicien branché sur trois repas
-mal saisis ne produit que des banalités.
+V3 → V4, dans l'ordre, avec les critères d'acceptation du §15. Ne pas anticiper
+l'IA : un assistant diététicien branché sur trois repas mal saisis ne produit
+que des banalités. La V3 demande une relecture humaine de 4 synthèses sur des
+données réelles, la V4 un an d'historique — les écrire avant, c'est produire de
+l'invérifiable.
 
 ---
 
@@ -131,10 +193,14 @@ mal saisis ne produit que des banalités.
 │   ├── plan-app-nutrition-famille.md
 │   ├── mockups-tablee.html
 │   └── jow-contract.md
+├── .github/workflows/  image publiée sur ghcr.io, tests d'abord
+├── deploy/k8s/       manifestes de déploiement
+├── Dockerfile
 ├── db/migrations/
 ├── scripts/          seed-food.ts, seed-seasonal.ts
 ├── server/
 │   ├── routes/
+│   ├── auth/         better-auth, rôles, résolution du foyer actif
 │   ├── jow/          parseur + contrat
 │   └── nutrition/    calcul, shares, repères
 └── web/
@@ -148,6 +214,13 @@ Conventions :
   `bilanJournalier`).
 - Les scripts de seed sont **idempotents** (`on conflict do update`).
 - Une valeur inconnue est `NULL`, jamais `0`.
+- Une route du domaine lit et écrit par **`request.db`**, le client marqué au
+  foyer courant — jamais `ctx.pool`, qui n'en porte aucun et que la RLS ne
+  filtre donc pas.
+- L'image ne contient **ni secret, ni export Ciqual** : les premiers viennent
+  de l'environnement, le second d'un seed joué une fois. Et `tsx` est une
+  dépendance de service, pas de développement — le serveur exécute du
+  TypeScript directement.
 
 ---
 

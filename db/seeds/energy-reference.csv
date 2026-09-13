@@ -1,0 +1,69 @@
+# energy_reference — besoin énergétique de référence, par sexe et par âge.
+#
+# ⚠️ CE N'EST PAS UN REPÈRE À AFFICHER. C'est un terme de calcul, et rien de
+# plus. I5 interdit d'afficher un objectif chiffré de calories sur un profil
+# mineur ; ces valeurs servent à traduire en grammes les intervalles que
+# l'ANSES publie en pourcentage de l'apport énergétique, et ne sortent jamais
+# à l'écran.
+#
+#   cible_g = intervalle (% AET) × kcal / facteur (kcal/g)
+#
+# ── D'où viennent ces chiffres ──────────────────────────────────────────────
+#
+# Enfants et adolescents — ligne « Apports caloriques », colonne « RN (Efsa
+# 2017) » des Tableaux 1 (garçons) et 2 (filles) de l'avis ANSES 2017-SA-0142.
+# L'avis précise que ces besoins sont ceux de l'EFSA (2013) pour un niveau
+# d'activité physique de 1,6.
+#
+# Adultes — avis ANSES 2012-SA-0103, section « Identification d'une référence
+# nutritionnelle pour le besoin énergétique » : « un besoin énergétique de
+# 2600 kcal/j et de 2100 kcal/j [...] pour les hommes âgés de 18 à 69 ans et
+# les femmes âgées de 18 à 59 ans respectivement a été retenu ». NAP médian de
+# 1,63 (SACN 2011), poids de référence à un IMC de 22 kg/m².
+#
+# ── Les tranches prolongées ─────────────────────────────────────────────────
+#
+# L'avis ne retient de valeur que jusqu'à 69 ans pour les hommes et 59 ans pour
+# les femmes. Au-delà, la valeur de la dernière tranche est **prolongée**, pour
+# qu'un repère existe quel que soit l'âge. Ces lignes le disent dans leur
+# `source`, et ce texte remonte tel quel dans l'écran « d'où viennent ces
+# barres » : l'app ne fait jamais dire à l'ANSES ce qu'elle ne dit pas.
+#
+# ⚠️ Le besoin énergétique **baisse** avec l'âge — masse maigre et métabolisme
+# de base diminuent. Prolonger la valeur des 18-69 ans à 75 ans la surestime
+# donc, et surestime avec elle les cibles en grammes qui en découlent : la
+# personne se verra réclamer un peu plus que nécessaire. C'est un choix assumé,
+# pas une approximation ignorée.
+#
+# Une valeur plus juste existe probablement : l'avis 2016 mentionne des
+# estimations calculées « entre 18 et 79 ans », détaillées dans un rapport
+# annexe (Anses 2017d) qui n'a pas été consulté. Consigné comme dette n° 1
+# dans docs/dette-technique.md — c'est là qu'il faut aller pour la lever.
+#
+# ── Ce qui reste non couvert, et le restera ─────────────────────────────────
+#
+# 0 à 3 ans. Aucune prolongation vers le bas : les besoins d'un nourrisson ne
+# sont pas ceux d'un enfant de 4 ans en plus petit, et c'est exactement l'âge
+# où une valeur plausible et fausse fait le plus de dégâts (I1). Les barres
+# concernées afficheront « repère indisponible ».
+#
+# ── Une limite à connaître ──────────────────────────────────────────────────
+#
+# Ce sont des besoins de **population**, pour une activité physique moyenne.
+# Un adolescent très sportif en dépense davantage. Les cibles qui en découlent
+# sont des repères, pas des besoins personnels — c'est d'ailleurs ce que veut
+# dire « référence nutritionnelle pour la population ».
+#
+sex,age_min,age_max,kcal,pal,source
+M,4,6,1521,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 1, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+M,7,10,1851,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 1, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+M,11,14,2263,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 1, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+M,15,17,2826,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 1, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+M,18,69,2600,1.63,"ANSES, avis 2012-SA-0103 du 12/12/2016, § Identification d'une référence nutritionnelle pour le besoin énergétique"
+M,70,120,2600,1.63,"ANSES, avis 2012-SA-0103 du 12/12/2016 — valeur des 18-69 ans, prolongée au-delà de 69 ans : hors du périmètre de l'avis, et probablement surestimée, le besoin énergétique baissant avec l'âge"
+F,4,6,1417,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 2, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+F,7,10,1726,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 2, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+F,11,14,2048,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 2, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+F,15,17,2253,1.6,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 2, ligne « Apports caloriques », colonne RN (Efsa 2017)"
+F,18,59,2100,1.63,"ANSES, avis 2012-SA-0103 du 12/12/2016, § Identification d'une référence nutritionnelle pour le besoin énergétique"
+F,60,120,2100,1.63,"ANSES, avis 2012-SA-0103 du 12/12/2016 — valeur des 18-59 ans, prolongée au-delà de 59 ans : hors du périmètre de l'avis, et probablement surestimée, le besoin énergétique baissant avec l'âge"

@@ -4,7 +4,9 @@ import { parseShareText, redactShareText } from './share.ts';
 import type { ParsedRecipe } from './types.ts';
 
 export type { ParsedIngredient, ParsedNutrition, ParsedRecipe, ShareInput, Confidence } from './types.ts';
-export { parseShareText, redactShareText, redactUrl, slugify } from './share.ts';
+export {
+  parseShareText, redactRequestUrl, redactShareText, redactUrl, slugify,
+} from './share.ts';
 export { extractNextData, parseRecipeHtml, parseRecipeNode, toGrams } from './parse.ts';
 export { fetchRecipeById, fetchRecipeByUrl } from './fetch.ts';
 

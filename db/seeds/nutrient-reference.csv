@@ -1,0 +1,80 @@
+# nutrient_reference — repères nutritionnels (§9 de la spec)
+#
+# RÈGLE ABSOLUE : aucune ligne sans `source` vérifiable. Le chargeur refuse un
+# fichier qui en manque une. Une valeur plausible et fausse est pire qu'une
+# valeur absente (I1) — ces repères servent de base à des conseils destinés à
+# des enfants.
+#
+# Une tranche d'âge non couverte reste ABSENTE. L'app affiche alors « repère
+# indisponible », ce qui est l'état attendu, pas une panne. On n'interpole
+# jamais entre deux tranches, et on ne reprend jamais la tranche voisine.
+#
+# ── Colonnes ────────────────────────────────────────────────────────────────
+#   sex       F, M ou ALL
+#   age_min   âge en années révolues, inclus
+#   age_max   inclus (120 pour « et au-delà »)
+#   nutrient  protein_g | carb_g | fat_g | fiber_g | kcal
+#   kind      AS | RNP | RN | IR_MIN | IR_MAX  (vocabulaire de l'ANSES)
+#   basis     absolu (dans l'unité de `unit`) | pct_aet (% de l'apport
+#             énergétique total de la journée)
+#   value     la valeur, telle que publiée. Jamais recalculée.
+#   unit      g, mg, µg, kcal, ou % pour un pct_aet
+#   source    organisme, avis, date, tableau — de quoi retrouver la valeur
+#
+# ── Ce que les sources publient réellement ──────────────────────────────────
+#
+# Les FIBRES sont le seul macronutriment de la V1 que l'ANSES publie en valeur
+# absolue. Protéines, lipides et glucides sont donnés en pourcentage de
+# l'apport énergétique total, sous forme d'intervalle, et sans distinction de
+# sexe. Les convertir en grammes exigerait une cible calorique par âge, que
+# l'app refuse d'installer (R7, I5) ; la RNP des protéines s'exprime en outre
+# par kilogramme de poids corporel, donnée que le §10 ne stocke pas.
+#
+# Les lignes `pct_aet` ci-dessous sont donc chargées et sourcées, mais
+# l'affichage des barres correspondantes reste à trancher — voir le rapport.
+#
+# Les tranches d'âge des deux avis ne coïncident pas (4-6/7-10/11-14/15-17
+# pour les fibres, 4-5/6-9/10-13/14-17 pour les protéines). Elles sont
+# recopiées telles quelles : les harmoniser serait inventer.
+#
+sex,age_min,age_max,nutrient,kind,basis,value,unit,source
+
+# ── Fibres — valeurs absolues ───────────────────────────────────────────────
+# Adulte : « Ainsi, un AS à 30 g de fibres totales alimentaires par jour a été
+# retenu. » (Tableau 4, p. 23/82)
+ALL,18,120,fiber_g,AS,absolu,30,g,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (AS)"
+# Enfants et adolescents : colonne « RN (Efsa 2017) » des Tableaux 1 (garçons)
+# et 2 (filles). Les deux tableaux donnent les mêmes références ; seuls les
+# apports simulés diffèrent.
+ALL,4,6,fiber_g,RN,absolu,14,g,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableaux 1 et 2, colonne RN (Efsa 2017)"
+ALL,7,10,fiber_g,RN,absolu,16,g,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableaux 1 et 2, colonne RN (Efsa 2017)"
+ALL,11,14,fiber_g,RN,absolu,19,g,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableaux 1 et 2, colonne RN (Efsa 2017)"
+ALL,15,17,fiber_g,RN,absolu,21,g,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableaux 1 et 2, colonne RN (Efsa 2017)"
+# 0 à 3 ans : non couvert par ces avis. La ligne reste absente, et l'app
+# affichera « repère indisponible ».
+
+# ── Protéines, lipides, glucides — intervalles en % de l'AET ────────────────
+# Adulte, Tableau 4 de l'avis 2016 : protéines 10-20 %, lipides 35-40 %,
+# glucides 40-55 % de l'apport énergétique total.
+ALL,18,120,protein_g,IR_MIN,pct_aet,10,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+ALL,18,120,protein_g,IR_MAX,pct_aet,20,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+ALL,18,120,fat_g,IR_MIN,pct_aet,35,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+ALL,18,120,fat_g,IR_MAX,pct_aet,40,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+ALL,18,120,carb_g,IR_MIN,pct_aet,40,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+ALL,18,120,carb_g,IR_MAX,pct_aet,55,%,"ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (IR)"
+
+# Enfants, Tableau 3 de l'avis 2019. Les bornes des protéines varient avec
+# l'âge ; celles des lipides et des glucides sont annoncées identiques pour
+# toutes les tranches de 4 à 17 ans.
+ALL,4,5,protein_g,IR_MIN,pct_aet,6,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,4,5,protein_g,IR_MAX,pct_aet,16,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,6,9,protein_g,IR_MIN,pct_aet,7,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,6,9,protein_g,IR_MAX,pct_aet,17,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,10,13,protein_g,IR_MIN,pct_aet,9,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,10,13,protein_g,IR_MAX,pct_aet,19,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,14,17,protein_g,IR_MIN,pct_aet,10,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,14,17,protein_g,IR_MAX,pct_aet,20,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,4,17,fat_g,IR_MIN,pct_aet,35,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,4,17,fat_g,IR_MAX,pct_aet,40,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3"
+ALL,4,17,carb_g,IR_MIN,pct_aet,40,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3 (glucides hors fibres)"
+ALL,4,17,carb_g,IR_MAX,pct_aet,55,%,"ANSES, avis 2017-SA-0142 du 08/02/2019 révisé 05/2019, Tableau 3 (glucides hors fibres)"

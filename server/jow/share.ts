@@ -43,6 +43,33 @@ export function redactShareText(text: string): string {
 }
 
 /**
+ * Version expurgée d'une URL de **requête entrante**, destinée au journal.
+ *
+ * I6, cas particulier et facile à manquer : le share target est un GET (§4),
+ * donc le texte partagé par Jow arrive **dans la query string**, percent-encodé.
+ * `key=SECRET` y apparaît sous la forme `%26key%3DSECRET` à l'intérieur du
+ * paramètre `text` : ni `redactUrl` ni `redactShareText` ne le voient, parce
+ * qu'ils travaillent sur le texte déjà décodé. Un journal de requêtes écrirait
+ * alors le jeton de compte sur le disque, en clair.
+ *
+ * On décode donc chaque paramètre avant de l'expurger, puis on ré-encode.
+ */
+export function redactRequestUrl(url: string): string {
+  const cut = url.indexOf('?');
+  if (cut === -1) return redactUrl(url);
+
+  const path = url.slice(0, cut);
+  const params = new URLSearchParams(url.slice(cut + 1));
+  const clean = new URLSearchParams();
+  for (const [key, value] of params) {
+    if (SECRET_PARAMS.includes(key.toLowerCase())) continue;
+    clean.set(key, redactShareText(value));
+  }
+  const query = clean.toString();
+  return query.length === 0 ? path : `${path}?${query}`;
+}
+
+/**
  * Extrait du texte de partage ce qui est exploitable, sans aucun accès réseau.
  *
  * Tolérant par construction : un texte inattendu ne lève pas, il ressort avec

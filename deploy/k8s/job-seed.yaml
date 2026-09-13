@@ -1,0 +1,78 @@
+# Le référentiel alimentaire — à jouer **une fois**, après le premier
+# déploiement. Idempotent : le rejouer met à jour, ne duplique rien.
+#
+#   kubectl -n tablee create -f deploy/k8s/job-seed.yaml
+#   kubectl -n tablee logs -f job/tablee-seed
+#
+# ── Deux seeds, deux natures ────────────────────────────────────────────────
+#
+# `seed:refs` charge les repères ANSES depuis `db/seeds/*.csv`, qui sont dans
+# l'image : quelques dizaines de lignes, chacune avec sa `source`.
+#
+# `seed:food` charge la table Ciqual — ~3 000 aliments, 57 Mo de XML publiés
+# par l'ANSES. Ces fichiers ne sont **ni dans le dépôt ni dans l'image** :
+# volumineux, et inchangés depuis 2020. L'`initContainer` ci-dessous les
+# télécharge dans un `emptyDir` le temps du job.
+#
+# ⚠️ Cela suppose que le cluster peut sortir vers `ciqual.anses.fr`. S'il ne
+# le peut pas, retirer l'`initContainer`, monter un volume contenant
+# `alim_*.xml` et `compo_*.xml`, et pointer `--dir` dessus.
+#
+# ── Ce que ce job ne remplit pas, et c'est voulu ────────────────────────────
+#
+# `unit_default` et `seasonal_produce` restent **vides** : ce sont des collectes
+# humaines (§17), chaque ligne exigeant une source ou une pesée. Les barres
+# concernées afficheront « indisponible », jamais 0. C'est le comportement
+# attendu, pas un échec de déploiement.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: tablee-seed-
+  namespace: tablee
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+
+      initContainers:
+        - name: telecharger-ciqual
+          image: alpine:3.20
+          command: ['/bin/sh', '-ceu']
+          args:
+            - |
+              apk add --no-cache curl unzip
+              cd /ciqual
+              curl -fsSL -o ciqual.zip \
+                'https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip'
+              unzip -o -j ciqual.zip
+              rm ciqual.zip
+              ls -la
+          volumeMounts:
+            - { name: ciqual, mountPath: /ciqual }
+
+      containers:
+        - name: seed
+          image: ghcr.io/xhelliom/tablee:latest
+          command: ['/bin/sh', '-ceu']
+          args:
+            - |
+              node --import tsx scripts/seed-refs.ts
+              node --import tsx scripts/seed-food.ts --dir=/ciqual
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: tablee, key: DATABASE_URL }
+          volumeMounts:
+            - { name: ciqual, mountPath: /ciqual }
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            # Le XML est lu en flux, pas chargé d'un bloc — mais l'ETL garde
+            # les aliments en mémoire le temps des écritures par lots.
+            limits: { memory: 1Gi }
+
+      volumes:
+        - name: ciqual
+          emptyDir: { sizeLimit: 512Mi }

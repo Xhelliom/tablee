@@ -1,0 +1,142 @@
+# Construit et publie l'image sur GitHub Container Registry.
+#
+# Les tests passent **avant** la publication, et l'image n'est poussée que
+# s'ils sont verts : publier une image non testée revient à déplacer le moment
+# où on découvre le problème, pas à l'éviter.
+
+name: Image
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # `github.repository` est « Xhelliom/tablee » ; les noms d'images doivent
+  # être en minuscules, et `metadata-action` s'en charge plus bas.
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  test:
+    name: Tests et typecheck
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # ⚠️ Le rôle applicatif **ne doit pas être superutilisateur**.
+      #
+      # `POSTGRES_USER` en est un, et un superutilisateur contourne la RLS de
+      # la migration 008 *en silence* : les tests d'étanchéité passeraient au
+      # vert sans rien prouver. C'est arrivé pendant l'écriture de la 008, d'où
+      # le rôle dédié ci-dessous — et d'où le test qui vérifie que la RLS est
+      # effective, qui échouerait ici si on l'oubliait.
+      - name: Rôle applicatif non superutilisateur
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+            create role tablee login password 'tablee';
+            create database tablee_test owner tablee;
+          SQL
+
+      - run: npm run typecheck
+
+      - name: Tests
+        env:
+          TEST_DATABASE_URL: postgres://tablee:tablee@localhost:5432/tablee_test
+        run: npm test
+
+      # Le front est construit ici aussi : une erreur de compilation Vite ne
+      # doit pas attendre l'étape d'image pour se voir.
+      - run: npm run build:web
+
+  # ───────────────────────────────────────────────────────────────────────────
+  image:
+    name: Image
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # `linux/arm64` est émulé par QEMU, donc lent. Il est là parce qu'un
+      # cluster domestique tourne souvent sur des machines ARM ; si le vôtre
+      # est en x86 uniquement, retirer la plateforme divise le temps de build
+      # par trois. Plus aucun module natif dans l'arbre de dépendances depuis
+      # que `@node-rs/argon2` en est sorti, donc les deux architectures sont
+      # équivalentes à construire.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Sur une pull request venue d'un fork, le jeton est en lecture seule :
+      # on construit pour vérifier que le Dockerfile tient, on ne publie pas.
+      - name: Connexion à ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Le cache de build est porté par GitHub Actions : sans lui, chaque
+          # commit réinstalle tout l'arbre npm pour les deux architectures.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Où l'image est publiée
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "### Image publiée" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

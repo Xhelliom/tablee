@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablée</title>
+<meta name="description" content="Le suivi alimentaire de la famille, un plat à la fois.">
+<!-- Le chrome du navigateur prend la couleur de marque : l'aplat terracotta
+     doit courir jusqu'en haut de l'écran, pas s'arrêter sous la barre d'état. -->
+<meta name="theme-color" content="#D85A30">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<!-- Les polices sont servies depuis ce dépôt, pas depuis un CDN : voir
+     web/public/fonts/LISEZMOI.md. Préchargées parce qu'elles portent le
+     premier écran et que le foyer est sur son propre réseau. -->
+<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/main.tsx"></script>
+</body>
+</html>

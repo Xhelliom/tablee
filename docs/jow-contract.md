@@ -17,6 +17,7 @@ Code correspondant : `server/jow/`. Échantillons figés :
 | Le `recipeId` du partage est-il inutilisable ? | **Non — il est directement résolvable.** Voir ci-dessous. |
 | `?coversCount=` change-t-il les quantités côté serveur ? | **Non.** Page statique, paramètre ignoré. |
 | Les valeurs par portion sont-elles publiées ? | Oui, 5 nutriments, plus Nutri-Score et Green-score. |
+| Les pages ingrédients disent-elles l'origine végétale ? | **Non.** `flags.vegetable` est une catégorie PNNS : l'ail et le riz y sont `false`. Voir §5. |
 
 **Critère de sortie atteint** : `npm run jow:resolve -- "<texte de partage>"`
 produit `{ title, servings, ingredients[], nutrition{} }` sur 5 recettes
@@ -174,7 +175,7 @@ sort à `null` plutôt qu'à un pourcentage calculé sur une base incomplète.
 
 ---
 
-## 5. Pages ingrédients — piste, pas contrat
+## 5. Pages ingrédients — base établie, flags inutilisables
 
 `https://jow.fr/ingredients/<ObjectId>` est publique et expose
 `props.pageProps.ingredient.editorialData` :
@@ -189,23 +190,74 @@ sort à `null` plutôt qu'à un pourcentage calculé sur une base incomplète.
 }
 ```
 
-Deux choses intéressantes et une réserve :
+### La base des valeurs, c'est `averageEstimatedValues`
 
-- `flags.fruit` / `flags.vegetable` alimenteraient `food.plant_based` sans
-  aucune saisie.
-- `seasonality` pourrait recouper `seasonal_produce` (§8bis) — vide sur
-  l'échantillon testé, à revérifier sur un légume franc.
-- ⚠️ **La base des `nutritionalFacts` d'un ingrédient n'est indiquée nulle
-  part dans le payload.** Le §5 de la spec suppose « valeurs /100 g » ; c'est
-  vraisemblable, ce n'est pas établi. `averageEstimatedValues` suggère même
-  qu'elles pourraient se rapporter à une pièce moyenne.
+**Le point ouvert n° 1 est levé.** Vérifié le 13/09/2026 sur 8 ingrédients :
+les `nutritionalFacts` d'une page ingrédient se rapportent à
+`averageEstimatedValues`, et non systématiquement à 100 g.
 
-**Rien de tout cela n'est utilisé pour l'instant.** Écrire des valeurs
-nutritionnelles sur une base supposée est précisément ce qu'interdit I1. À
-trancher avant d'exploiter ces pages : soit une confirmation de la base, soit
-on s'en tient à Ciqual et Open Food Facts, dont la base est documentée.
+| Ingrédient | `averageEstimatedValues` | kcal publiées |
+|---|---|---|
+| Persil (frais) | `{100, "g"}` | 43 |
+| Riz | `{100, "g"}` | 352 |
+| Beurre | `{100, "g"}` | 717 |
+| Purée de carotte (surgelée) | `{100, "g"}` | 32 |
+| **Poulet (entier)** | `{1, "piece"}` | **1960** |
+| **Ail** | `{1, "piece"}` | **105** |
 
----
+Deux vérifications croisées le confirment :
+
+- « Persil (frais) » donne 43 kcal / 3,71 prot / 3,48 gluc / 0,63 lip / 4,30
+  fibres — **exactement** la ligne Ciqual « Persil, frais » pour 100 g, aux
+  arrondis près.
+- « Poulet (entier) » à 1960 kcal et 266 g de protéines ne peut pas être une
+  base 100 g : c'est un poulet entier.
+
+⚠️ **Ces valeurs restent inexploitées, et pour une autre raison qu'avant.**
+Elles sont arrondies à l'entier et mutuellement incohérentes : l'ail à 105 kcal
+implique ~95 g, ses 6 g de protéines ~113 g, ses 9 g de fibres ~155 g. On ne
+peut donc **ni** s'en servir comme valeurs nutritionnelles (Ciqual est plus
+précise et documentée), **ni** en déduire le poids d'une `Pièce` par
+proportionnalité. Le conditionnel de la spec (§5, « valeurs /100 g ») est
+tranché ; l'usage, lui, ne s'ouvre pas pour autant.
+
+### ❌ `flags.vegetable` ne dit **pas** l'origine végétale
+
+Piste explorée le 13/09/2026, et abandonnée sur constat. Les flags relevés :
+
+| Ingrédient | `fruit` | `vegetable` | Origine réelle |
+|---|---|---|---|
+| Salade (Mélange) | false | **true** | végétale |
+| Purée de carotte | false | **true** | végétale |
+| **Ail** | false | **false** | **végétale** |
+| **Riz** | false | **false** | **végétale** |
+| **Pommes de terre** | false | **false** | **végétale** |
+| **Persil (frais)** | false | **false** | **végétale** |
+| Poulet (entier) | false | false | animale |
+| Beurre | false | false | animale |
+
+`false/false` recouvre aussi bien le riz que le poulet. La lecture cohérente
+est que `vegetable` signifie « **compte comme un légume au sens du PNNS** » —
+l'ail et le persil sont des condiments, la pomme de terre un féculent, le riz
+une céréale. C'est une catégorie de recommandation, pas une origine.
+
+S'en servir pour `food.plant_based` classerait l'ail, le riz, les pommes de
+terre et les herbes comme non végétaux, et sous-estimerait silencieusement
+toutes les barres « Végétal » du foyer. C'est exactement la valeur plausible
+et fausse qu'interdit I1.
+
+Ces flags restent intéressants **pour autre chose** : un indicateur « portions
+de fruits et légumes au sens PNNS », qui est une question différente. Rien
+n'est câblé dessus aujourd'hui.
+
+Le rattachement d'un ingrédient Jow au référentiel passe donc par
+`jow_food_link` (migration 004) : confirmation humaine une fois par ingrédient,
+propagée ensuite à toutes les recettes qui l'emploient.
+
+### `seasonality` reste vide
+
+Vide sur les 8 ingrédients testés, y compris sur des légumes francs (carotte,
+salade). Aucun usage possible.
 
 ## 6. Tolérance et confiance
 
@@ -268,12 +320,17 @@ diff inattendu signifie que Jow a bougé, donc que le contrat est à relire.
 
 ## 9. Ce qui reste ouvert
 
-1. **Base des valeurs des pages ingrédients** (§5 ci-dessus) — à confirmer
-   avant toute exploitation.
-2. **Contenu de `unit_default`** (§4 ci-dessus) — sept unités identifiées,
-   chacune à sourcer. Relève du « ne pas décider seul ».
+1. ~~**Base des valeurs des pages ingrédients**~~ — **levé le 13/09/2026** : les
+   valeurs se rapportent à `averageEstimatedValues` (§5). Elles restent
+   inexploitées, mais pour une raison désormais connue : arrondies à l'entier
+   et mutuellement incohérentes.
+2. **Contenu de `unit_default`** (§4 ci-dessus) — cinq unités à peser, `Pièce`
+   et `Litre` relevant de `food.unit_weights`. Relève du « ne pas décider
+   seul ». Gabarit dans `db/seeds/unit-default.csv`.
 3. **Durée de vie de la redirection par ObjectId** (§1) — non documentée par
    Jow, donc susceptible de changer sans préavis. Le repli existe.
 4. **Recettes non publiques** — les 3 618 URLs du `sitemap.xml` couvrent le
    catalogue indexé. Une recette personnelle ou retirée du catalogue n'a pas
    été testée : elle retombera en `confidence='basse'`.
+5. **Poids d'une `Pièce` chez Jow** — ni publié, ni déductible des pages
+   ingrédients (§5). Se renseigne à la main dans `food.unit_weights`.

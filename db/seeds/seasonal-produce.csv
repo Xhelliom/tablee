@@ -1,0 +1,76 @@
+# seasonal_produce — fruits et légumes de saison (§8bis de la spec)
+#
+# RÈGLE ABSOLUE : aucune ligne sans `source`. Le chargeur refuse un fichier qui
+# en manque une, et ignore les lignes dont les mois ne sont pas renseignés.
+# Tant que la table est vide, la bande « De saison en … » ne s'affiche pas du
+# tout — plutôt qu'un cadre creux qui passerait pour un bug.
+#
+# ── Pourquoi ce fichier est à remplir à la main ─────────────────────────────
+#
+# La saisonnalité n'existe ni dans Ciqual ni dans Open Food Facts, et aucune
+# source ouverte et directement exploitable n'a été trouvée. Des calendriers
+# publics existent (ADEME/GoodPlanet, Greenpeace France, Interfel) : il faut en
+# choisir un, le recopier, et le citer dans `source`. Une demi-journée, acquise
+# définitivement.
+#
+# La liste de noms ci-dessous est un **point de départ**, pas une source : elle
+# répond à « lesquels ? » pour ne pas avoir à y penser. Ajoutez, retirez,
+# renommez. Ce qui compte, ce sont les colonnes `months` et `source`.
+#
+# ── Colonnes ────────────────────────────────────────────────────────────────
+#   name          nom affiché dans la bande d'accueil
+#   kind          legume | fruit
+#   months        mois de saison, séparés par des espaces : « 9 10 11 ».
+#                 Une saison qui passe l'hiver s'écrit « 11 12 1 2 ».
+#   ciqual_code   facultatif — code aliment Ciqual, pour cocher le produit
+#                 quand le foyer l'a mangé dans le mois. Sans lui, le produit
+#                 s'affiche mais ne se coche jamais : le rapprochement par
+#                 ressemblance de nom produirait des coches fausses, et une
+#                 coche fausse ruine le jeu.
+#   source        le calendrier retenu, avec sa date de consultation
+#   region        facultatif, FR par défaut
+#
+name,kind,months,ciqual_code,source,region
+Courgette,legume,,,,
+Tomate,legume,,,,
+Carotte,legume,,,,
+Poireau,legume,,,,
+Potimarron,legume,,,,
+Courge butternut,legume,,,,
+Épinard,legume,,,,
+Brocoli,legume,,,,
+Chou-fleur,legume,,,,
+Chou de Bruxelles,legume,,,,
+Haricot vert,legume,,,,
+Petit pois,legume,,,,
+Aubergine,legume,,,,
+Poivron,legume,,,,
+Concombre,legume,,,,
+Salade verte,legume,,,,
+Radis,legume,,,,
+Betterave,legume,,,,
+Navet,legume,,,,
+Panais,legume,,,,
+Céleri,legume,,,,
+Fenouil,legume,,,,
+Endive,legume,,,,
+Artichaut,legume,,,,
+Asperge,legume,,,,
+Champignon de Paris,legume,,,,
+Oignon,legume,,,,
+Pomme,fruit,,,,
+Poire,fruit,,,,
+Raisin,fruit,,,,
+Fraise,fruit,,,,
+Framboise,fruit,,,,
+Cerise,fruit,,,,
+Abricot,fruit,,,,
+Pêche,fruit,,,,
+Prune,fruit,,,,
+Melon,fruit,,,,
+Pastèque,fruit,,,,
+Figue,fruit,,,,
+Kiwi,fruit,,,,
+Clémentine,fruit,,,,
+Orange,fruit,,,,
+Rhubarbe,fruit,,,,

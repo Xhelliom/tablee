@@ -1,0 +1,46 @@
+# ⚠️ **HTTPS n'est pas optionnel ici.**
+#
+# Android n'expose un share target que sur une origine sécurisée, et Chrome
+# refuse d'installer une PWA sans certificat valide. Sans HTTPS, Tablée
+# n'apparaît pas dans le menu de partage de Jow — c'est-à-dire que le chemin
+# critique du produit n'existe pas (§4). Un certificat auto-signé ne suffit
+# pas non plus.
+#
+# Ce manifeste suppose ingress-nginx et cert-manager, qui est la combinaison la
+# plus répandue. Avec Traefik, remplacer `ingressClassName` et les annotations
+# par une `IngressRoute` ; avec un tunnel Cloudflare, le TLS est terminé en
+# amont et cet Ingress se réduit au routage.
+#
+# Le nom de domaine doit être **le même** que `TABLEE_BASE_URL` dans le
+# Deployment. S'ils divergent, better-auth refuse les requêtes pour cause
+# d'origine invalide, et les liens d'invitation pointent ailleurs.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tablee
+  namespace: tablee
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Le partage Jow arrive en GET avec le texte partagé **dans l'URL** : elle
+    # est plus longue qu'une URL ordinaire. La valeur par défaut de nginx
+    # (4k/8k) tronquerait certains partages, et le repas arriverait amputé.
+    nginx.ingress.kubernetes.io/proxy-buffer-size: '16k'
+    nginx.ingress.kubernetes.io/client-header-buffer-size: '16k'
+    nginx.ingress.kubernetes.io/large-client-header-buffers: '4 16k'
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: ['tablee.example.net']
+      secretName: tablee-tls
+  rules:
+    - host: tablee.example.net
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tablee
+                port:
+                  name: http

@@ -1,0 +1,127 @@
+# Postgres dans le cluster — **optionnel**.
+#
+# Si vous avez déjà une base ailleurs, supprimez ce fichier du `kustomization`
+# et pointez `DATABASE_URL` dessus : rien d'autre ne dépend de ce qui suit.
+#
+# ── Ce que ce fichier fait de particulier ───────────────────────────────────
+#
+# L'image officielle crée `POSTGRES_USER` en **superutilisateur**, et un
+# superutilisateur contourne la Row-Level Security de la migration 008 — en
+# silence. L'étanchéité entre foyers du §16 serait alors une promesse vide.
+#
+# Le script d'initialisation ci-dessous crée donc un rôle `tablee` **sans**
+# attribut superutilisateur, propriétaire de sa base. Il possède ses tables,
+# les migrations passent, et `force row level security` s'applique à lui.
+#
+# Ce script ne tourne **qu'au tout premier démarrage**, sur un volume vide.
+# Sur une base déjà initialisée, il est ignoré : voir le mode d'emploi pour la
+# commande à jouer à la main dans ce cas.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tablee-postgres-init
+  namespace: tablee
+data:
+  10-role-applicatif.sh: |
+    #!/bin/sh
+    set -eu
+    # `:'pw'` est l'interpolation **quotée** de psql : elle échappe le mot de
+    # passe correctement. Le coller directement dans la chaîne SQL casserait
+    # sur une apostrophe, et cette panne-là n'arrive qu'en production.
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
+         --set=pw="$TABLEE_DB_PASSWORD" <<'SQL'
+      create role tablee login password :'pw' nosuperuser;
+      create database tablee owner tablee;
+    SQL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tablee-postgres
+  namespace: tablee
+spec:
+  clusterIP: None
+  selector:
+    app: tablee-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tablee-postgres
+  namespace: tablee
+spec:
+  serviceName: tablee-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tablee-postgres
+  template:
+    metadata:
+      labels:
+        app: tablee-postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            # Le compte d'administration de l'instance. Ce n'est **pas** celui
+            # de l'application : voir le ConfigMap plus haut.
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: tablee, key: POSTGRES_PASSWORD }
+            # Le mot de passe du rôle applicatif, lu par le script d'init.
+            - name: TABLEE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: tablee, key: POSTGRES_PASSWORD }
+            # Les données sous un sous-répertoire : le point de montage d'un PVC
+            # contient souvent un `lost+found`, et initdb refuse un répertoire
+            # non vide.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: donnees
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ['pg_isready', '-U', 'postgres']
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ['pg_isready', '-U', 'postgres']
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { memory: 1Gi }
+      volumes:
+        - name: init
+          configMap:
+            name: tablee-postgres-init
+            defaultMode: 0555
+  volumeClaimTemplates:
+    - metadata:
+        name: donnees
+      spec:
+        accessModes: ['ReadWriteOnce']
+        # Décommentez pour forcer une classe précise. Sans cette ligne, la
+        # classe par défaut du cluster est utilisée.
+        # storageClassName: longhorn
+        resources:
+          requests:
+            # Ciqual pèse ~3 000 aliments ; le reste, ce sont des repas. 5 Gio
+            # tiennent des années pour un foyer, et plusieurs foyers n'y
+            # changent pas grand-chose.
+            storage: 5Gi

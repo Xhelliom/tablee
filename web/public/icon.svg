@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Tablée">
+  <rect width="512" height="512" rx="112" fill="#D85A30"/>
+  <!-- Une assiette et une cuillère : de la cuisine, pas un stéthoscope. -->
+  <path d="M112 244h224a16 16 0 0 1 16 16c0 70-50 122-128 122S96 330 96 260a16 16 0 0 1 16-16z" fill="#FAECE7"/>
+  <rect x="392" y="126" width="26" height="256" rx="13" fill="#FAECE7"/>
+  <ellipse cx="405" cy="170" rx="34" ry="52" fill="#FAECE7"/>
+</svg>

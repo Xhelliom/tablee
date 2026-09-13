@@ -131,6 +131,7 @@ export function parseRecipeNode(node: unknown, ctx: ParseContext = {}): ParsedRe
     nutriScore: score(node['nutritionalRatingScores'], 'nutriscore'),
     greenScore: score(node['nutritionalRatingScores'], 'greenscore'),
     confidence: 'haute',
+    raw: node,
     warnings,
   };
 
@@ -274,6 +275,7 @@ export function fallback(ctx: ParseContext, warnings: string[]): ParsedRecipe {
     nutriScore: null,
     greenScore: null,
     confidence: 'basse',
+    raw: null,
     warnings,
   };
 }
