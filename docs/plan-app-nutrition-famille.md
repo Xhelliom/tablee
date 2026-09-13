@@ -221,6 +221,19 @@ Trois voies, par priorité d'usage :
 
 ## 6. Unités et conversions
 
+> ⚠️ **Écart assumé, 13/09/2026.** Le point 1 ci-dessous range `ml` parmi les
+> unités directement utilisables. Le code ne le fait pas : passer d'un volume à
+> une masse demande une densité, et 35 ml d'huile ne pèsent pas 35 g. Les
+> volumes passent donc par `food.unit_weights` ou `unit_default`, et à défaut
+> déclenchent la question à l'utilisateur — même règle que `Litre` au §4 de
+> `docs/jow-contract.md`. Elle découle de I1, qui ne se négocie pas.
+>
+> `unit_default` est toujours vide. Son gabarit commenté est dans
+> `db/seeds/unit-default.csv`, avec le détail de ce qu'il y a à peser. `Pièce`
+> et `Litre` en sont volontairement absents : une pièce de poulet et une pièce
+> de radis n'ont rien en commun, et ces deux-là relèvent de `food.unit_weights`,
+> au cas par cas.
+
 Les recettes Jow utilisent des unités non métriques (`1 poignée`, `1/10 botte`,
 `×1 steak`). Le calcul nutritionnel exige des grammes.
 
@@ -440,6 +453,47 @@ vocabulaire système est la moitié de l'effet tableau de bord.
 
 ## 9. Repères nutritionnels — **à sourcer, pas à inventer**
 
+> ⚠️ **Constat du 13/09/2026 : cette section suppose un modèle que les sources
+> ne suivent pas.** Elle demande de remplir `nutrient_reference` avec, pour
+> chaque tranche d'âge et de sexe, une valeur en grammes. Des quatre
+> macronutriments de la V1, **seules les fibres sont publiées ainsi**.
+>
+> | Nutriment | Ce que l'ANSES publie réellement |
+> |---|---|
+> | Fibres | 30 g/j pour l'adulte, 14 / 16 / 19 / 21 g/j pour les 4-6, 7-10, 11-14 et 15-17 ans. Absolu, non sexué. |
+> | Protéines | un **intervalle de référence en % de l'apport énergétique total** (10-20 % chez l'adulte), qui varie avec l'âge |
+> | Lipides | intervalle de 35-40 % de l'AET |
+> | Glucides | intervalle de 40-55 % de l'AET, hors fibres |
+>
+> La RNP des protéines s'exprime en outre **par kilogramme de poids corporel**,
+> donnée que le §10 ne stocke volontairement pas.
+>
+> Or un pourcentage d'énergie est un ratio : il converge au fil de la journée
+> au lieu de progresser, et ne répond donc jamais à « qu'est-ce qu'il me
+> manque ». `nutrient_reference` porte donc désormais un `kind` (AS, RNP, RN,
+> IR_MIN, IR_MAX) et une `basis` (`absolu` ou `pct_aet`), et les cibles en
+> grammes des trois autres macros sont **dérivées** au moment du seed :
+>
+> ```
+> cible_g = intervalle (% AET) × besoin énergétique (kcal) / facteur (kcal/g)
+> ```
+>
+> Les trois termes sont sourcés — avis ANSES, besoins énergétiques EFSA 2017
+> repris par l'ANSES, facteurs du Règlement (UE) n° 1169/2011 Annexe XIV, qui
+> est la convention sous laquelle Ciqual publie son énergie. Le produit, lui,
+> n'est publié nulle part : ces lignes portent `derived = true` et leur chaîne
+> de calcul complète en `source`. Voir `db/seeds/` et
+> `server/nutrition/derive.ts`.
+>
+> Le besoin énergétique vit dans sa propre table (`energy_reference`) et **ne
+> sort jamais à l'écran** : I5 interdit un objectif chiffré de calories sur un
+> profil mineur, et il ne sert ici qu'au calcul.
+>
+> Le point 4 ci-dessous tient intégralement : une tranche non couverte reste
+> absente et l'UI affiche « repère indisponible ». C'est le cas des 0-3 ans.
+> Les tranches au-delà de 69 ans (hommes) et 59 ans (femmes) sont prolongées,
+> ce qui est consigné comme dette n° 1 dans `docs/dette-technique.md`.
+
 La table `nutrient_reference` est **livrée vide**.
 
 > ⚠️ **I1 s'applique ici en priorité.** Les repères varient par âge et par sexe.
@@ -462,6 +516,18 @@ La table `nutrient_reference` est **livrée vide**.
 ---
 
 ## 10. Schéma Postgres
+
+> **Le schéma a évolué depuis, par migrations numérotées** (13/09/2026). Ce qui
+> suit est l'état initial, transcrit dans `db/migrations/001_init.sql`. Les
+> suivantes, et pourquoi :
+>
+> | Migration | Ce qu'elle ajoute, et la raison |
+> |---|---|
+> | `002` | `meal_nutrition.grams_total / grams_plant / grams_classified`. Agréger une part végétale sur une journée demande les deux termes du rapport ; la moyenne de deux pourcentages de repas ne mesure rien. |
+> | `003` | `food.*_100g_max` et `meal_nutrition.*_max`. Ciqual publie des majorants (« < 0,5 ») que la doc de la table appelle « une valeur maximale » : un nutriment devient un intervalle plutôt qu'un point. |
+> | `004` | `jow_food_link`. L'ObjectId d'un ingrédient Jow est stable : on le rattache une fois, pas une fois par recette. |
+> | `005` | `nutrient_reference.kind` et `.basis` — voir l'encart du §9. |
+> | `006` | `nutrient_reference.derived` et la table `energy_reference` — voir l'encart du §9. |
 
 ```sql
 create extension if not exists "pgcrypto";
@@ -753,6 +819,26 @@ create table weekly_insight (
 
 ## 11. Calcul nutritionnel — algorithme
 
+> **Quatre points tranchés à l'écriture** (13/09/2026). Le pseudo-code
+> ci-dessous les laisse implicites, et chacun se résout dans le sens de I1 :
+>
+> - **Les totaux sont des intervalles, pas des points.** Une mesure exacte est
+>   un intervalle de largeur nulle ; un « < 0,5 » de Ciqual vaut `[0 ; 0,5]` ;
+>   « traces » reste sans majorant, l'ANSES écrivant « très faible » sans jamais
+>   donner de seuil.
+> - **Un aliment hors référentiel ne détruit pas le total, il en retire le
+>   plafond.** Un repas avec un plat de cantine vaut « au moins 31 g de
+>   protéines » — vrai, vérifiable, et plus utile que « valeur inconnue ».
+> - **Les parts sont arrondies au millième par la méthode du plus fort reste**,
+>   et non chacune dans son coin. Trois convives à coefficient égal donneraient
+>   sinon 0,333 × 3 = 0,999, et le repas perdrait un millième à chaque
+>   enregistrement.
+> - **« jamais 0 par défaut » vaut aussi à l'échelle de la journée.** Un repas
+>   dont aucun gramme n'est classé est écarté du rapport de part végétale, et
+>   non compté au dénominateur : l'y laisser reviendrait à le traiter comme
+>   entièrement non végétal, c'est-à-dire à réintroduire le zéro qu'on vient de
+>   refuser au niveau du repas.
+
 Exécuté **en applicatif**, à chaque écriture ou modification d'un repas.
 
 ```
@@ -830,6 +916,22 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 | `GET` | `/api/dashboard?date=` | Bilan du jour, par membre, en % des repères |
 | `GET` | `/api/insights/weekly?week=` | Synthèse hebdo (V3) |
 | `POST` | `/api/notes` | Ajouter une `family_note` (V3) |
+
+> **Routes ajoutées depuis** (13/09/2026), toutes sous la même session :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `GET` | `/api/auth/session` | Une PWA qui ouvre sur un formulaire alors que la session est valide, c'est un tap perdu à chaque lancement. |
+> | `GET` | `/api/meals/leftovers?days=` | La liste du bouton « Restes de… » (§6bis). |
+> | `GET` | `/api/meals/:id` | Écran de détail. |
+> | `GET` | `/api/recipes/:id` | Une recette et ses ingrédients, pour proposer de les rattacher au référentiel. |
+> | `POST` | `/api/recipes/peek` | Ce qu'on tire d'un texte partagé **sans accès réseau**, pour afficher quelque chose tout de suite. |
+> | `POST` | `/api/recipes/ingredients/:id/food` | Rattache un ingrédient Jow au référentiel, et propage à toutes les recettes qui l'emploient. |
+> | `GET` | `/api/recipes/links` | Les correspondances déjà posées, pour les relire et les corriger. |
+> | `POST` | `/api/foods` | Créer un aliment saisi à la main, sans aucune valeur déduite. |
+> | `DELETE` | `/api/templates/:id` | |
+> | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
+> | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
 
 **`POST /api/meals` — corps :**
 
@@ -977,34 +1079,43 @@ on accumule, on ne juge personne.
 - [x] Test de non-régression vert (`npm test`)
 
 ### V1 — Aucune IA
-- [ ] Schéma migré, seed Ciqual chargé (`food` non vide)
-- [ ] `nutrient_reference` rempli depuis l'ANSES, `source` renseigné partout
-- [ ] Login foyer, session persistante
-- [ ] CRUD membres avec `portion_coef`
-- [ ] Share target : partage Jow → repas enregistré en ≤ 3 taps
-- [ ] Saisie texte avec recherche `food`
-- [ ] Les 5 créneaux disponibles
-- [ ] **Templates** : créer depuis un repas, appliquer en ≤ 2 taps
-- [ ] Bouton « Restes de… » : repas des 3 derniers jours, re-log en ≤ 2 taps
-- [ ] Champ invités sur l'écran de saisie
-- [ ] Accueil : 5 barres en % par membre
-- [ ] `seasonal_produce` saisie ; bande « De saison en <mois> » en haut de l'accueil
-- [ ] Badge « N produits de saison » sur les cartes de repas Jow
-- [ ] Identité visuelle appliquée (§8ter) : terracotta chrome, fond crème, palette nutriments sur les données uniquement
-- [ ] **Test** : Σ des `share` d'un repas = 1 (sans invité)
-- [ ] **Test** : avec 2 invités, Σ des `share` < 1 et les assiettes du foyer ne gonflent pas
-- [ ] **Test** : modifier un `portion_coef` ne change aucun repas passé
-- [ ] **Test** : tranche d'âge sans repère → « indisponible », pas 0
+- [x] Schéma migré, seed Ciqual chargé (`food` non vide)
+- [x] `nutrient_reference` rempli, `source` renseigné partout — fibres recopiées
+      de l'ANSES, trois autres macros dérivées ; voir l'encart du §9
+- [x] Login foyer, session persistante
+- [x] CRUD membres avec `portion_coef`
+- [x] Share target : partage Jow → repas enregistré en ≤ 3 taps
+- [x] Saisie texte avec recherche `food`
+- [x] Les 5 créneaux disponibles
+- [x] **Templates** : créer depuis un repas, appliquer en ≤ 2 taps
+- [x] Bouton « Restes de… » : repas des 3 derniers jours, re-log en ≤ 2 taps
+- [x] Champ invités sur l'écran de saisie
+- [x] Accueil : 5 barres en % par membre
+- [ ] `seasonal_produce` saisie — **reste à faire.** La bande est écrite et
+      testée ; elle ne s'affiche pas tant que la table est vide. Gabarit dans
+      `db/seeds/seasonal-produce.csv`
+- [x] Badge « N produits de saison » sur les cartes de repas Jow
+- [x] Identité visuelle appliquée (§8ter) : terracotta chrome, fond crème, palette nutriments sur les données uniquement
+- [x] **Test** : Σ des `share` d'un repas = 1 (sans invité)
+- [x] **Test** : avec 2 invités, Σ des `share` < 1 et les assiettes du foyer ne gonflent pas
+- [x] **Test** : modifier un `portion_coef` ne change aucun repas passé
+- [x] **Test** : tranche d'âge sans repère → « indisponible », pas 0
 
 > **Objectif du jalon :** savoir si la famille logue encore trois semaines plus
 > tard. Si non, tout le reste était du travail perdu. Ne pas enchaîner sur V2
 > avant d'avoir la réponse.
 
+> **État au 13/09/2026 :** V1 et V2 sont écrites et testées (176 tests). Il
+> reste deux collectes de données avant un usage réel — `seasonal_produce` et
+> `unit_default` — et une vérification que rien ne remplace : **installer la
+> PWA sur un téléphone**. Le share target est le chemin critique du produit et
+> n'a jamais tourné ailleurs que dans un Chromium de test (dette n° 4).
+
 ### V2 — Le confort
-- [ ] Historique, favoris, récents
-- [ ] Vue semaine
-- [ ] Édition d'un repas passé
-- [ ] Suggestion automatique de template quand un même repas revient 3 fois
+- [x] Historique, favoris, récents
+- [x] Vue semaine
+- [x] Édition d'un repas passé
+- [x] Suggestion automatique de template quand un même repas revient 3 fois
 
 > **Objectif :** passer de « on a testé » à « on l'utilise ».
 
@@ -1054,18 +1165,25 @@ multi-tenant, auth individuelle. À décider avant, jamais après.
 
 ## 17. Non tranché — demander, ne pas décider
 
-1. **Valeurs de `nutrient_reference`** — §9. À sourcer auprès de l'ANSES.
+1. ~~**Valeurs de `nutrient_reference`**~~ — **levé le 13/09/2026, en partie.**
+   Les fibres sont recopiées de l'ANSES ; protéines, lipides et glucides sont
+   dérivés d'intervalles en % de l'AET, faute d'être publiés en grammes. Voir
+   l'encart du §9. Restent découverts : les 0-3 ans, et les tranches prolongées
+   au-delà de 69/59 ans (dette n° 1).
 2. **Valeurs de `unit_default`** — §6. Chaque ligne exige une `source`. Les
    sept unités effectivement utilisées par Jow sont inventoriées au §4 de
    `docs/jow-contract.md`.
 3. **Contenu de `seasonal_produce`** — §8bis. Environ 40 produits × leurs mois,
    à saisir à la main pour la France. Pas de source automatisable identifiée.
-4. **Base des valeurs nutritionnelles des pages ingrédients Jow** — non
-   documentée dans le payload. Le §5 suppose « /100 g » ; ce n'est pas établi.
-   À confirmer avant d'exploiter ces pages (§5 de `docs/jow-contract.md`).
+4. ~~**Base des valeurs nutritionnelles des pages ingrédients Jow**~~ — **levé
+   le 13/09/2026.** Les valeurs se rapportent à `averageEstimatedValues`, pas
+   systématiquement à 100 g. Elles restent inexploitées, pour une raison
+   désormais connue : arrondies à l'entier et mutuellement incohérentes. Voir
+   le §5 de `docs/jow-contract.md`.
 
-Les points 1 à 3 sont des **collectes de données**, pas des arbitrages : la
+Les points 2 et 3 restent des **collectes de données**, pas des arbitrages : la
 source existe, il faut aller la chercher. Ne rien inventer à la place (I1).
+Leurs gabarits commentés sont dans `db/seeds/`.
 
 ### Décidé depuis la v2
 

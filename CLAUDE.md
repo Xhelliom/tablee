@@ -76,11 +76,21 @@ sont pas des préférences de style.
 
 Sur ces points, demander plutôt que choisir :
 
-1. **Contenu de `nutrient_reference`** — à sourcer auprès de l'ANSES. Ne pas
-   générer les valeurs.
-2. **Contenu de `unit_default`** — chaque ligne exige une `source`.
-3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits.
+1. ~~**Contenu de `nutrient_reference`**~~ — fait le 13/09/2026, en partie. Les
+   fibres viennent de l'ANSES ; protéines, lipides et glucides sont **dérivés**
+   d'intervalles en % de l'apport énergétique, faute d'être publiés en grammes.
+   Lire l'encart du §9 de la spec avant d'y toucher. Restent découverts : les
+   0-3 ans, et les tranches prolongées au-delà de 69/59 ans.
+2. **Contenu de `unit_default`** — chaque ligne exige une `source`. Toujours
+   vide. Gabarit commenté dans `db/seeds/unit-default.csv`.
+3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
+   vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
 4. Toute modification des règles ci-dessus.
+
+Les valeurs se chargent depuis `db/seeds/*.csv`, versionnés, avec une colonne
+`source` **obligatoire sur chaque ligne** — le chargeur refuse un fichier qui
+en manque une. Rien n'est téléchargé au démarrage : un fichier versionné se
+relit en diff, un fetch au boot ne se relit pas.
 
 Le reste est tranché dans la spec. Les décisions y sont motivées pour pouvoir
 être contestées en connaissance de cause, pas pour être réouvertes par défaut.
@@ -106,11 +116,28 @@ ne pas réintroduire par habitude :
 Avant de toucher à `server/jow/`, lire le contrat. Les échantillons figés se
 recapturent (`npm run jow:capture`), ne se modifient pas à la main.
 
+### V1 et V2 — ✅ écrites le 13/09/2026
+
+Toutes les cases du §15 passent, sauf la saisie de `seasonal_produce`. 176
+tests, typecheck vert. Le détail de ce qui a été décidé en chemin est dans les
+encarts datés des §6, §9, §10, §11 et §12 de la spec — le texte d'origine y est
+conservé, comme au §3.
+
+**Avant d'aller plus loin, deux choses ne se remplacent pas par du code :**
+
+1. Installer la PWA sur un téléphone et partager une vraie recette depuis Jow.
+   Le share target est le chemin critique du produit et n'a jamais tourné
+   ailleurs que dans un Chromium de test.
+2. Savoir si la famille logue encore trois semaines plus tard. C'est l'objectif
+   du jalon V1, et aucune ligne de code n'y répond.
+
 ### Ensuite
 
-V1 → V2 → V3 → V4, dans l'ordre, avec les critères d'acceptation du §15 de la
-spec. Ne pas anticiper l'IA : un assistant diététicien branché sur trois repas
-mal saisis ne produit que des banalités.
+V3 → V4, dans l'ordre, avec les critères d'acceptation du §15. Ne pas anticiper
+l'IA : un assistant diététicien branché sur trois repas mal saisis ne produit
+que des banalités. La V3 demande une relecture humaine de 4 synthèses sur des
+données réelles, la V4 un an d'historique — les écrire avant, c'est produire de
+l'invérifiable.
 
 ---
 
