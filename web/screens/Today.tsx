@@ -91,7 +91,7 @@ export function TodayScreen(): React.ReactElement {
                     : `${open.balance.mealCount} repas aujourd’hui`}
                 </p>
               </div>
-              <NutrientBars balance={open.balance} />
+              <NutrientBars balance={open.balance} firstName={open.member.firstName} />
             </div>
             {standings(open.balance).length > 0 ? (
               <ul style={{

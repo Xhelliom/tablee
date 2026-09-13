@@ -36,7 +36,8 @@ export type ReferenceKind = 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX';
  */
 export type ReferenceBasis = 'absolu' | 'pct_aet';
 
-export interface NutrientReference {
+/** Une ligne de `nutrient_reference`, telle qu'elle est stockée. */
+export interface ReferenceValue {
   nutrient: string;
   value: number;
   unit: string;
@@ -53,13 +54,45 @@ export interface NutrientReference {
   source: string;
 }
 
-export type ReferenceTable = NutrientReference & { sex: 'F' | 'M' | 'ALL'; ageMin: number; ageMax: number };
+/**
+ * Un repère rendu à l'appelant : la ligne stockée, plus ses citations
+ * dégagées de l'arithmétique.
+ */
+export interface NutrientReference extends ReferenceValue {
+  /**
+   * Les documents cités, sans le détail du calcul.
+   *
+   * ⚠️ **C'est cette liste qui va à l'écran, pas `source`.** La chaîne de
+   * dérivation d'un repère contient le besoin énergétique (« × 2263 kcal ») :
+   * l'afficher reviendrait à montrer un chiffre de calories sur la fiche d'un
+   * enfant, ce qu'interdit I5. Le détail complet reste en base, consultable en
+   * SQL, pour qui veut refaire le calcul.
+   */
+  citations: string[];
+}
 
+export type ReferenceTable = ReferenceValue & {
+  sex: 'F' | 'M' | 'ALL';
+  ageMin: number;
+  ageMax: number;
+};
+
+/**
+ * Les lignes qui couvrent cet âge pour ce nutriment, une fois `keep` appliqué.
+ *
+ * ⚠️ **`keep` est appliqué avant la préférence de sexe, et l'ordre compte.**
+ * Les cibles en grammes sont sexuées (elles dérivent d'un besoin énergétique
+ * qui l'est), les intervalles en % de l'AET ne le sont pas. Trier par sexe
+ * d'abord ferait disparaître les lignes `ALL` dès qu'une ligne sexuée existe,
+ * quelle que soit sa nature — et l'intervalle d'origine deviendrait
+ * introuvable alors qu'il est juste à côté.
+ */
 function candidates(
   table: ReferenceTable[],
   sex: 'F' | 'M',
   age: number,
   nutrient: Nutrient,
+  keep: (row: ReferenceTable) => boolean,
 ): ReferenceTable[] {
   const key = REFERENCE_KEYS[nutrient];
   const matches = table.filter(
@@ -67,7 +100,8 @@ function candidates(
       row.nutrient === key &&
       age >= row.ageMin &&
       age <= row.ageMax &&
-      (row.sex === sex || row.sex === 'ALL'),
+      (row.sex === sex || row.sex === 'ALL') &&
+      keep(row),
   );
   // Une ligne propre au sexe l'emporte sur une ligne `ALL` : les repères de
   // l'ANSES sont sexués à partir de l'adolescence, et retomber sur la ligne
@@ -95,7 +129,8 @@ export function findReference(
   age: number,
   nutrient: Nutrient,
 ): NutrientReference | null {
-  const matches = candidates(table, sex, age, nutrient).filter(
+  const matches = candidates(
+    table, sex, age, nutrient,
     (row) => row.basis === 'absolu' && row.kind !== 'IR_MAX',
   );
   // Entre deux natures, la plus engageante d'abord : une RNP couvre le besoin,
@@ -124,17 +159,34 @@ export function findCeiling(
   age: number,
   nutrient: Nutrient,
 ): NutrientReference | null {
-  const row = candidates(table, sex, age, nutrient).find(
+  const row = candidates(
+    table, sex, age, nutrient,
     (candidate) => candidate.basis === 'absolu' && candidate.kind === 'IR_MAX',
-  );
+  )[0];
   return row === undefined ? null : strip(row);
 }
 
 function strip(row: ReferenceTable): NutrientReference {
   return {
     nutrient: row.nutrient, value: row.value, unit: row.unit,
-    kind: row.kind, basis: row.basis, derived: row.derived, source: row.source,
+    kind: row.kind, basis: row.basis, derived: row.derived,
+    source: row.source, citations: citations(row.source),
   };
+}
+
+/**
+ * Extrait les documents cités d'une chaîne de source.
+ *
+ * Un repère dérivé s'écrit `dérivé : 10 % AET [doc A] × 2600 kcal [doc B] ÷
+ * 4 kcal/g [doc C]` — les crochets encadrent les références, le reste est
+ * l'arithmétique. Une source recopiée n'a pas de crochets : elle est déjà la
+ * citation.
+ */
+export function citations(source: string): string[] {
+  const found = [...source.matchAll(/\[([^\]]+)\]/g)]
+    .map((match) => match[1])
+    .filter((value): value is string => value !== undefined);
+  return found.length > 0 ? [...new Set(found)] : [source];
 }
 
 /**
@@ -153,7 +205,7 @@ export function findEnergyShareRange(
   age: number,
   nutrient: Nutrient,
 ): { min: number | null; max: number | null; source: string } | null {
-  const matches = candidates(table, sex, age, nutrient).filter((row) => row.basis === 'pct_aet');
+  const matches = candidates(table, sex, age, nutrient, (row) => row.basis === 'pct_aet');
   const min = matches.find((row) => row.kind === 'IR_MIN');
   const max = matches.find((row) => row.kind === 'IR_MAX');
   if (min === undefined && max === undefined) return null;

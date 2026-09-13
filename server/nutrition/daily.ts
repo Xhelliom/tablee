@@ -21,7 +21,8 @@
  */
 import { NUTRIENTS, type Macros, type Nutrient } from './compute.ts';
 import {
-  findCeiling, findReference, type NutrientReference, type ReferenceTable,
+  findCeiling, findEnergyShareRange, findReference,
+  type NutrientReference, type ReferenceTable,
 } from './references.ts';
 
 export type BarState = 'disponible' | 'encadre' | 'partiel' | 'indisponible';
@@ -60,6 +61,12 @@ export interface NutrientBar {
   /** Grammes au-delà du plafond. `null` tant qu'il n'est pas dépassé. */
   excess: number | null;
   standing: Standing | null;
+  /**
+   * L'intervalle publié par l'ANSES, en pourcentage de l'apport énergétique,
+   * quand la cible en grammes en découle. Sert à expliquer d'où vient le
+   * repère — « 10 à 20 % de l'énergie de la journée » — sans citer de calories.
+   */
+  energyShare: { min: number | null; max: number | null } | null;
 }
 
 /**
@@ -169,7 +176,14 @@ function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {
     percent,
     percentMax,
     ...position(consumed, reference, referenceMax),
+    energyShare: share(findEnergyShareRange(input.references, input.sex, input.age, nutrient)),
   };
+}
+
+function share(
+  range: { min: number | null; max: number | null; source: string } | null,
+): { min: number | null; max: number | null } | null {
+  return range === null ? null : { min: range.min, max: range.max };
 }
 
 /**

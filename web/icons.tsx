@@ -108,6 +108,10 @@ export const IconAlert = (p: IconProps) => (
   <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 16.5v.5" /></g></Base>
 );
 
+export const IconInfo = (p: IconProps) => (
+  <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5M12 7.5v.5" /></g></Base>
+);
+
 export const IconPencil = (p: IconProps) => (
   <Base {...p}><g><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z" /><path d="m14 6 4 4" /></g></Base>
 );

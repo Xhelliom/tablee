@@ -65,7 +65,8 @@ export function MembersScreen(): React.ReactElement {
                 </p>
               </div>
               {balances.get(member.id) !== undefined ? (
-                <NutrientBars balance={balances.get(member.id) as DailyBalance} />
+                <NutrientBars balance={balances.get(member.id) as DailyBalance}
+                              firstName={member.firstName} />
               ) : null}
             </div>
 

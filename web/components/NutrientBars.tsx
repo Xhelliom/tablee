@@ -13,12 +13,23 @@
  *   rien de connu      pas de barre. Surtout pas une barre à zéro.
  */
 import type { DailyBalance } from '../api.ts';
+import { useState } from 'react';
 import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, NUTRIENT_SHORT } from '../design/vocabulary.ts';
 import { formatPercentRange } from '../design/quantities.ts';
+import { IconInfo } from '../icons.tsx';
+import { ReferenceSheet } from './ReferenceSheet.tsx';
 
 const HEIGHT = 58;
 
-export function NutrientBars({ balance }: { balance: DailyBalance }): React.ReactElement {
+export function NutrientBars({
+  balance,
+  firstName = '',
+}: {
+  balance: DailyBalance;
+  /** Sert à nommer la feuille d'explication pour les lecteurs d'écran. */
+  firstName?: string;
+}): React.ReactElement {
+  const [explaining, setExplaining] = useState(false);
   const columns = BAR_NUTRIENTS.map((nutrient) => {
     const bar = balance.bars.find((b) => b.nutrient === nutrient);
     return {
@@ -62,14 +73,35 @@ export function NutrientBars({ balance }: { balance: DailyBalance }): React.Reac
           <Bar key={key} {...column} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginTop: 6 }}>
+      <div style={{ display: 'flex', gap: 7, justifyContent: 'center', alignItems: 'center', marginTop: 6 }}>
         {columns.map((column) => (
           <span key={column.key} title={column.label}
                 style={{ width: 17, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
             {column.short}
           </span>
         ))}
+        {/* Un repère affiché sans sa provenance demande qu'on lui fasse
+            confiance sur parole. Le « i » est le chemin vers la source. */}
+        <button
+          type="button"
+          onClick={() => setExplaining(true)}
+          aria-label="D’où viennent ces repères"
+          style={{
+            background: 'none', border: 0, padding: 0, marginLeft: 2,
+            cursor: 'pointer', color: 'var(--text-muted)', display: 'flex',
+          }}
+        >
+          <IconInfo size={14} />
+        </button>
       </div>
+
+      {explaining ? (
+        <ReferenceSheet
+          balance={balance}
+          firstName={firstName}
+          onClose={() => setExplaining(false)}
+        />
+      ) : null}
     </div>
   );
 }

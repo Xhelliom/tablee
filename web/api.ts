@@ -88,6 +88,12 @@ export interface NutrientReference {
   /** Calculée à partir d'autres lignes sourcées, pas recopiée d'un tableau. */
   derived: boolean;
   source: string;
+  /**
+   * Les documents cités, sans le détail arithmétique. C'est ce qui s'affiche :
+   * la chaîne complète contient un nombre de calories, qui n'a rien à faire
+   * sur la fiche d'un mineur (I5).
+   */
+  citations: string[];
 }
 
 /** Où en est la journée : ce qui manque, ce qui est atteint, ce qui est dépassé. */
@@ -112,6 +118,8 @@ export interface NutrientBar {
   /** Grammes au-delà du plafond. `null` tant qu'il n'est pas dépassé. */
   excess: number | null;
   standing: Standing | null;
+  /** L'intervalle publié par l'ANSES, en % de l'énergie de la journée. */
+  energyShare: { min: number | null; max: number | null } | null;
 }
 
 export interface PlantBar {

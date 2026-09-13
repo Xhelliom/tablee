@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { bilanJournalier, type DailyMeal } from './daily.ts';
 import {
-  findCeiling, findEnergyShareRange, findReference, type ReferenceTable,
+  citations, findCeiling, findEnergyShareRange, findReference, type ReferenceTable,
 } from './references.ts';
 import { ageAt, ageBracket, isMinor } from './age.ts';
 
@@ -402,5 +402,49 @@ describe('bilanJournalier — progression, manque et dépassement', () => {
     assert.equal(proteines.remaining, null);
     assert.equal(proteines.standing, null);
     assert.equal(proteines.consumed, 45, 'la consommation reste connue');
+  });
+});
+
+describe('citations', () => {
+  it('dégage les documents du détail arithmétique', () => {
+    assert.deepEqual(
+      citations('dérivé : 10 % AET [ANSES 2016, Tableau 4] × 2600 kcal [ANSES 2016, § besoin] ÷ 4 kcal/g [Règlement UE 1169/2011]'),
+      ['ANSES 2016, Tableau 4', 'ANSES 2016, § besoin', 'Règlement UE 1169/2011'],
+    );
+  });
+
+  // I5 : la chaîne de dérivation porte un nombre de calories. Ce qui part à
+  // l'écran ne doit pas le contenir.
+  it('ne laisse passer aucun chiffre de calories', () => {
+    for (const c of citations('dérivé : 10 % AET [ANSES 2016] × 2263 kcal [EFSA 2017] ÷ 4 kcal/g [UE 1169/2011]')) {
+      assert.doesNotMatch(c, /kcal/);
+      assert.doesNotMatch(c, /2263/);
+    }
+  });
+
+  it('rend la source telle quelle quand elle n’est pas dérivée', () => {
+    assert.deepEqual(
+      citations('ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (AS)'),
+      ['ANSES, avis 2012-SA-0103 du 12/12/2016, Tableau 4 (AS)'],
+    );
+  });
+
+  it('ne répète pas deux fois le même document', () => {
+    assert.deepEqual(citations('a [X] b [X] c [Y]'), ['X', 'Y']);
+  });
+
+  it('remonte jusqu’à la barre, avec l’intervalle d’origine', () => {
+    const table: ReferenceTable[] = [
+      { sex: 'M', ageMin: 18, ageMax: 69, nutrient: 'protein_g', kind: 'IR_MIN', basis: 'absolu', derived: true, value: 65, unit: 'g', source: 'dérivé : 10 % AET [ANSES 2016] × 2600 kcal [ANSES 2016] ÷ 4 kcal/g [UE 1169/2011]' },
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', kind: 'IR_MIN', basis: 'pct_aet', derived: false, value: 10, unit: '%', source: 'ANSES 2016' },
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', kind: 'IR_MAX', basis: 'pct_aet', derived: false, value: 20, unit: '%', source: 'ANSES 2016' },
+    ];
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: table, meals: [repas({ proteinG: 30 })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.deepEqual(proteines.reference?.citations, ['ANSES 2016', 'UE 1169/2011']);
+    assert.deepEqual(proteines.energyShare, { min: 10, max: 20 });
+    assert.equal(proteines.reference?.derived, true);
   });
 });
