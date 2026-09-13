@@ -13,6 +13,7 @@ import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
+import { acquireForHousehold, type ScopedClient } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
 import { redactRequestUrl } from './jow/share.ts';
@@ -43,6 +44,15 @@ declare module 'fastify' {
     identity(): Identity;
     /** Le foyer actif. Lève 401 s'il n'y en a pas. */
     householdId(): string;
+    /**
+     * Le client Postgres de cette requête, sur lequel `app.household_id` est
+     * posé — donc celui que la RLS de la migration 008 filtre. **Toute** lecture
+     * ou écriture du domaine passe par lui ; `ctx.pool` ne porte aucun foyer et
+     * ne doit plus servir qu'à l'authentification.
+     */
+    db: pg.PoolClient;
+    /** Interne : la libération du client, appelée par le hook onResponse. */
+    scoped: ScopedClient | null;
   }
 }
 
@@ -95,6 +105,8 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
   // serait partagé par référence entre toutes les requêtes. Le hook ci-dessous
   // affecte une valeur propre à chacune, avant toute route.
   app.decorateRequest<AuthState | null>('auth', null);
+  app.decorateRequest<pg.PoolClient | null>('db', null);
+  app.decorateRequest<ScopedClient | null>('scoped', null);
   app.decorateRequest('identity', function (this: { auth: AuthState | null }): Identity {
     if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();
     return this.auth.identity;
@@ -127,6 +139,26 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
     if (!isPublicApi(path) && request.auth.kind !== 'actif') {
       throw ApiError.unauthorized();
     }
+
+    // Un foyer actif : la requête reçoit son propre client, marqué à ce foyer.
+    // Les policies de la 008 s'appuient dessus, et une requête qui aurait
+    // oublié son `where household_id = …` ne ramènera donc rien plutôt que le
+    // foyer d'à côté.
+    if (request.auth.kind === 'actif') {
+      const scoped = await acquireForHousehold(ctx.pool, request.auth.identity.householdId);
+      request.scoped = scoped;
+      request.db = scoped.client;
+    }
+  });
+
+  // Rendre le client quoi qu'il arrive — réponse normale, erreur, 404.
+  // `onResponse` passe dans tous ces cas ; ne pas le faire viderait le pool en
+  // quelques dizaines de requêtes.
+  app.addHook('onResponse', async (request) => {
+    const scoped = request.scoped;
+    if (scoped === null) return;
+    request.scoped = null;
+    await scoped.release();
   });
 
   app.setErrorHandler((error, request, reply) => {

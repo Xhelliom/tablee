@@ -18,7 +18,7 @@ import type { AppContext } from '../app.ts';
 
 export function templateRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get('/api/templates', async (request) => ({
-    templates: await listTemplates(ctx.pool, request.householdId()),
+    templates: await listTemplates(request.db, request.householdId()),
   }));
 
   app.post<{ Params: { id: string } }>('/api/templates/:id/apply', async (request, reply) => {
@@ -26,7 +26,7 @@ export function templateRoutes(app: FastifyInstance, ctx: AppContext): void {
     const householdId = request.householdId();
     const input = request.body === undefined || request.body === null ? {} : body(request.body);
 
-    const mealId = await transaction(ctx.pool, (client) =>
+    const mealId = await transaction(request.db, (client) =>
       applyTemplate(client, householdId, id, {
         ...(input['eatenAt'] !== undefined && { eatenAt: isoDateTime(input['eatenAt'], 'eatenAt') }),
         ...(input['slot'] !== undefined && { slot: slot(input['slot']) }),
@@ -41,11 +41,11 @@ export function templateRoutes(app: FastifyInstance, ctx: AppContext): void {
 
     if (mealId === null) throw ApiError.notFound('template introuvable');
     reply.code(201);
-    return { meal: await getMeal(ctx.pool, householdId, mealId) };
+    return { meal: await getMeal(request.db, householdId, mealId) };
   });
 
   app.delete<{ Params: { id: string } }>('/api/templates/:id', async (request) => {
-    const deleted = await deleteTemplate(ctx.pool, request.householdId(), uuid(request.params.id, 'id'));
+    const deleted = await deleteTemplate(request.db, request.householdId(), uuid(request.params.id, 'id'));
     if (!deleted) throw ApiError.notFound('template introuvable');
     return { ok: true };
   });
@@ -58,6 +58,6 @@ export function templateRoutes(app: FastifyInstance, ctx: AppContext): void {
    * brièveté.
    */
   app.get('/api/templates/suggestions', async (request) => ({
-    suggestions: await suggestTemplates(ctx.pool, request.householdId()),
+    suggestions: await suggestTemplates(request.db, request.householdId()),
   }));
 }

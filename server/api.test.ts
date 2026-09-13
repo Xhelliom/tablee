@@ -11,6 +11,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import type pg from 'pg';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.ts';
+import { withHousehold } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import { buildTestAuth, signUp, signUpWithHousehold, TEST_BASE_URL } from './test-support/auth.ts';
 import { closeTestPool, resetDatabase, SKIP_MESSAGE, testDatabaseUrl, testPool } from './test-support/db.ts';
@@ -50,6 +51,17 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     await app.close();
     await closeTestPool();
   });
+
+  /**
+   * Une requête SQL dans le foyer du test — l'équivalent de ce que fait le
+   * serveur à chaque requête. Depuis la 008, un `pool.query` nu sur une table
+   * du domaine ne voit ni n'écrit rien : c'est exactement la garantie qu'on
+   * voulait, et le harnais doit s'y plier comme le reste.
+   */
+  const sql = async <T extends pg.QueryResultRow>(
+    text: string, params: unknown[] = [], foyer = householdId,
+  ): Promise<T[]> =>
+    withHousehold(pool, foyer, async (client) => (await client.query<T>(text, params)).rows);
 
   beforeEach(async () => {
     await resetDatabase(pool);
@@ -271,7 +283,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
           'Galette végé https://jow.fr/r?recipeId=650b16ade7cc8d0013ce4a6e&key=SECRET42&userId=abc123',
       });
 
-      const { rows } = await pool.query<{ raw_input: string }>('select raw_input from meal');
+      const rows = await sql<{ raw_input: string }>('select raw_input from meal');
       const stored = rows[0]?.raw_input ?? '';
       assert.doesNotMatch(stored, /SECRET42/);
       assert.doesNotMatch(stored, /abc123/);
@@ -287,10 +299,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
 
       const voisins = await signUpWithHousehold(auth, pool, 'voisin@exemple.test', 'Voisins');
-      await pool.query(
+      // Écrit **dans le foyer des voisins**, comme le ferait leur propre
+      // session. La RLS interdit désormais d'écrire chez eux depuis ici.
+      await sql(
         `insert into meal (household_id, eaten_at, slot, source)
          values ($1, '2026-09-13T19:30:00+02:00', 'diner', 'manuel')`,
-        [voisins.householdId],
+        [voisins.householdId], voisins.householdId,
       );
 
       const { body } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
@@ -362,7 +376,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         participants: [{ eaterId: adulte }],
       });
       // Un plat d'il y a dix jours : hors fenêtre.
-      await pool.query(
+      await sql(
         `insert into meal (household_id, eaten_at, slot, source, recipe_id)
          values ($1, now() - interval '10 days', 'diner', 'jow', $2)`,
         [householdId, recipeId],

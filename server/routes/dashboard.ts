@@ -22,17 +22,17 @@ import type { AppContext } from '../app.ts';
 export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get<{ Querystring: { date?: string } }>('/api/dashboard', async (request) => {
     const householdId = request.householdId();
-    const timezone = await householdTimezone(ctx.pool, householdId);
+    const timezone = await householdTimezone(request.db, householdId);
     const date = request.query.date ?? todayIn(timezone);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw ApiError.badRequest('« date » doit être une date AAAA-MM-JJ');
     }
 
     const [eaters, references, meals, plantAverage] = await Promise.all([
-      listEaters(ctx.pool, householdId),
-      loadReferences(ctx.pool),
-      mealsForDay(ctx.pool, householdId, date, timezone),
-      householdPlantAverage(ctx.pool, householdId, 7),
+      listEaters(request.db, householdId),
+      loadReferences(request.db),
+      mealsForDay(request.db, householdId, date, timezone),
+      householdPlantAverage(request.db, householdId, 7),
     ]);
 
     const byMember = new Map<string, typeof meals>();
@@ -64,14 +64,14 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
       date,
       dashboard,
       meals: await listMeals(
-        ctx.pool, householdId,
+        request.db, householdId,
         startOfDay(date, timezone),
         startOfDay(nextDay(date), timezone),
       ),
       // §8bis — la bande « De saison en <mois> ». Vide tant que
       // `seasonal_produce` n'est pas saisie (§17) : la bande ne s'affiche
       // alors pas, plutôt que de s'afficher creuse.
-      seasonal: await seasonalForMonth(ctx.pool, householdId, Number(month), Number(year)),
+      seasonal: await seasonalForMonth(request.db, householdId, Number(month), Number(year)),
       month: Number(month),
       year: Number(year),
       /** Les repères manquent-ils entièrement ? L'écran doit pouvoir le dire. */
@@ -82,7 +82,7 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
   /** V2 — grille 7 jours × membres. */
   app.get<{ Querystring: { from?: string; days?: string } }>('/api/week', async (request) => {
     const householdId = request.householdId();
-    const timezone = await householdTimezone(ctx.pool, householdId);
+    const timezone = await householdTimezone(request.db, householdId);
     const days = Math.min(Number(request.query.days ?? 7) || 7, 31);
     const from = request.query.from ?? mondayOf(todayIn(timezone));
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) {
@@ -90,8 +90,8 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
 
     const [eaters, cells] = await Promise.all([
-      listEaters(ctx.pool, householdId),
-      weekGrid(ctx.pool, householdId, from, days, timezone),
+      listEaters(request.db, householdId),
+      weekGrid(request.db, householdId, from, days, timezone),
     ]);
     return {
       from,

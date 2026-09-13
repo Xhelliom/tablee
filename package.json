@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --import tsx --test \"server/**/*.test.ts\"",
+    "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.json",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
     "jow:capture": "node --import tsx scripts/jow-capture.ts",
@@ -15,7 +15,7 @@
     "seed:food": "node --import tsx scripts/seed-food.ts",
     "start": "node --import tsx server/index.ts",
     "dev": "node --import tsx --watch server/index.ts",
-    "test:db": "node --import tsx --test \"server/**/*.test.ts\"",
+    "test:db": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
     "dev:web": "vite",
     "build:web": "vite build",
     "icons": "node --import tsx scripts/make-icons.ts",

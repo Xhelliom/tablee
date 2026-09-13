@@ -10,6 +10,7 @@
 import { buildApp } from './app.ts';
 import { buildAuth } from './auth/auth.ts';
 import { closePool, getPool } from './db.ts';
+import { assertIsolation, IsolationError } from './db/guard.ts';
 
 const port = Number(process.env['PORT'] ?? 3000);
 const host = process.env['HOST'] ?? '0.0.0.0';
@@ -48,6 +49,20 @@ if (secret.length < 32) {
 const secureCookies = process.env['TABLEE_INSECURE_COOKIE'] !== '1';
 
 const pool = getPool();
+
+// Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
+// Un superutilisateur Postgres contourne la RLS **en silence**, et servir dans
+// cet état promettrait aux familles invitées quelque chose de faux (§16).
+try {
+  await assertIsolation(pool);
+} catch (error) {
+  if (error instanceof IsolationError) {
+    console.error(`\n${error.message}\n`);
+    process.exit(1);
+  }
+  throw error;
+}
+
 const auth = buildAuth({ pool, baseURL, secret, secureCookies });
 
 const app = buildApp({ pool, auth, baseURL });

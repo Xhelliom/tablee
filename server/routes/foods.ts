@@ -15,13 +15,13 @@ export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
     async (request) => {
       const query = request.query.q ?? '';
       const limit = Math.min(Number(request.query.limit ?? 20) || 20, 50);
-      return { foods: await searchFoods(ctx.pool, query, limit) };
+      return { foods: await searchFoods(request.db, query, limit) };
     },
   );
 
   app.post('/api/foods', async (request, reply) => {
     const input = body(request.body);
-    const id = await createManualFood(ctx.pool, {
+    const id = await createManualFood(request.db, {
       name: str(input['name'], 'name', { max: 200 }),
       // Laissé à `null` si l'utilisateur ne le dit pas : « non classé »,
       // jamais « pas végétal » (§10).
@@ -50,10 +50,14 @@ export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
       const ingredientId = uuid(request.params.id, 'id');
       const input = body(request.body);
       const foodId = optionalUuid(input['foodId'], 'foodId');
-      const confirmedBy = optionalUuid(input['confirmedBy'], 'confirmedBy');
+      // Qui a confirmé, c'est qui est connecté — jamais ce que le client
+      // affirme. Et depuis la 007 c'est un identifiant de compte, qui n'est
+      // pas un UUID : le valider comme tel rejetterait toutes les valeurs
+      // légitimes.
+      const confirmedBy = request.identity().userId;
       const householdId = request.householdId();
 
-      return transaction(ctx.pool, async (client) => {
+      return transaction(request.db, async (client) => {
         const link = await linkIngredientToFood(client, ingredientId, foodId, confirmedBy);
         const recomputed =
           link.jowFoodId === null
@@ -65,5 +69,5 @@ export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
   );
 
   /** Les correspondances Jow → référentiel déjà posées. */
-  app.get('/api/recipes/links', async () => ({ links: await listLinks(ctx.pool) }));
+  app.get('/api/recipes/links', async (request) => ({ links: await listLinks(request.db) }));
 }

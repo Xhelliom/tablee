@@ -23,13 +23,13 @@ function present(eater: Eater): Eater & { age: number; minor: boolean } {
 
 export function eaterRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get('/api/eaters', async (request) => {
-    const eaters = await listEaters(ctx.pool, request.householdId());
+    const eaters = await listEaters(request.db, request.householdId());
     return { eaters: eaters.map(present) };
   });
 
   app.post('/api/eaters', async (request, reply) => {
     const input = body(request.body);
-    const eater = await createEater(ctx.pool, request.householdId(), {
+    const eater = await createEater(request.db, request.householdId(), {
       firstName: str(input['firstName'], 'firstName', { max: 80 }),
       birthDate: isoDate(input['birthDate'], 'birthDate'),
       sex: sex(input['sex']),
@@ -55,7 +55,7 @@ export function eaterRoutes(app: FastifyInstance, ctx: AppContext): void {
     const id = uuid(request.params.id, 'id');
     const input = body(request.body);
 
-    const eater = await updateEater(ctx.pool, request.householdId(), id, {
+    const eater = await updateEater(request.db, request.householdId(), id, {
       ...(input['firstName'] !== undefined && { firstName: str(input['firstName'], 'firstName', { max: 80 }) }),
       ...(input['birthDate'] !== undefined && { birthDate: isoDate(input['birthDate'], 'birthDate') }),
       ...(input['sex'] !== undefined && { sex: sex(input['sex']) }),

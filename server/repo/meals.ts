@@ -16,6 +16,7 @@ import type { Db } from '../db.ts';
 import { redactShareText } from '../jow/share.ts';
 import type { Confidence, MealNutrition, NutritionItem } from '../nutrition/compute.ts';
 import { calculerNutrition } from '../nutrition/compute.ts';
+import { ApiError } from '../http/errors.ts';
 import { calculerShares } from '../nutrition/shares.ts';
 import { loadFoodValues } from './foods.ts';
 import { ingredientsAsItems, loadIngredients, loadRecipe } from './recipes.ts';
@@ -182,7 +183,11 @@ async function writeShares(
     [householdId, presentIds],
   );
   if (rows.length !== presentIds.length) {
-    throw new Error('un convive ne fait pas partie de ce foyer');
+    // 400 et non 500 : la requête est fautive, pas le serveur. Un identifiant
+    // de convive venu d'un autre foyer arrive forcément d'un client qui l'a
+    // fabriqué — le traiter comme une panne interne le journaliserait comme
+    // telle et rendrait un message qui n'aide personne.
+    throw ApiError.badRequest('un convive ne fait pas partie de ce foyer', 'convive_inconnu');
   }
 
   const shares = calculerShares(

@@ -21,7 +21,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     const input = body(request.body);
     const householdId = request.householdId();
 
-    const id = await transaction(ctx.pool, (client) =>
+    const id = await transaction(request.db, (client) =>
       createMeal(client, householdId, {
         eatenAt: isoDateTime(input['eaten_at'] ?? input['eatenAt'], 'eaten_at'),
         slot: slot(input['slot']),
@@ -44,24 +44,24 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     );
 
     reply.code(201);
-    return { meal: await getMeal(ctx.pool, householdId, id) };
+    return { meal: await getMeal(request.db, householdId, id) };
   });
 
   app.get<{ Querystring: { from?: string; to?: string } }>('/api/meals', async (request) => {
     const householdId = request.householdId();
-    const timezone = await householdTimezone(ctx.pool, householdId);
+    const timezone = await householdTimezone(request.db, householdId);
     const { from, to } = range(request.query.from, request.query.to, timezone);
-    return { meals: await listMeals(ctx.pool, householdId, from, to) };
+    return { meals: await listMeals(request.db, householdId, from, to) };
   });
 
   /** Les repas des 3 derniers jours portant une recette — bouton « Restes de… ». */
   app.get<{ Querystring: { days?: string } }>('/api/meals/leftovers', async (request) => {
     const days = Math.min(Number(request.query.days ?? 3) || 3, 14);
-    return { meals: await recentWithRecipe(ctx.pool, request.householdId(), days) };
+    return { meals: await recentWithRecipe(request.db, request.householdId(), days) };
   });
 
   app.get<{ Params: { id: string } }>('/api/meals/:id', async (request) => {
-    const meal = await getMeal(ctx.pool, request.householdId(), uuid(request.params.id, 'id'));
+    const meal = await getMeal(request.db, request.householdId(), uuid(request.params.id, 'id'));
     if (meal === null) throw ApiError.notFound('repas introuvable');
     return { meal };
   });
@@ -78,7 +78,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     const householdId = request.householdId();
     const input = body(request.body);
 
-    const found = await transaction(ctx.pool, (client) =>
+    const found = await transaction(request.db, (client) =>
       updateMeal(client, householdId, id, {
         ...(input['eaten_at'] !== undefined || input['eatenAt'] !== undefined
           ? { eatenAt: isoDateTime(input['eaten_at'] ?? input['eatenAt'], 'eaten_at') }
@@ -100,11 +100,11 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     );
 
     if (!found) throw ApiError.notFound('repas introuvable');
-    return { meal: await getMeal(ctx.pool, householdId, id) };
+    return { meal: await getMeal(request.db, householdId, id) };
   });
 
   app.delete<{ Params: { id: string } }>('/api/meals/:id', async (request) => {
-    const deleted = await deleteMeal(ctx.pool, request.householdId(), uuid(request.params.id, 'id'));
+    const deleted = await deleteMeal(request.db, request.householdId(), uuid(request.params.id, 'id'));
     if (!deleted) throw ApiError.notFound('repas introuvable');
     return { ok: true };
   });
@@ -113,7 +113,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.post('/api/templates', async (request, reply) => {
     const input = body(request.body);
     const template = await createTemplateFromMeal(
-      ctx.pool,
+      request.db,
       request.householdId(),
       uuid(input['mealId'] ?? input['meal_id'], 'mealId'),
       optionalStr(input['name'], 'name', { max: 120 }) ?? 'Repas habituel',

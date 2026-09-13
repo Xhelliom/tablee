@@ -30,12 +30,12 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
 
     // §4, point 2 : une recette déjà connue est réutilisée, sans accès réseau.
     if (share.jowRecipeId !== null) {
-      const known = await findRecipeByJowId(ctx.pool, share.jowRecipeId);
+      const known = await findRecipeByJowId(request.db, share.jowRecipeId);
       if (known !== null) {
-        const { month } = await currentMonth(ctx.pool, request.householdId());
+        const { month } = await currentMonth(request.db, request.householdId());
         return {
           recipe: known,
-          seasonal: await seasonalCount(ctx.pool, known.id, month),
+          seasonal: await seasonalCount(request.db, known.id, month),
           fetched: false,
           // Reconstruits depuis la recette : un deuxième partage doit montrer
           // les mêmes trous que le premier.
@@ -51,11 +51,11 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
       return { recipe: null, parsed, seasonal: 0, fetched: true, warnings: parsed.warnings };
     }
 
-    const recipe = await saveJowRecipe(ctx.pool, parsed);
-    const { month } = await currentMonth(ctx.pool, request.householdId());
+    const recipe = await saveJowRecipe(request.db, parsed);
+    const { month } = await currentMonth(request.db, request.householdId());
     return {
       recipe,
-      seasonal: await seasonalCount(ctx.pool, recipe.id, month),
+      seasonal: await seasonalCount(request.db, recipe.id, month),
       fetched: true,
       warnings: parsed.warnings,
     };
@@ -66,12 +66,12 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
    * pour proposer de rattacher chaque ingrédient au référentiel.
    */
   app.get<{ Params: { id: string } }>('/api/recipes/:id', async (request) => {
-    const recipe = await loadRecipe(ctx.pool, uuid(request.params.id, 'id'));
+    const recipe = await loadRecipe(request.db, uuid(request.params.id, 'id'));
     if (recipe === null) throw ApiError.notFound('recette introuvable');
-    const { month } = await currentMonth(ctx.pool, request.householdId());
+    const { month } = await currentMonth(request.db, request.householdId());
     return {
       recipe,
-      seasonal: await seasonalCount(ctx.pool, recipe.id, month),
+      seasonal: await seasonalCount(request.db, recipe.id, month),
       warnings: recipeGaps(recipe),
     };
   });
