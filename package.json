@@ -19,7 +19,9 @@
     "test:db": "node --import tsx --test \"server/**/*.test.ts\"",
     "dev:web": "vite",
     "build:web": "vite build",
-    "icons": "node --import tsx scripts/make-icons.ts"
+    "icons": "node --import tsx scripts/make-icons.ts",
+    "seed:refs": "node --import tsx scripts/seed-refs.ts",
+    "seed": "npm run seed:food && npm run seed:refs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

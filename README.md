@@ -56,17 +56,56 @@ avec un message**, jamais silencieusement vertes.
 
 ---
 
-## Les trois tables livrées vides
+## Les tables de référence
 
-Ce n'est pas un oubli. Chacune demande une collecte, et une valeur inventée y
-serait pire que son absence (I1). Le code est écrit pour fonctionner sans
-elles, et chaque état « la donnée manque » est testé comme un cas nominal.
+Elles se chargent depuis `db/seeds/*.csv`, versionnés, avec **une colonne
+`source` obligatoire sur chaque ligne** : le chargeur refuse un fichier qui en
+manque une. C'est le seul garde-fou mécanique contre une valeur arrivée là on
+ne sait comment (I1).
 
-| Table | Ce qu'il faut | Ce que fait l'app en attendant |
+Rien n'est téléchargé au démarrage. Un fichier versionné se relit en diff et se
+retrouve avec `git blame` le jour où une barre paraît fausse ; des chiffres qui
+changent sous les pieds entre deux redémarrages, ce sont des conseils destinés
+à des enfants qui changent avec.
+
+| Table | État | Ce que fait l'app |
 |---|---|---|
-| `nutrient_reference` | Les repères ANSES / PNNS par âge et sexe, avec leur `source` | Les barres affichent « repère indisponible » — pas une barre à 0. L'accueil le dit en toutes lettres. |
-| `unit_default` | Les 7 unités Jow du §4 de `docs/jow-contract.md`, chacune sourcée | Une unité non convertible est signalée et la quantité est demandée. La nutrition d'un repas Jow reste exacte : elle vient du snapshot par portion. |
-| `seasonal_produce` | ~40 fruits et légumes × leurs mois, saisie manuelle | La bande « De saison en … » ne s'affiche pas, et le badge des cartes de repas non plus. |
+| `nutrient_reference` | **Fibres remplies** (ANSES, 4-17 ans et adulte). Protéines, lipides et glucides chargés en % de l'AET mais pas encore affichés — voir ci-dessous. | La barre Fibres est en % du repère. Les trois autres affichent « repère indisponible ». |
+| `unit_default` | Vide — cinq pesées à faire | Une unité non convertible est signalée et la quantité est demandée. La nutrition d'un repas Jow reste exacte : elle vient du snapshot par portion. |
+| `seasonal_produce` | Gabarit de 43 produits, mois à saisir depuis un calendrier au choix | La bande « De saison en … » ne s'affiche pas, et le badge des cartes non plus. |
+
+```bash
+npm run seed          # Ciqual + tables de référence
+npm run seed:refs     # les tables de référence seules
+npm run seed:refs -- --dry-run
+```
+
+### Ce que l'ANSES publie réellement
+
+Des quatre macronutriments de la V1, **seules les fibres ont une valeur
+absolue** : 30 g/j pour l'adulte, 14 / 16 / 19 / 21 g/j pour les 4-6, 7-10,
+11-14 et 15-17 ans. Protéines, lipides et glucides sont publiés en
+**pourcentage de l'apport énergétique total**, sous forme d'intervalle et sans
+distinction de sexe. Les convertir en grammes demanderait une cible calorique
+par âge, que l'app refuse d'installer (R7, I5) — et la RNP des protéines
+s'exprime par kilogramme de poids corporel, donnée que le §10 ne stocke pas.
+
+Ces intervalles sont donc chargés et sourcés (`basis = 'pct_aet'`), mais
+`findReference` les écarte délibérément : les traiter comme des grammes
+afficherait « 30 g sur un repère de 10 ». Ce qu'on en fait à l'écran reste à
+décider.
+
+### Ce qu'il y a à peser pour `unit_default`
+
+Un bol sur la balance, tare, et on pèse : une poignée de salade, une gousse
+d'ail épluchée, un bouquet de persil, une tranche de pain, une cuillère à
+soupe rase d'huile. Trois fois chacune, on garde la moyenne. « Pesée maison,
+09/2026 » est une source valable — c'est même la meilleure, parce que c'est
+votre poignée.
+
+`Pièce` et `Litre` n'ont volontairement pas de valeur générique : une pièce de
+poulet et une pièce de radis n'ont rien en commun, et 35 ml d'huile ne pèsent
+pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas.
 
 ## Où se trouve quoi
 

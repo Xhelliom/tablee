@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { bilanJournalier, type DailyMeal } from './daily.ts';
-import { findReference, type ReferenceTable } from './references.ts';
+import { findEnergyShareRange, findReference, type ReferenceTable } from './references.ts';
 import { ageAt, ageBracket, isMinor } from './age.ts';
 
 /** Aucune borne connue — le point de départ de tous les cas. */
@@ -34,10 +34,14 @@ const repas = (over: Partial<DailyMeal>): DailyMeal => {
  * la base.
  */
 const REPERES_DE_TEST: ReferenceTable[] = [
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', value: 60, unit: 'g', source: 'fixture de test' },
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', value: 30, unit: 'g', source: 'fixture de test' },
-  { sex: 'F', ageMin: 18, ageMax: 120, nutrient: 'carb_g', value: 250, unit: 'g', source: 'fixture de test' },
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'carb_g', value: 300, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', kind: 'RNP', basis: 'absolu', value: 60, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', value: 30, unit: 'g', source: 'fixture de test' },
+  { sex: 'F', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', value: 250, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', value: 300, unit: 'g', source: 'fixture de test' },
+  // Un intervalle en % de l'AET, tel que l'ANSES le publie pour les lipides :
+  // il ne doit jamais servir de dénominateur à une consommation en grammes.
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MIN', basis: 'pct_aet', value: 35, unit: '%', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MAX', basis: 'pct_aet', value: 40, unit: '%', source: 'fixture de test' },
 ];
 
 const bar = (result: ReturnType<typeof bilanJournalier>, nutrient: string) => {
@@ -280,5 +284,37 @@ describe('bilanJournalier — encadrements', () => {
     // Repère fibres de test : 30 g.
     assert.equal(bar(result, 'fiberG').percent, 50);
     assert.equal(bar(result, 'fiberG').percentMax, 60);
+  });
+});
+
+describe('natures de repère', () => {
+  // Le piège : « 30 g de lipides » comparés à un intervalle de référence de
+  // « 35 % de l'apport énergétique » donnerait 86 % de quelque chose qui
+  // n'existe pas. Les deux natures ne se mélangent pas.
+  it('n’utilise jamais un pourcentage d’AET comme repère en grammes', () => {
+    assert.equal(findReference(REPERES_DE_TEST, 'M', 40, 'fatG'), null);
+
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [repas({ fatG: 30 })],
+    });
+    const lipides = bar(result, 'fatG');
+    assert.equal(lipides.reference, null);
+    assert.equal(lipides.percent, null);
+    assert.equal(lipides.consumed, 30, 'la consommation reste connue');
+  });
+
+  it('rend l’intervalle en % de l’AET à qui le demande explicitement', () => {
+    const range = findEnergyShareRange(REPERES_DE_TEST, 'M', 40, 'fatG');
+    assert.deepEqual(range, { min: 35, max: 40, source: 'fixture de test' });
+    assert.equal(findEnergyShareRange(REPERES_DE_TEST, 'M', 40, 'fiberG'), null);
+  });
+
+  it('préfère une RNP à un AS quand les deux existent', () => {
+    const table: ReferenceTable[] = [
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', value: 30, unit: 'g', source: 'a' },
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'RNP', basis: 'absolu', value: 25, unit: 'g', source: 'b' },
+    ];
+    assert.equal(findReference(table, 'M', 40, 'fiberG')?.kind, 'RNP');
   });
 });

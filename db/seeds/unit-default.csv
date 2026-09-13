@@ -1,0 +1,42 @@
+# unit_default — équivalences génériques d'unités en grammes (§6 de la spec)
+#
+# RÈGLE ABSOLUE : aucune ligne sans `source`. Le chargeur refuse un fichier qui
+# en manque une. Tant qu'une unité n'est pas ici, l'app **demande la quantité à
+# l'utilisateur** au lieu de la deviner — c'est le comportement attendu, pas
+# une panne.
+#
+# ── Ce qu'il y a à peser ────────────────────────────────────────────────────
+#
+# Les unités ci-dessous sont celles que Jow emploie réellement, inventoriées au
+# §4 de docs/jow-contract.md sur 8 recettes. Pour les remplir : un bol sur la
+# balance, tare, et on pèse. Trois fois, on garde la moyenne. « Pesée maison,
+# <date> » est une source parfaitement valable — c'est même la meilleure, parce
+# que c'est votre poignée, pas celle d'une moyenne nationale.
+#
+# ── Deux unités volontairement absentes de ce fichier ───────────────────────
+#
+# `Pièce` et `Litre` n'ont pas de valeur générique défendable :
+#
+#   Pièce  une pièce de poulet et une pièce de radis n'ont rien en commun.
+#          Cette conversion appartient à l'aliment : `food.unit_weights`,
+#          renseigné au cas par cas (« {"piece": 1200} » pour un poulet entier).
+#   Litre  passer d'un volume à une masse demande une densité. 35 ml d'huile ne
+#          pèsent pas 35 g. Même raison au §4 du contrat Jow.
+#
+# Leur donner une valeur générique ici produirait des grammes plausibles et
+# faux sur tous les aliments à la fois (I1).
+#
+# ── Colonnes ────────────────────────────────────────────────────────────────
+#   unit    libellé tel que Jow le publie (la comparaison ignore casse/accents)
+#   grams   le poids mesuré, en grammes
+#   source  d'où vient la valeur. « Pesée maison, 09/2026 » convient.
+#
+unit,grams,source
+# Les cinq lignes ci-dessous attendent leur pesée. Tant que `grams` et `source`
+# sont vides, le chargeur les ignore et le signale — il ne charge pas un
+# fichier à moitié rempli en silence.
+Poignée,,
+Gousse,,
+Bouquet,,
+Tranche,,
+Cuillère à soupe,,

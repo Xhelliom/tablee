@@ -14,7 +14,9 @@
  * états nominaux.
  */
 import type { Db } from '../db.ts';
-import type { ReferenceTable } from '../nutrition/references.ts';
+import type {
+  ReferenceBasis, ReferenceKind, ReferenceTable,
+} from '../nutrition/references.ts';
 import type { UnitDefaults } from '../nutrition/units.ts';
 import { normalizeUnit } from '../nutrition/units.ts';
 
@@ -28,11 +30,16 @@ export async function loadUnitDefaults(db: Db): Promise<UnitDefaults> {
 export async function loadReferences(db: Db): Promise<ReferenceTable[]> {
   const { rows } = await db.query<{
     sex: 'F' | 'M' | 'ALL'; age_min: number; age_max: number;
-    nutrient: string; value: number; unit: string; source: string;
-  }>('select sex, age_min, age_max, nutrient, value, unit, source from nutrient_reference');
+    nutrient: string; kind: ReferenceKind; basis: ReferenceBasis;
+    value: number; unit: string; source: string;
+  }>(
+    `select sex, age_min, age_max, nutrient, kind, basis, value, unit, source
+     from nutrient_reference`,
+  );
   return rows.map((r) => ({
     sex: r.sex, ageMin: r.age_min, ageMax: r.age_max,
-    nutrient: r.nutrient, value: r.value, unit: r.unit, source: r.source,
+    nutrient: r.nutrient, kind: r.kind, basis: r.basis,
+    value: r.value, unit: r.unit, source: r.source,
   }));
 }
 
