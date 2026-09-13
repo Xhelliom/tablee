@@ -15,7 +15,13 @@
  * servi comme s'il était à jour serait pire qu'un écran d'erreur.
  */
 const CACHE = 'tablee-v1';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg'];
+const SHELL = [
+  '/', '/index.html', '/manifest.webmanifest', '/icon.svg',
+  // Les polices font partie de la coquille : sans elles l'app s'ouvre hors
+  // ligne dans ses polices de repli, et perd l'écart typographique qui porte
+  // son identité (§8ter).
+  '/fonts/inter-latin.woff2', '/fonts/fraunces-latin.woff2',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,7 +46,9 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
 
-  if (url.pathname.startsWith('/assets/')) {
+  // Les polices sont immuables elles aussi : leur nom change quand leur
+  // contenu change.
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/')) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>

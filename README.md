@@ -165,3 +165,9 @@ web/
   `docs/jow-contract.md` avant de toucher à `server/jow/`.
 - **Ne jamais logger ni persister `key` / `userId`** d'un lien de partage Jow.
   `redactShareText` est le seul point de passage.
+- **Les journées se découpent dans le fuseau du foyer**, jamais en UTC — y
+  compris le mois de saisonnalité, qui se lit via une jointure sur
+  `household.timezone`. Voir `server/http/tz.ts`.
+- **Aucune requête vers un tiers au chargement.** Les polices sont embarquées
+  (`web/public/fonts/`). Seules les photos de plats viennent de Jow, et c'est
+  le §8ter qui le demande.

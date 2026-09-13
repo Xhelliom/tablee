@@ -127,7 +127,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
 
         {meal.leftoverOf !== null ? (
           <p className="meta" style={{ marginTop: 10 }}>
-            2ᵉ service d’un plat déjà enregistré.
+            Deuxième service d’un plat déjà enregistré.
           </p>
         ) : null}
       </section>

@@ -574,6 +574,80 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
   });
 
+
+  // ── saisonnalité et fuseau du foyer ───────────────────────────────────────
+
+  describe('mois de saisonnalité', () => {
+    /** Un produit de saison rattaché à un aliment, pour pouvoir être coché. */
+    const courgette = async (): Promise<string> => {
+      const foodId = await insertFood(pool, 'Courgette, crue', { kcal: 15 }, true);
+      await pool.query(
+        `insert into seasonal_produce (name, kind, months, food_id)
+         values ('Courgette', 'legume', '{6,7,8,9}', $1)`,
+        [foodId],
+      );
+      return foodId;
+    };
+
+    it('rattache un repas de fin de mois au mois du foyer, pas à celui d’UTC', async () => {
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const foodId = await courgette();
+      const { rows } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Gratin', 1) returning id`,
+      );
+      await pool.query(
+        `insert into recipe_ingredient (recipe_id, food_id, label, quantity, unit, quantity_g, position)
+         values ($1, $2, 'Courgette', 0.2, 'Kilogramme', 200, 0)`,
+        [rows[0]!.id, foodId],
+      );
+
+      // 31 août, 23 h 30 heure de Paris — soit le 31 août 21 h 30 en UTC.
+      // Les deux tombent en août, donc le badge doit compter la courgette.
+      const { body: aout } = await call('POST', '/api/meals', {
+        eaten_at: '2026-08-31T23:30:00+02:00', slot: 'diner', source: 'jow',
+        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+      });
+      assert.equal(aout.meal.seasonalCount, 1, 'août : la courgette est de saison');
+
+      // 1er septembre, 0 h 30 heure de Paris — soit le 31 août 22 h 30 en UTC.
+      // C'est septembre pour le foyer, et la courgette l'est encore.
+      const { body: septembre } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-01T00:30:00+02:00', slot: 'collation', source: 'jow',
+        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+      });
+      assert.equal(septembre.meal.seasonalCount, 1);
+
+      // 1er octobre, 0 h 30 heure de Paris — le 30 septembre 22 h 30 en UTC.
+      // Lu en UTC, la courgette serait encore de saison ; pour le foyer, non.
+      const { body: octobre } = await call('POST', '/api/meals', {
+        eaten_at: '2026-10-01T00:30:00+02:00', slot: 'collation', source: 'jow',
+        recipe_id: rows[0]!.id, participants: [{ memberId: adulte }],
+      });
+      assert.equal(
+        octobre.meal.seasonalCount, 0,
+        'le foyer est en octobre, même si UTC est encore en septembre',
+      );
+    });
+
+    it('coche ce qui a été mangé le mois demandé, pas le mois courant', async () => {
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const foodId = await courgette();
+      await call('POST', '/api/meals', {
+        eaten_at: '2026-07-15T12:30:00+02:00', slot: 'dejeuner', source: 'texte',
+        participants: [{ memberId: adulte }],
+        items: [{ foodId, label: 'Courgette', quantity: 200, unit: 'g', quantityG: 200 }],
+      });
+
+      const juillet = await call('GET', '/api/dashboard?date=2026-07-15');
+      assert.equal(juillet.body.seasonal[0].eatenThisMonth, true);
+
+      // Même produit, autre mois : rien n'a été mangé en août.
+      const aout = await call('GET', '/api/dashboard?date=2026-08-15');
+      assert.equal(aout.body.seasonal[0].eatenThisMonth, false);
+    });
+  });
+
   // ── tables livrées vides ──────────────────────────────────────────────────
 
   describe('tables livrées vides (§17)', () => {

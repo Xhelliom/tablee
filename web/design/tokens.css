@@ -1,4 +1,47 @@
 /*
+ * ── Polices ─────────────────────────────────────────────────────────────────
+ *
+ * Servies depuis `web/public/fonts/`, pas depuis un CDN : une app
+ * auto-hébergée sur le réseau d'une maison ne devrait pas changer d'allure
+ * quand la box tousse, et l'écart serif / sans-serif porte la moitié de
+ * l'identité visuelle (§8ter).
+ *
+ * Sous-ensemble **latin seul**. Vérifié sur les 3 185 noms d'aliments de
+ * Ciqual et sur tous les textes de l'interface : aucun caractère n'en sort.
+ * `latin-ext` pesait 116 Ko — plus de la moitié du total — pour un unique
+ * exposant « ᵉ » dans une phrase, qui a été reformulée.
+ *
+ * Inter est un fichier variable : 400 et 500 sont le même fichier, déclaré
+ * sur une plage. Le séparer doublait son poids pour rien.
+ *
+ * `swap` : le texte s'affiche tout de suite dans la police de repli, puis
+ * bascule. Une app de saisie ne doit jamais attendre une police pour montrer
+ * ce qu'on vient d'écrire.
+ */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
  * Identité visuelle de Tablée — §8ter de la spec, maquettes de référence dans
  * `docs/mockups-tablee.html`.
  *

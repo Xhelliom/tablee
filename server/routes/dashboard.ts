@@ -71,7 +71,7 @@ export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
       // §8bis — la bande « De saison en <mois> ». Vide tant que
       // `seasonal_produce` n'est pas saisie (§17) : la bande ne s'affiche
       // alors pas, plutôt que de s'afficher creuse.
-      seasonal: await seasonalForMonth(ctx.pool, householdId, Number(month)),
+      seasonal: await seasonalForMonth(ctx.pool, householdId, Number(month), Number(year)),
       month: Number(month),
       year: Number(year),
       /** Les repères manquent-ils entièrement ? L'écran doit pouvoir le dire. */

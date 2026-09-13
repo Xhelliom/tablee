@@ -19,6 +19,7 @@ import { body, str, uuid } from '../http/validate.ts';
 import {
   findRecipeByJowId, loadRecipe, recipeGaps, saveJowRecipe, seasonalCount,
 } from '../repo/recipes.ts';
+import { currentMonth } from '../repo/dashboard.ts';
 import type { AppContext } from '../app.ts';
 
 export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -31,9 +32,10 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
     if (share.jowRecipeId !== null) {
       const known = await findRecipeByJowId(ctx.pool, share.jowRecipeId);
       if (known !== null) {
+        const { month } = await currentMonth(ctx.pool, request.householdId());
         return {
           recipe: known,
-          seasonal: await seasonalCount(ctx.pool, known.id, new Date().getMonth() + 1),
+          seasonal: await seasonalCount(ctx.pool, known.id, month),
           fetched: false,
           // Reconstruits depuis la recette : un deuxième partage doit montrer
           // les mêmes trous que le premier.
@@ -50,9 +52,10 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
     }
 
     const recipe = await saveJowRecipe(ctx.pool, parsed);
+    const { month } = await currentMonth(ctx.pool, request.householdId());
     return {
       recipe,
-      seasonal: await seasonalCount(ctx.pool, recipe.id, new Date().getMonth() + 1),
+      seasonal: await seasonalCount(ctx.pool, recipe.id, month),
       fetched: true,
       warnings: parsed.warnings,
     };
@@ -65,9 +68,10 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
   app.get<{ Params: { id: string } }>('/api/recipes/:id', async (request) => {
     const recipe = await loadRecipe(ctx.pool, uuid(request.params.id, 'id'));
     if (recipe === null) throw ApiError.notFound('recette introuvable');
+    const { month } = await currentMonth(ctx.pool, request.householdId());
     return {
       recipe,
-      seasonal: await seasonalCount(ctx.pool, recipe.id, new Date().getMonth() + 1),
+      seasonal: await seasonalCount(ctx.pool, recipe.id, month),
       warnings: recipeGaps(recipe),
     };
   });

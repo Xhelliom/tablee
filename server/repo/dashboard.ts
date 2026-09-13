@@ -6,6 +6,7 @@
  * celle d'UTC. Se tromper là-dessus déplace un repas sur deux dans l'année.
  */
 import type { Db } from '../db.ts';
+import { todayIn } from '../http/tz.ts';
 import type { DailyMeal } from '../nutrition/daily.ts';
 
 export async function householdTimezone(db: Db, householdId: string): Promise<string> {
@@ -14,6 +15,19 @@ export async function householdTimezone(db: Db, householdId: string): Promise<st
     [householdId],
   );
   return rows[0]?.timezone ?? 'Europe/Paris';
+}
+
+/**
+ * Le mois en cours **chez le foyer**. Les badges de saisonnalité s'y réfèrent :
+ * calculés à l'heure du serveur, ils basculeraient jusqu'à deux heures trop
+ * tôt le dernier jour d'un mois.
+ */
+export async function currentMonth(
+  db: Db,
+  householdId: string,
+): Promise<{ year: number; month: number }> {
+  const today = todayIn(await householdTimezone(db, householdId));
+  return { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
 }
 
 export interface DayMealForMember extends DailyMeal {

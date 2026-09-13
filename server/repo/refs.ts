@@ -67,24 +67,32 @@ export async function seasonalForMonth(
   db: Db,
   householdId: string,
   month: number,
+  year: number,
 ): Promise<SeasonalProduce[]> {
   const { rows } = await db.query<{
     id: string; name: string; kind: 'legume' | 'fruit'; months: number[];
     food_id: string | null; eaten: boolean;
   }>(
+    // Deux précisions sur la sous-requête « déjà mangé » :
+    //   — le mois se lit dans le fuseau du foyer, joint depuis `household` ;
+    //   — c'est le mois **demandé** qui compte, pas le mois courant. Regarder
+    //     une journée de mars devait sinon cocher ce qui a été mangé en
+    //     septembre.
     `select sp.id, sp.name, sp.kind, sp.months, sp.food_id,
             exists (
               select 1
               from meal_item mi
               join meal m on m.id = mi.meal_id
+              join household h on h.id = m.household_id
               where m.household_id = $1
                 and mi.food_id = sp.food_id
-                and date_trunc('month', m.eaten_at) = date_trunc('month', now())
+                and extract(month from (m.eaten_at at time zone h.timezone)) = $2
+                and extract(year from (m.eaten_at at time zone h.timezone)) = $3
             ) as eaten
      from seasonal_produce sp
      where $2 = any(sp.months)
      order by sp.kind, sp.name`,
-    [householdId, month],
+    [householdId, month, year],
   );
 
   return rows.map((r) => ({

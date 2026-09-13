@@ -504,13 +504,19 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
 
   // Croisement recipe_ingredient × seasonal_produce pour tous les repas d'un
   // coup : une requête par carte affichée serait un N+1 pour un badge.
+  //
+  // Le mois est lu **dans le fuseau du foyer**, joint depuis `household` plutôt
+  // que passé en paramètre : un dîner du 31 août à 23 h heure de Paris compte
+  // pour août, pas pour septembre. Le sortir de la requête reviendrait à
+  // confier ce soin à chaque appelant, et l'un d'eux finirait par l'oublier.
   const { rows: seasonRows } = await db.query<{ meal_id: string; count: number }>(
     `select m.id as meal_id, count(distinct sp.id)::int as count
      from meal m
+     join household h on h.id = m.household_id
      join recipe_ingredient ri on ri.recipe_id = m.recipe_id
      join seasonal_produce sp on sp.food_id = ri.food_id
      where m.id = any($1::uuid[])
-       and extract(month from m.eaten_at) = any(sp.months)
+       and extract(month from (m.eaten_at at time zone h.timezone)) = any(sp.months)
      group by m.id`,
     [ids],
   );

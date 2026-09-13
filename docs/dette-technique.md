@@ -85,28 +85,7 @@ en l'état — et c'est le bon état.
 
 ---
 
-## 4. Le mois de saisonnalité est calculé en UTC, pas dans le fuseau du foyer
-
-**Où** — `server/repo/refs.ts:82`, `server/repo/meals.ts:513`,
-`server/routes/recipes.ts` (trois appels à `seasonalCount`).
-
-Tout le découpage des journées passe soigneusement par `household.timezone`
-(voir `server/http/tz.ts`). Ces cinq endroits-là ne le font pas : ils utilisent
-`extract(month from eaten_at)` en UTC, ou `new Date().getMonth()` en heure du
-serveur.
-
-**Ce que ça coûte.** Un repas pris le 31 août à 23 h heure de Paris compte pour
-septembre dans le badge « N produits de saison » et dans le marquage « déjà
-mangé ce mois-ci » de la bande d'accueil. Deux heures par mois, sur un badge
-décoratif — donc peu, mais c'est une incohérence avec le reste du code, et
-c'est le genre d'incohérence qui se propage si on la laisse.
-
-**Ce qui le lèverait.** Passer le fuseau du foyer à ces requêtes, comme le font
-déjà `mealsForDay` et `weekGrid`.
-
----
-
-## 5. La PWA n'a jamais tourné sur un vrai Android
+## 4. La PWA n'a jamais tourné sur un vrai Android
 
 **Où** — `web/public/manifest.webmanifest`, `web/public/sw.js`.
 
@@ -125,23 +104,7 @@ puis couper le Wi-Fi et rouvrir l'app.
 
 ---
 
-## 6. Les polices viennent d'un CDN
-
-**Où** — `web/index.html`, lien vers `fonts.googleapis.com`.
-
-Fraunces et Inter sont chargées depuis Google Fonts. Les piles de repli sont
-réelles (Georgia, system-ui) et l'app reste lisible sans elles, mais une app
-auto-hébergée sur le réseau de la maison ne devrait pas dépendre d'un CDN pour
-sa typographie — et l'écart serif/sans-serif est la moitié de l'identité
-visuelle (§8ter).
-
-**Ce qui le lèverait.** Vendoriser les deux familles en woff2 dans
-`web/public/fonts/` et servir un `@font-face` local. Quelques centaines de Ko
-dans le dépôt, et plus aucune requête sortante au chargement.
-
----
-
-## 7. Les ingrédients Jow doivent être rattachés à la main
+## 5. Les ingrédients Jow doivent être rattachés à la main
 
 **Où** — `jow_food_link`, écran de détail d'un repas.
 
@@ -165,7 +128,7 @@ plus fréquents, pour les traiter en série plutôt qu'au fil des repas.
 
 ---
 
-## 8. L'authentification est faite à la main, et pour un seul foyer
+## 6. L'authentification est faite à la main, et pour un seul foyer
 
 **Où** — `server/auth/`.
 
@@ -178,3 +141,24 @@ d'échelle mais de nature : données de santé de mineurs, comptes individuels,
 consentement parental, multi-tenant. C'est à ce moment-là qu'une bibliothèque
 d'authentification vaut mieux que cent lignes maison, et cette décision se
 prend **avant**, jamais après.
+
+---
+
+## Levées
+
+Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
+forme qu'il a. Le détail est dans l'historique git.
+
+- **Le mois de saisonnalité était calculé en UTC.** Cinq requêtes lisaient
+  `extract(month from eaten_at)` sans fuseau, alors que tout le reste du
+  découpage des journées passe par `household.timezone`. Le fuseau est
+  désormais joint depuis `household` **dans la requête** plutôt que passé en
+  paramètre : le sortir du SQL reviendrait à confier ce soin à chaque appelant,
+  et l'un d'eux finirait par l'oublier. Au passage, la bande d'accueil cochait
+  ce qui avait été mangé le mois **courant** au lieu du mois **affiché**.
+- **Les polices venaient de Google Fonts.** Fraunces et Inter sont embarquées
+  dans `web/public/fonts/`, en sous-ensemble `latin` seul : vérification faite
+  sur les 3 185 noms de Ciqual et sur tous les textes de l'interface, aucun
+  caractère n'en sort. 84 Ko au total, et plus aucune requête vers un tiers au
+  chargement — hors les photos de plats de Jow, qui sont le sujet même du
+  §8ter.
