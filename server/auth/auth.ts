@@ -131,6 +131,21 @@ export function buildAuth(options: AuthOptions) {
       minPasswordLength: 12,
     },
 
+    /**
+     * 30 jours, et non les 7 par défaut de better-auth.
+     *
+     * C'est la seule décision du §7 qui survit à son renversement, et sa raison
+     * tient toujours : une PWA familiale qui redemande le mot de passe toutes
+     * les semaines met de la friction sur le chemin critique — et la friction
+     * de saisie est le vrai risque du projet. `updateAge` repousse l'échéance
+     * à chaque usage, donc quelqu'un qui ouvre l'app régulièrement ne se
+     * reconnecte jamais.
+     */
+    session: {
+      expiresIn: 60 * 60 * 24 * 30,
+      updateAge: 60 * 60 * 24,
+    },
+
     // Le partage Android ouvre l'app sur une navigation de haut niveau :
     // `SameSite=Lax` laisse passer le cookie, et `Strict` le bloquerait.
     advanced: {

@@ -24,6 +24,7 @@ Inutile de le refaire sur le téléphone — c'est vert au 13/09/2026 :
 | Icônes 192, 512 et une `maskable` 512 présentes | Chrome exige un PNG ≥ 192 **et** un ≥ 512 pour l'installabilité | ✅ |
 | `scope: "/"` couvre `action: "/share"` | Une action hors scope est refusée en silence | ✅ |
 | Session absente sur `/share` → l'écran de connexion s'affiche **sans changer l'URL** | La session dure 30 jours : un jour elle expirera pile au moment d'un partage. Les paramètres survivent, et l'écran de partage reprend après connexion | ✅ (lu dans le code, à confirmer en vrai) |
+| Le parcours complet compte → foyer → invitation → acceptation | Vérifié contre un serveur réel, en HTTP | ✅ |
 
 Ce qui **ne peut pas** être vérifié sans téléphone, et qui est donc tout
 l'objet de la soirée :
@@ -58,18 +59,66 @@ Chrome refuse d'installer la PWA.
 
 ## Déploiement
 
+### Le rôle Postgres — à lire avant tout le reste
+
+L'étanchéité entre foyers (§16) repose sur la Row-Level Security de la
+migration 008. **Un superutilisateur Postgres la contourne, et en silence** :
+les policies existent, `\d` les affiche, les requêtes passent, et rien ne
+filtre. C'est exactement ce qui s'est produit pendant l'écriture — 178 tests au
+vert avec une isolation entièrement décorative.
+
+Le rôle de connexion doit donc **posséder ses tables sans être
+superutilisateur** :
+
+```sql
+create role tablee login password '…';
+create database tablee owner tablee;
+-- surtout pas :  alter role tablee superuser;
+```
+
+Si le rôle existe déjà en superutilisateur :
+
+```sql
+alter role tablee nosuperuser;   -- il reste propriétaire, les migrations passent
+```
+
+Inutile de s'en souvenir : **le serveur refuse de démarrer** si l'isolation
+n'est pas effective, et dit quoi corriger. C'est délibérément un refus et non
+un avertissement — un avertissement dans un journal que personne ne lit
+n'aurait rien changé au cas ci-dessus.
+
+### La séquence
+
 ```bash
 npm ci
 npm run build:web                       # produit web/dist/
 npm run migrate                         # applique db/migrations/
 npm run seed                            # Ciqual + repères ANSES
-npm run household -- --login=maison --name="Chez nous"
 npm start                               # écoute sur $PORT (3000 par défaut)
 ```
+
+Il n'y a plus de commande pour créer le foyer : **le premier compte se crée
+depuis l'app**, et crée son foyer dans la foulée.
 
 `npm run seed` charge le référentiel et les repères. Il ne remplit **pas**
 `unit_default` ni `seasonal_produce`, qui attendent leurs collectes (§17) :
 c'est nominal, pas un échec.
+
+### Les variables
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` | La base. Rôle non superutilisateur, voir ci-dessus. |
+| `TABLEE_SECRET` | Signe les jetons de session, 32 caractères au moins. **Pas de valeur par défaut** : une clé codée en dur et partagée par toutes les installations ne protège rien, donc le serveur refuse de démarrer sans.<br>`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
+| `TABLEE_BASE_URL` | L'origine publique telle que le navigateur la voit — `https://tablee.example.net`, pas `localhost`. better-auth valide l'origine des requêtes avec, et les liens d'invitation en sortent. |
+| `TABLEE_INSECURE_COOKIE` | `1` retire l'attribut `Secure` du cookie. Développement sur `http://localhost` uniquement. |
+| `TABLEE_LOG` | `1` rallume le journal de requêtes, expurgé des jetons Jow (I6). |
+
+⚠️ L'inscription est **ouverte**, et c'est voulu : des amis doivent pouvoir
+créer leur foyer sans passer par vous. Ça veut dire que quiconque trouve l'URL
+peut créer un compte. Un compte seul ne donne accès à **aucun** foyer — il faut
+une invitation acceptée — mais les adresses ne sont pas vérifiées faute de SMTP
+(dette n° 7).
 
 ### Caddy
 
@@ -90,13 +139,20 @@ retire l'attribut `Secure` du cookie de session.
 
 ## La séquence, dans l'ordre
 
-### 1. L'app s'ouvre
+### 1. L'app s'ouvre, et vous créez votre compte
 
 Ouvrir `https://tablee.example.net` dans **Chrome** (pas Firefox : le share
 target n'y est pas implémenté).
 
+L'app demande de créer un compte, puis le foyer. Vous en êtes **parent** : vous
+pourrez inviter votre conjoint depuis « La famille », en bas de l'écran — le
+lien se copie et se transmet comme vous voulez, il n'y a pas d'envoi
+automatique.
+
 - **Échec possible** : erreur de certificat → Caddy n'a pas obtenu le
   certificat. Regarder ses logs, pas ceux de l'app.
+- **Le serveur refuse de démarrer** en parlant d'étanchéité → le rôle Postgres
+  est superutilisateur. Voir plus haut ; c'est une ligne de SQL.
 
 ### 2. L'app s'installe
 

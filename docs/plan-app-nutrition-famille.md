@@ -356,8 +356,23 @@ est la principale façon de faire échouer la V1.
 >   (saisir et lire, pas gérer les accès). `jeune` est une valeur réservée,
 >   **sans écran** : un enfant qui a un compte est un autre produit, soumis à
 >   I5, et ça se décidera le jour venu.
-> - Inscription **ouverte** — c'est le but — donc vérification d'adresse mail
->   et limitation de débit sur la création de compte.
+> - Inscription **ouverte** — c'est le but — donc limitation de débit sur la
+>   création de compte. La vérification d'adresse attend un SMTP (dette n° 7).
+>
+> **Écrit le 13/09/2026** (better-auth 1.7.4, migrations 007 et 008). Trois
+> points que l'encart ci-dessus ne pouvait pas prévoir :
+>
+> - **La session reste à 30 jours**, contre 7 par défaut chez better-auth.
+>   C'est la seule décision du §7 d'origine qui survit, et sa raison n'a pas
+>   bougé : une PWA familiale qui redemande le mot de passe toutes les semaines
+>   met de la friction sur le chemin critique.
+> - **Trois états d'authentification, pas deux.** `anonyme`, `sans_foyer`
+>   (connecté, mais pas encore dans un foyer) et `actif`. Renvoyer un compte
+>   tout neuf vers l'écran de connexion serait lui redemander un mot de passe
+>   qu'il vient de saisir — d'où `GET /api/me`, qui les distingue.
+> - **Un compte qui n'appartient qu'à un seul foyer n'a rien à choisir.** Le
+>   serveur résout ce foyer implicitement ; exiger un « choisissez » ajouterait
+>   un tap au chemin du partage, pour rien.
 
 
 **Un compte par foyer. Pas de compte individuel.**
@@ -1202,11 +1217,24 @@ diététicien branché sur trois repas mal saisis ne produit que des banalités.
 >
 > 1. le scoping applicatif, qui existe déjà (`household_id` est sur toutes les
 >    tables de premier niveau depuis `001_init.sql`) ;
-> 2. **Row-Level Security Postgres**, à ajouter. Aujourd'hui l'isolation tient
->    par discipline — `delete from meal_item where meal_id = $1` est correct
->    parce que l'appelant a vérifié avant. Chez soi, un oubli est un bug ; avec
->    les enfants des autres dans la table, un oubli est une fuite. La base doit
->    refuser d'elle-même.
+> 2. **Row-Level Security Postgres** — posée le 13/09/2026 par la migration
+>    008. Jusque-là l'isolation tenait par discipline : `delete from meal_item
+>    where meal_id = $1` est correct parce que l'appelant a vérifié avant. Chez
+>    soi, un oubli est un bug ; avec les enfants des autres dans la table, un
+>    oubli est une fuite. La base refuse désormais d'elle-même.
+>
+> ⚠️ **Le rôle Postgres de l'application ne doit pas être superutilisateur.**
+> Un superutilisateur contourne la RLS *en silence* — les policies existent,
+> `\d` les affiche, et rien ne filtre. C'est arrivé pendant l'écriture de la
+> 008 : 178 tests au vert avec une isolation entièrement décorative. Le serveur
+> refuse maintenant de démarrer dans cet état (`assertIsolation`), et un test
+> vérifie que la RLS est effective et pas seulement déclarée — sans lui, tous
+> les autres tests d'étanchéité peuvent passer sans rien prouver.
+>
+> `household` reste hors RLS, délibérément : c'est la table qui *détermine* le
+> foyer courant, une policy dessus rendrait la connexion impossible. Elle n'est
+> lue que par une jointure obligatoire sur l'appartenance, ce qui est plus fort
+> qu'un filtre qu'on peut oublier.
 >
 > **Non garanti, et dit tel quel aux familles invitées** — l'hébergeur a le
 > root et le mot de passe postgres. Aucune policy applicative n'arrête le
@@ -1224,7 +1252,7 @@ diététicien branché sur trois repas mal saisis ne produit que des banalités.
 > |---|---|
 > | Globale | `food`, `nutrient_reference`, `energy_reference`, `unit_default`, `seasonal_produce` — référentiel public |
 > | Globale | Recettes **Jow** : donnée publique, dédupliquée entre foyers |
-> | **Par foyer** | Recettes **manuelles**. ⚠️ `recipe` n'a pas de `household_id` et accepte `source = 'manuel'` avec un `title` libre : en l'état, « Blanquette de mamie Jeanne » serait visible par tous les foyers de l'instance. **La table est à couper en deux.** |
+> | **Par foyer** | Recettes **manuelles** — `recipe.household_id`, ajouté par la 007. Sans lui, « Blanquette de mamie Jeanne » aurait été visible par tous les foyers. Une contrainte interdit qu'une recette Jow soit scopée ou qu'une recette manuelle soit globale. |
 > | À trancher | `jow_food_link` — le rattachement manuel ingrédient → Ciqual. Le partager mutualise un vrai travail et ne révèle qu'une correspondance de libellés, mais ça se décide exprès. |
 >
 > ### Ce que ça fait de l'hébergeur

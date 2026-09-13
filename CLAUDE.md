@@ -133,26 +133,36 @@ conservé, comme au §3.
 2. Savoir si la famille logue encore trois semaines plus tard. C'est l'objectif
    du jalon V1, et aucune ligne de code n'y répond.
 
-### Auth multi-comptes et multi-foyers — décidée le 13/09/2026, à écrire
+### Auth multi-comptes et multi-foyers — ✅ écrite le 13/09/2026
 
 Le §7 (« un compte par foyer ») est **renversé** et le §16 (« si l'app sort du
 foyer ») est **tranché** : plusieurs adultes avec leur propre compte, plusieurs
-foyers étanches sur une instance. Lire les deux encarts avant d'y toucher.
+foyers étanches sur une instance. Lire les deux encarts datés avant d'y toucher.
 
-Trois points à ne pas perdre en route :
+better-auth 1.7.4 (plugin `organization`), migrations 007 et 008. Quatre choses
+à ne pas défaire par habitude :
 
-- **`member` est une assiette, pas un compte.** Les enfants sont des assiettes
-  sans compte ; une nounou serait un compte sans assiette. `member` devient
-  `eater`, et `meal.created_by` pointe vers un `user`.
-- **L'étanchéité se met en base, pas seulement dans le code.** RLS Postgres en
-  plus du scoping applicatif : avec les enfants des autres dans la table, un
-  `where` oublié n'est plus un bug mais une fuite. Même lot que l'auth.
+- **`eater` est une assiette, `"user"` est un compte, et les deux ensembles ne
+  coïncident pas.** Les enfants sont des convives sans compte ; une nounou est
+  un compte sans convive. Tout ce qui désigne « qui a agi » — `meal.created_by`,
+  `jow_food_link.confirmed_by` — pointe vers un compte. Ne jamais les
+  refusionner « pour simplifier » : c'est l'erreur que la 007 répare.
+- **Le schéma de better-auth est figé dans la 007**, recopié de son générateur.
+  Ne jamais lancer son CLI en écriture sur cette base : une migration appliquée
+  ne se modifie plus, et le lanceur le vérifie par empreinte. Une montée de
+  version = une migration de plus.
+- **Le rôle Postgres ne doit pas être superutilisateur**, sinon la RLS est
+  contournée *en silence*. Le serveur refuse de démarrer dans cet état, et un
+  test vérifie que la RLS est effective et pas seulement déclarée. Ne pas
+  désarmer l'un ni l'autre : 178 tests sont passés au vert avec une isolation
+  entièrement décorative avant qu'on s'en aperçoive.
 - **La version chiffrée par foyer a été écartée en connaissance de cause.**
   L'hébergeur a le root ; l'app ne montre rien, la machine reste la sienne, et
   ça se dit tel quel aux familles invitées. Ne pas rouvrir sans relire le §16.
 
-Ça vient **après** le téléphone : refondre l'identité par-dessus une ingestion
-jamais vérifiée, c'est empiler deux inconnues.
+Deux rôles : `parent` (gère les accès) et `adulte` (saisit et lit). `jeune`
+est une valeur réservée **sans écran** — un enfant qui a un compte est un autre
+produit, soumis à I5, et ça se décidera le jour venu.
 
 ### Ensuite
 
@@ -186,6 +196,7 @@ l'invérifiable.
 ├── scripts/          seed-food.ts, seed-seasonal.ts
 ├── server/
 │   ├── routes/
+│   ├── auth/         better-auth, rôles, résolution du foyer actif
 │   ├── jow/          parseur + contrat
 │   └── nutrition/    calcul, shares, repères
 └── web/
@@ -199,6 +210,9 @@ Conventions :
   `bilanJournalier`).
 - Les scripts de seed sont **idempotents** (`on conflict do update`).
 - Une valeur inconnue est `NULL`, jamais `0`.
+- Une route du domaine lit et écrit par **`request.db`**, le client marqué au
+  foyer courant — jamais `ctx.pool`, qui n'en porte aucun et que la RLS ne
+  filtre donc pas.
 
 ---
 

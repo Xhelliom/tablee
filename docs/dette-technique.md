@@ -130,31 +130,6 @@ aujourd'hui l'usage hors ligne est un confort, pas le chemin critique.
 
 ---
 
-## 4ter. L'isolation entre foyers tient par discipline, pas par construction
-
-**Où** — `server/repo/*.ts`.
-
-Les entrées publiques scopent correctement — `getMeal(db, householdId, id)`,
-`deleteMeal(db, householdId, mealId)`. Les helpers internes, non :
-
-```ts
-// server/repo/meals.ts
-await client.query('delete from meal_item where meal_id = $1', [mealId]);
-```
-
-C'est **correct aujourd'hui**, parce que l'appelant a vérifié avant.
-
-**Ce que ça coûtera.** Rien tant qu'un seul foyer vit sur l'instance. À partir
-du moment où des amis y créent le leur (§16, décidé le 13/09/2026), un oubli
-cesse d'être un bug et devient une fuite de données alimentaires d'enfants qui
-ne sont pas les siens.
-
-**Ce qui le lèverait.** Row-Level Security Postgres : `app.household_id` posé
-dans la session, une policy par table scopée. La base refuse alors d'elle-même
-une ligne d'un autre foyer, même si la requête a oublié son `where`. À faire
-**dans le même lot que l'auth multi-foyer**, jamais après.
-
----
 
 ## 5. Les ingrédients Jow doivent être rattachés à la main
 
@@ -180,37 +155,70 @@ plus fréquents, pour les traiter en série plutôt qu'au fil des repas.
 
 ---
 
-## 6. L'authentification est faite à la main, et pour un seul foyer — **échue**
+## 7. Une adresse e-mail n'est pas vérifiée
 
-**Où** — `server/auth/`.
+**Où** — `server/auth/auth.ts`, `requireEmailVerification: false`.
 
-Argon2id, jeton opaque en base, cookie `httpOnly`. Une centaine de lignes, sans
-bibliothèque, parce que le §7 a tranché pour un compte unique par foyer.
+L'inscription est ouverte — c'est le but (§16) — mais rien ne prouve que celui
+qui s'inscrit possède l'adresse qu'il donne. Il n'y a pas de serveur SMTP sur
+la machine, et la vérification suppose d'en envoyer un.
 
-Cette entrée disait : *« ce n'est pas de la dette tant que l'app reste à la
-maison ; ça le devient le jour où elle en sort »*. **Ce jour est arrivé le
-13/09/2026** — le §16 est amendé, plusieurs foyers cohabiteront sur l'instance.
-C'est donc de la dette, échue.
+**Ce que ça coûte.** Quelqu'un peut créer un compte sur l'adresse d'un autre.
+Le dégât reste borné : un compte ne donne accès à **aucun** foyer tant qu'une
+invitation n'a pas été acceptée, et l'invitation est liée à l'adresse. Le vrai
+coût est ailleurs — sans adresse vérifiée, une réinitialisation de mot de passe
+par mail ne vaut rien, et c'était l'une des deux raisons d'avoir pris
+better-auth.
 
-**Ce que ces cent lignes ne font pas, et qu'il faut maintenant :**
-
-- **L'invitation.** Entropie du jeton, expiration, usage unique, et le cas
-  tordu : accepter une invitation en étant déjà connecté sous un autre compte.
-  Court à écrire, facile à écrire mal.
-- **La récupération de mot de passe.** Elle n'existe pas : aujourd'hui c'est
-  `npm run household` en SSH. Acceptable pour un mot de passe partagé entre
-  deux adultes qui ont la main sur la machine ; pas pour la femme d'un ami.
-- **Séparer compte et convive.** `member` est une assiette (`portion_coef`,
-  âge, allergènes) et `meal.created_by` pointe dessus : « qui a saisi » et
-  « qui a mangé » sont le même objet. Les enfants sont des assiettes sans
-  compte, une nounou serait un compte sans assiette. Voir l'encart du §7.
-
-**Ce qui le lèverait.** better-auth, plugin `organization` (une organisation =
-un foyer), schéma figé dans une migration numérotée comme les autres — son CLI
-ne doit jamais réécrire une migration appliquée. Deux rôles, `parent` et
-`adulte`. Et la RLS de la dette n° 4ter **dans le même lot**.
+**Ce qui le lèverait.** Un relais SMTP, puis `requireEmailVerification: true`
+et `sendResetPassword`. Tant que ce n'est pas fait, un mot de passe oublié se
+règle en base, ce qui n'est acceptable que pour l'hébergeur lui-même.
 
 ---
+
+## 8. La RLS ne traverse pas les clés étrangères
+
+**Où** — `db/migrations/008_rls.sql`, section finale.
+
+Les policies portent sur les tables qui ont un `household_id` : `eater`,
+`meal`, `meal_template`, `family_note`, `weekly_insight`, `recipe`. Leurs
+tables filles — `meal_item`, `meal_participant`, `meal_nutrition`,
+`eater_preference`, `eater_allergen`, `recipe_ingredient` — n'en ont pas, et
+la RLS ne se propage pas à travers une clé étrangère.
+
+**Ce que ça coûte.** `select … from meal_item where meal_id = $1` reste lisible
+quel que soit le foyer, **si l'identifiant du repas est connu**. Ce sont des
+UUID v4 qui ne sortent jamais d'une route scopée, donc le risque est théorique
+tant que le code ne les expose pas. Ce n'est pas la garantie dure qu'on a sur
+les tables parentes, et il vaut mieux le savoir que le découvrir.
+
+**Ce qui le lèverait.** Une policy par table fille, avec un `exists` sur le
+parent — soit un sous-select par ligne lue. À faire si l'une de ces tables
+devient atteignable par un identifiant venu du client.
+
+---
+
+## 9. Le calcul des repas n'est pas concurrent-safe
+
+**Où** — `server/repo/meals.ts`, `withHousehold` dans `server/db.ts`.
+
+Le client Postgres d'une requête porte `app.household_id` en paramètre de
+session, hors transaction — un `set_config(…, true)` serait annulé au premier
+`commit`, et plusieurs fonctions ouvrent déjà la leur.
+
+**Ce que ça coûte.** Rien aujourd'hui : chaque requête tient son client en
+exclusivité du début à la fin. Mais si un jour une requête ouvrait deux
+opérations en parallèle sur le même client, ou si un traitement de fond
+réutilisait un client sans passer par `withHousehold`, le foyer courant
+deviendrait ambigu. Le garde-fou du démarrage ne voit pas ce cas.
+
+**Ce qui le lèverait.** Faire de `Db` un type qui ne s'obtient que par
+`withHousehold`, pour qu'un `pool.query` sur une table du domaine ne compile
+plus.
+
+---
+
+
 
 ## Levées
 
@@ -224,6 +232,19 @@ forme qu'il a. Le détail est dans l'historique git.
   paramètre : le sortir du SQL reviendrait à confier ce soin à chaque appelant,
   et l'un d'eux finirait par l'oublier. Au passage, la bande d'accueil cochait
   ce qui avait été mangé le mois **courant** au lieu du mois **affiché**.
+- **L'authentification était faite à la main, pour un seul foyer.** La dette
+  n° 6 disait « ça le devient le jour où l'app en sort ». Elle est levée par
+  better-auth 1.7.4 (plugin `organization`), dont le schéma est **figé** dans
+  la migration 007 : son générateur ne doit jamais réécrire une migration
+  appliquée. Ce qui manquait n'était pas le login, c'était l'invitation et la
+  récupération de mot de passe — la seconde attend encore un SMTP (dette n° 7).
+- **L'isolation entre foyers tenait par discipline.** La dette n° 4ter est
+  levée par la RLS de la migration 008. Deux choses comptent autant que les
+  policies : le rôle de connexion **ne doit pas être superutilisateur**, sans
+  quoi elles sont contournées en silence — 178 tests sont passés au vert dans
+  cet état avant qu'on s'en aperçoive —, et `assertIsolation()` empêche
+  désormais de démarrer plutôt que d'écrire un avertissement que personne ne
+  lit.
 - **Les polices venaient de Google Fonts.** Fraunces et Inter sont embarquées
   dans `web/public/fonts/`, en sous-ensemble `latin` seul : vérification faite
   sur les 3 185 noms de Ciqual et sur tous les textes de l'interface, aucun
