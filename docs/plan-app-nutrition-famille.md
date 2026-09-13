@@ -315,7 +315,50 @@ est la principale façon de faire échouer la V1.
 
 ---
 
-## 7. Authentification — **décidé**
+## 7. Authentification — ~~**décidé**~~ **renversé (13/09/2026)**
+
+> ⚠️ **Renversé le 13/09/2026. Cette section est caduque, et la raison qu'elle
+> donne était fausse.** Elle est conservée parce qu'elle explique la forme du
+> code écrit jusqu'ici, et parce que l'erreur mérite d'être lisible.
+>
+> Ce que le §7 disait : *« des comptes individuels ajouteraient de l'auth, des
+> rôles et des policies pour un gain nul »*. Le gain n'était pas nul — il était
+> juste invisible tant qu'on regardait un seul foyer. Deux décisions du
+> 13/09/2026 le rendent visible :
+>
+> 1. **Plusieurs adultes saisissent, avec leur propre compte.** Le sélecteur
+>    « c'est moi » ne dit pas qui saisit, il dit qui *prétend* saisir.
+> 2. **Plusieurs foyers cohabitent sur une instance.** Des amis créent leur
+>    foyer, et l'hébergeur ne doit pas voir leurs données.
+>
+> **L'erreur de fond n'était pas dans l'auth, elle était dans le mot
+> « membre ».** Le §10 n'a qu'une table de personnes : `member`, qui porte un
+> `portion_coef`, un âge, des allergènes — c'est **une assiette**. Et
+> `meal.created_by` pointe dessus, c'est-à-dire que « qui a saisi » et « qui a
+> mangé » sont le même objet. Or les deux ensembles ne coïncident pas :
+>
+> | | compte | assiette |
+> |---|---|---|
+> | Les parents | oui | oui |
+> | Les enfants | non (trop jeunes) | oui |
+> | Une nounou, un grand-parent | possible | non |
+>
+> **Ce qui remplace cette section :**
+>
+> - `member` devient `eater` — le convive, inchangé par ailleurs.
+> - Un compte est un `user`, membre d'un ou plusieurs foyers. `meal.created_by`
+>   pointe vers un `user`.
+> - Identité, invitations et rôles délégués à **better-auth** (plugin
+>   `organization` : une organisation = un foyer). L'invitation et la
+>   récupération de mot de passe sont les deux endroits où l'auth maison se
+>   trompe, et la seconde n'existe pas aujourd'hui.
+> - Deux rôles par foyer : `parent` (tout, y compris les accès) et `adulte`
+>   (saisir et lire, pas gérer les accès). `jeune` est une valeur réservée,
+>   **sans écran** : un enfant qui a un compte est un autre produit, soumis à
+>   I5, et ça se décidera le jour venu.
+> - Inscription **ouverte** — c'est le but — donc vérification d'adresse mail
+>   et limitation de débit sur la création de compte.
+
 
 **Un compte par foyer. Pas de compte individuel.**
 
@@ -1143,6 +1186,61 @@ diététicien branché sur trois repas mal saisis ne produit que des banalités.
 ---
 
 ## 16. Stack et déploiement
+
+> ⚠️ **L'app sort du foyer — décidé le 13/09/2026.** Cette section prévenait :
+> *« si l'app sort un jour du foyer, ce n'est pas un changement d'échelle mais
+> de nature […] À décider avant, jamais après. »* C'est décidé, et avant.
+>
+> **Plusieurs foyers sur une instance, étanches entre eux, y compris vis-à-vis
+> de l'hébergeur.**
+>
+> ### Ce que l'étanchéité garantit, et ce qu'elle ne garantit pas
+>
+> **Garanti** — aucun chemin par l'application ne laisse un foyer en lire un
+> autre. Pas de mode administrateur, pas de vue globale. Deux verrous plutôt
+> qu'un :
+>
+> 1. le scoping applicatif, qui existe déjà (`household_id` est sur toutes les
+>    tables de premier niveau depuis `001_init.sql`) ;
+> 2. **Row-Level Security Postgres**, à ajouter. Aujourd'hui l'isolation tient
+>    par discipline — `delete from meal_item where meal_id = $1` est correct
+>    parce que l'appelant a vérifié avant. Chez soi, un oubli est un bug ; avec
+>    les enfants des autres dans la table, un oubli est une fuite. La base doit
+>    refuser d'elle-même.
+>
+> **Non garanti, et dit tel quel aux familles invitées** — l'hébergeur a le
+> root et le mot de passe postgres. Aucune policy applicative n'arrête le
+> propriétaire de la machine.
+>
+> La version forte — chiffrer chaque foyer avec une clé dérivée du mot de passe
+> de ses membres — a été **écartée le 13/09/2026** en connaissance de son prix :
+> elle tue la V3 (synthèse calculée côté serveur), tue la récupération de mot
+> de passe (oubli = perte définitive), et remonte le calcul nutritionnel dans
+> le navigateur. C'est un autre produit.
+>
+> ### Ce que ça change au partitionnement des tables
+>
+> | Portée | Tables |
+> |---|---|
+> | Globale | `food`, `nutrient_reference`, `energy_reference`, `unit_default`, `seasonal_produce` — référentiel public |
+> | Globale | Recettes **Jow** : donnée publique, dédupliquée entre foyers |
+> | **Par foyer** | Recettes **manuelles**. ⚠️ `recipe` n'a pas de `household_id` et accepte `source = 'manuel'` avec un `title` libre : en l'état, « Blanquette de mamie Jeanne » serait visible par tous les foyers de l'instance. **La table est à couper en deux.** |
+> | À trancher | `jow_food_link` — le rattachement manuel ingrédient → Ciqual. Le partager mutualise un vrai travail et ne révèle qu'une correspondance de libellés, mais ça se décide exprès. |
+>
+> ### Ce que ça fait de l'hébergeur
+>
+> Tant que c'était une famille sur sa propre machine, l'exemption « activité
+> strictement personnelle ou domestique » du RGPD s'appliquait. Héberger les
+> données d'autres familles — **dont leurs enfants** — en fait un responsable
+> de traitement. Trois conséquences dans le produit, pas dans un document :
+>
+> 1. **Supprimer un foyer et tout son contenu**, à la demande. Les
+>    `on delete cascade` sont là, le bouton manque.
+> 2. **Dire ce qui est stocké**, en une page lisible.
+> 3. **Les sauvegardes.** Un dump contient désormais les enfants des autres.
+>    `CLAUDE.md` interdit déjà les dumps dans le dépôt ; sur la machine, la
+>    question est neuve.
+
 
 | Couche | Choix |
 |---|---|

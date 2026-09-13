@@ -98,9 +98,61 @@ installée, Tablée n'apparaît pas dans le menu de partage d'Android, donc pas
 d'ingestion Jow, donc pas d'app. Une erreur de manifeste ne se verrait pas
 avant le premier essai réel.
 
-**Ce qui le lèverait.** Installer sur un téléphone derrière HTTPS, partager une
-recette depuis Jow, vérifier que Tablée apparaît dans la feuille de partage,
-puis couper le Wi-Fi et rouvrir l'app.
+**Ce qui a été réduit à froid le 13/09/2026.** Les pièges Android statiquement
+vérifiables l'ont été, et sont verts : types MIME (le manifeste sort bien en
+`application/manifest+json` — servi en `text/plain`, Chrome l'ignore et l'app
+n'est pas installable, en silence), présence des icônes 192 / 512 / maskable
+après build, `scope` couvrant l'action de partage, et `GET /share?…` qui rend
+la coquille en 200. Reste ce qu'aucune machine ne peut dire : Chrome
+accepte-t-il d'installer, Tablée apparaît-elle dans la feuille de partage de
+Jow, et Jow met-il dans `text` ce que le contrat prévoit.
+
+**Ce qui le lèverait.** `docs/mise-en-service.md` — la séquence ordonnée, avec
+ce qui échoue à chaque étape et comment le diagnostiquer.
+
+---
+
+## 4bis. Le service worker survit mal à un redéploiement du front
+
+**Où** — `web/public/sw.js`, constante `CACHE`.
+
+La coquille est mise en cache à l'installation du worker. Si le front est
+redéployé **sans** que `sw.js` change d'un octet, le navigateur ne voit pas de
+nouveau worker, ne réinstalle pas, et garde une coquille qui référence des
+bundles hachés désormais absents du serveur.
+
+**Ce que ça coûte.** Rien en ligne — la navigation est réseau d'abord. Hors
+ligne, l'app s'ouvre sur une page blanche jusqu'au prochain passage en ligne.
+
+**Ce qui le lèverait.** Faire dépendre le nom du cache de la version du build
+plutôt que d'une constante écrite à la main. À faire quand ça gênera vraiment :
+aujourd'hui l'usage hors ligne est un confort, pas le chemin critique.
+
+---
+
+## 4ter. L'isolation entre foyers tient par discipline, pas par construction
+
+**Où** — `server/repo/*.ts`.
+
+Les entrées publiques scopent correctement — `getMeal(db, householdId, id)`,
+`deleteMeal(db, householdId, mealId)`. Les helpers internes, non :
+
+```ts
+// server/repo/meals.ts
+await client.query('delete from meal_item where meal_id = $1', [mealId]);
+```
+
+C'est **correct aujourd'hui**, parce que l'appelant a vérifié avant.
+
+**Ce que ça coûtera.** Rien tant qu'un seul foyer vit sur l'instance. À partir
+du moment où des amis y créent le leur (§16, décidé le 13/09/2026), un oubli
+cesse d'être un bug et devient une fuite de données alimentaires d'enfants qui
+ne sont pas les siens.
+
+**Ce qui le lèverait.** Row-Level Security Postgres : `app.household_id` posé
+dans la session, une policy par table scopée. La base refuse alors d'elle-même
+une ligne d'un autre foyer, même si la requête a oublié son `where`. À faire
+**dans le même lot que l'auth multi-foyer**, jamais après.
 
 ---
 
@@ -128,19 +180,35 @@ plus fréquents, pour les traiter en série plutôt qu'au fil des repas.
 
 ---
 
-## 6. L'authentification est faite à la main, et pour un seul foyer
+## 6. L'authentification est faite à la main, et pour un seul foyer — **échue**
 
 **Où** — `server/auth/`.
 
 Argon2id, jeton opaque en base, cookie `httpOnly`. Une centaine de lignes, sans
 bibliothèque, parce que le §7 a tranché pour un compte unique par foyer.
 
-**Ce n'est pas de la dette tant que l'app reste à la maison.** Ça le devient le
-jour où elle en sort — et le §16 rappelle que ce n'est pas un changement
-d'échelle mais de nature : données de santé de mineurs, comptes individuels,
-consentement parental, multi-tenant. C'est à ce moment-là qu'une bibliothèque
-d'authentification vaut mieux que cent lignes maison, et cette décision se
-prend **avant**, jamais après.
+Cette entrée disait : *« ce n'est pas de la dette tant que l'app reste à la
+maison ; ça le devient le jour où elle en sort »*. **Ce jour est arrivé le
+13/09/2026** — le §16 est amendé, plusieurs foyers cohabiteront sur l'instance.
+C'est donc de la dette, échue.
+
+**Ce que ces cent lignes ne font pas, et qu'il faut maintenant :**
+
+- **L'invitation.** Entropie du jeton, expiration, usage unique, et le cas
+  tordu : accepter une invitation en étant déjà connecté sous un autre compte.
+  Court à écrire, facile à écrire mal.
+- **La récupération de mot de passe.** Elle n'existe pas : aujourd'hui c'est
+  `npm run household` en SSH. Acceptable pour un mot de passe partagé entre
+  deux adultes qui ont la main sur la machine ; pas pour la femme d'un ami.
+- **Séparer compte et convive.** `member` est une assiette (`portion_coef`,
+  âge, allergènes) et `meal.created_by` pointe dessus : « qui a saisi » et
+  « qui a mangé » sont le même objet. Les enfants sont des assiettes sans
+  compte, une nounou serait un compte sans assiette. Voir l'encart du §7.
+
+**Ce qui le lèverait.** better-auth, plugin `organization` (une organisation =
+un foyer), schéma figé dans une migration numérotée comme les autres — son CLI
+ne doit jamais réécrire une migration appliquée. Deux rôles, `parent` et
+`adulte`. Et la RLS de la dette n° 4ter **dans le même lot**.
 
 ---
 

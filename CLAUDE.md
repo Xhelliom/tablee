@@ -25,6 +25,7 @@ besoins différents. Aucune app du marché ne modélise ça.
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
 | `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
 | `docs/dette-technique.md` | Ce qui est su, assumé, et à reprendre. À lire avant de « corriger » une approximation : elle y est peut-être déjà expliquée. |
+| `docs/mise-en-service.md` | Déploiement et **séquence de vérification sur un vrai téléphone**. Le share target est le chemin critique du produit. |
 
 En cas de contradiction entre ce fichier et la spec, **la spec gagne** — sauf sur
 les interdits ci-dessous, qui ne se négocient pas.
@@ -127,9 +128,31 @@ conservé, comme au §3.
 
 1. Installer la PWA sur un téléphone et partager une vraie recette depuis Jow.
    Le share target est le chemin critique du produit et n'a jamais tourné
-   ailleurs que dans un Chromium de test.
+   ailleurs que dans un Chromium de test. La séquence est dans
+   `docs/mise-en-service.md` ; les pièges vérifiables à froid le sont déjà.
 2. Savoir si la famille logue encore trois semaines plus tard. C'est l'objectif
    du jalon V1, et aucune ligne de code n'y répond.
+
+### Auth multi-comptes et multi-foyers — décidée le 13/09/2026, à écrire
+
+Le §7 (« un compte par foyer ») est **renversé** et le §16 (« si l'app sort du
+foyer ») est **tranché** : plusieurs adultes avec leur propre compte, plusieurs
+foyers étanches sur une instance. Lire les deux encarts avant d'y toucher.
+
+Trois points à ne pas perdre en route :
+
+- **`member` est une assiette, pas un compte.** Les enfants sont des assiettes
+  sans compte ; une nounou serait un compte sans assiette. `member` devient
+  `eater`, et `meal.created_by` pointe vers un `user`.
+- **L'étanchéité se met en base, pas seulement dans le code.** RLS Postgres en
+  plus du scoping applicatif : avec les enfants des autres dans la table, un
+  `where` oublié n'est plus un bug mais une fuite. Même lot que l'auth.
+- **La version chiffrée par foyer a été écartée en connaissance de cause.**
+  L'hébergeur a le root ; l'app ne montre rien, la machine reste la sienne, et
+  ça se dit tel quel aux familles invitées. Ne pas rouvrir sans relire le §16.
+
+Ça vient **après** le téléphone : refondre l'identité par-dessus une ingestion
+jamais vérifiée, c'est empiler deux inconnues.
 
 ### Ensuite
 
