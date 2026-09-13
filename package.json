@@ -3,16 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --import tsx --test \"server/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
-    "jow:capture": "node --import tsx scripts/jow-capture.ts"
+    "jow:capture": "node --import tsx scripts/jow-capture.ts",
+    "migrate": "node --import tsx scripts/migrate.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0"
   }
 }
