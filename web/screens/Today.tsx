@@ -15,6 +15,7 @@ import { IconPlus } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_ORDER, longDate,
 } from '../design/vocabulary.ts';
+import { formatPercent } from '../design/quantities.ts';
 
 export function TodayScreen(): React.ReactElement {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -92,7 +93,12 @@ export function TodayScreen(): React.ReactElement {
               </div>
               <NutrientBars balance={open.balance} />
             </div>
-            <p className="meta" style={{ marginTop: 12, lineHeight: 1.5 }}>
+            {open.balance.bars.some((b) => b.state === 'encadre' || b.state === 'partiel') ? (
+              <p className="meta" style={{ marginTop: 10, lineHeight: 1.5 }}>
+                {uncertaintySentence(open.balance)}
+              </p>
+            ) : null}
+            <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
               {plantSentence(open.balance)}
             </p>
           </div>
@@ -159,6 +165,29 @@ function addLabel(count: number): string {
 }
 
 /**
+ * Dit pourquoi certaines barres sont hachurées ou dégradées, plutôt que de
+ * laisser deviner. Une incertitude qu'on n'explique pas se lit comme un bug.
+ */
+function uncertaintySentence(balance: DashboardResponse['dashboard'][number]['balance']): string {
+  const encadre = balance.bars.filter((b) => b.state === 'encadre');
+  const partiel = balance.bars.filter((b) => b.state === 'partiel');
+  const parts: string[] = [];
+  if (encadre.length > 0) {
+    parts.push(
+      `${encadre.map((b) => NUTRIENT_LABELS[b.nutrient].toLowerCase()).join(', ')} : ` +
+        'la source ne donne qu’un intervalle',
+    );
+  }
+  if (partiel.length > 0) {
+    parts.push(
+      `${partiel.map((b) => NUTRIENT_LABELS[b.nutrient].toLowerCase()).join(', ')} : ` +
+        'au moins ce qui est affiché, un aliment n’est pas rattaché',
+    );
+  }
+  return parts.join(' · ');
+}
+
+/**
  * §8 — la barre Végétal se lit en tendance, pas en objectif : la valeur du
  * jour et la moyenne du foyer sur sept jours. Aucune cible chiffrée (R7, I5).
  */
@@ -168,9 +197,12 @@ function plantSentence(balance: { plant: { percent: number | null; householdAver
     return 'Part végétale indisponible : les aliments du jour ne sont pas rattachés au référentiel.';
   }
   if (householdAverage7d === null) {
-    return `Part végétale du jour : ${percent} %.`;
+    return `Part végétale du jour : ${formatPercent(percent)}.`;
   }
-  return `Part végétale du jour : ${percent} % — moyenne du foyer sur 7 jours : ${householdAverage7d} %.`;
+  return (
+    `Part végétale du jour : ${formatPercent(percent)} — ` +
+    `moyenne du foyer sur 7 jours : ${formatPercent(householdAverage7d)}.`
+  );
 }
 
 function Legend(): React.ReactElement {

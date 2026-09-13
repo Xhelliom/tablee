@@ -4,13 +4,25 @@
  * Jow et la somme des items est trop tordue à exprimer en SQL, et un calcul
  * dispersé dans des vues finirait par diverger du calcul de l'API.
  *
- * Deux règles gouvernent tout ce fichier :
+ * ── Tout est un encadrement ─────────────────────────────────────────────────
  *
- * - **Une valeur inconnue est `null`, jamais `0`.** Un nutriment que l'on ne
- *   sait pas sommer ressort `null`, avec un warning qui nomme l'aliment
- *   fautif. Additionner en traitant les trous comme des zéros produirait un
- *   total plausible et sous-estimé, c'est-à-dire un chiffre faux affiché sans
- *   avertissement (I1).
+ * Un nutriment n'est pas un nombre mais un intervalle `[min ; max]`, parce que
+ * les sources ne disent pas toutes la même chose :
+ *
+ *   Ciqual publie `12,5`      → `[12,5 ; 12,5]`, exact
+ *   Ciqual publie `< 0,5`     → `[0 ; 0,5]`, majorant publié par la source
+ *   Ciqual publie `traces`    → inconnu : « très faible » sans seuil chiffré
+ *   l'aliment n'est pas connu → inconnu
+ *
+ * Sommer des intervalles donne un intervalle. Un repas peut donc valoir
+ * « entre 82,9 et 83,4 g de lipides », ou « au moins 31 g de protéines » quand
+ * un aliment échappe au référentiel — ce qui est à la fois vrai et utile, là
+ * où l'ancien « valeur inconnue » jetait tout ce qu'on savait.
+ *
+ * Deux règles gouvernent le reste du fichier :
+ *
+ * - **On n'invente jamais une borne.** `traces` reste sans majorant : l'ANSES
+ *   écrit « très faible » et ne donne pas de seuil (I1).
  * - **Toute estimation porte un `confidence` affiché** (R6).
  */
 import type { Confidence } from '../jow/types.ts';
@@ -22,14 +34,22 @@ export type { Confidence };
 export const NUTRIENTS = ['kcal', 'proteinG', 'carbG', 'fatG', 'fiberG'] as const;
 export type Nutrient = (typeof NUTRIENTS)[number];
 
+/** Bornes basses, ou valeurs exactes. `null` = rien de connu. */
 export type Macros = Record<Nutrient, number | null>;
+
+export const EMPTY_MACROS: Macros = {
+  kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null,
+};
 
 /** Un aliment de `food`, réduit à ce dont le calcul a besoin. */
 export interface FoodValues extends UnitSource {
   name: string;
   /** `null` = non classé, jamais « pas végétal » (§10). */
   plantBased: boolean | null;
+  /** Bornes basses pour 100 g. */
   per100g: Macros;
+  /** Bornes hautes pour 100 g. `null` = non bornée. */
+  per100gMax?: Macros | undefined;
 }
 
 export interface NutritionItem {
@@ -42,7 +62,10 @@ export interface NutritionItem {
   quantityG: number | null;
 }
 
-/** Snapshot Jow figé à la capture — valeurs **par portion**. */
+/**
+ * Snapshot Jow figé à la capture — valeurs **par portion**, exactes. Jow ne
+ * publie pas de majorants : une valeur est là, ou elle ne l'est pas.
+ */
 export interface RecipeSnapshot {
   perServing: Macros;
   confidence: Confidence;
@@ -71,6 +94,8 @@ export interface ResolvedItem extends NutritionItem {
 }
 
 export interface MealNutrition extends Macros {
+  /** Bornes hautes du total. `null` = non bornée. */
+  max: Macros;
   /** 0-100, ou `null` si aucun gramme du repas n'est classé. */
   plantRatio: number | null;
   /** Grammes dont la quantité est connue — dénominateur du §8. */
@@ -89,7 +114,13 @@ export interface MealNutrition extends Macros {
 const RANK: Record<Confidence, number> = { haute: 3, moyenne: 2, basse: 1 };
 const worst = (a: Confidence, b: Confidence): Confidence => (RANK[a] <= RANK[b] ? a : b);
 
-const EMPTY: Macros = { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null };
+const LABELS: Record<Nutrient, string> = {
+  kcal: 'énergie',
+  proteinG: 'protéines',
+  carbG: 'glucides',
+  fatG: 'lipides',
+  fiberG: 'fibres',
+};
 
 export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): MealNutrition {
   const warnings: string[] = [];
@@ -101,6 +132,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
   const items = meal.items.map((item) => resolve(item, defaults, warnings));
 
   let macros: Macros;
+  let maxima: Macros;
   let confidence: Confidence;
 
   const snapshot = meal.recipe;
@@ -110,6 +142,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
     // encore convertir. Un nutriment absent du snapshot reste absent — on ne
     // va pas le chercher ailleurs, les deux bases ne sont pas comparables.
     macros = scale(snapshot.perServing, servings);
+    maxima = { ...macros };
     confidence = snapshot.confidence;
     const partial = NUTRIENTS.filter((n) => snapshot.perServing[n] === null);
     if (partial.length > 0) {
@@ -123,7 +156,8 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
     }
   } else {
     const summed = sum(items, warnings);
-    macros = summed.macros;
+    macros = summed.min;
+    maxima = summed.max;
     confidence = summed.confidence;
     if (snapshot !== null) {
       warnings.push('la recette ne publie aucune valeur nutritionnelle');
@@ -136,7 +170,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
 
   const plant = plantRatio(meal, items, servings, warnings);
 
-  return { ...macros, ...plant, confidence, warnings, items };
+  return { ...macros, max: maxima, ...plant, confidence, warnings, items };
 }
 
 function resolve(item: NutritionItem, defaults: UnitDefaults, warnings: string[]): ResolvedItem {
@@ -151,71 +185,98 @@ function resolve(item: NutritionItem, defaults: UnitDefaults, warnings: string[]
 }
 
 /**
- * Somme les items. Un nutriment dont **un seul** item contributeur ignore la
- * valeur ressort `null` pour tout le repas : le total partiel serait
- * sous-estimé sans que rien ne le dise, et c'est précisément la valeur
- * plausible et fausse qu'interdit I1. Le warning nomme l'aliment en cause,
- * pour que la correction soit possible.
+ * Somme les items, nutriment par nutriment, en intervalles.
+ *
+ * Un aliment dont la teneur est totalement inconnue ne casse plus le total :
+ * il **déborne le haut** sans effacer le bas. Le repas ressort « au moins
+ * 31 g », ce qui est vrai, vérifiable, et plus utile que « on ne sait pas ».
+ *
+ * Un nutriment sur lequel **aucun** aliment n'a rien à dire ressort `[null ;
+ * null]` : un plancher à 0 serait techniquement exact et parfaitement
+ * trompeur à l'écran.
  */
-function sum(items: ResolvedItem[], warnings: string[]): { macros: Macros; confidence: Confidence } {
-  const totals: Macros = { ...EMPTY };
-  const unknown: Record<Nutrient, string[]> = {
+function sum(
+  items: ResolvedItem[],
+  warnings: string[],
+): { min: Macros; max: Macros; confidence: Confidence } {
+  const min: Macros = { ...EMPTY_MACROS };
+  const max: Macros = { ...EMPTY_MACROS };
+  const floors: Record<Nutrient, number> = { kcal: 0, proteinG: 0, carbG: 0, fatG: 0, fiberG: 0 };
+  const ceilings: Record<Nutrient, number> = { kcal: 0, proteinG: 0, carbG: 0, fatG: 0, fiberG: 0 };
+  /** Nombre d'aliments ayant apporté au moins une borne, par nutriment. */
+  const informed: Record<Nutrient, number> = { kcal: 0, proteinG: 0, carbG: 0, fatG: 0, fiberG: 0 };
+  const unbounded: Record<Nutrient, string[]> = {
     kcal: [], proteinG: [], carbG: [], fatG: [], fiberG: [],
   };
+
   let confidence: Confidence = 'haute';
   let counted = 0;
+
+  /**
+   * Un item qu'on ne sait pas évaluer — aliment non rattaché, ou quantité non
+   * convertible — ne contribue à aucun plancher, mais il **retire tous les
+   * plafonds** : il y a bien quelque chose dans l'assiette, et ce quelque
+   * chose peut contenir n'importe quoi. Sans cela, un plat de cantine ferait
+   * passer un total pour exact alors qu'il ignore la moitié du repas.
+   */
+  const debound = (label: string): void => {
+    for (const nutrient of NUTRIENTS) unbounded[nutrient].push(label);
+  };
 
   for (const item of items) {
     if (item.food === null) {
       warnings.push(`« ${item.label} » : aliment non rattaché au référentiel, non compté`);
       confidence = 'basse';
+      debound(item.label);
       continue;
     }
     if (item.quantityG === null) {
       // Le warning a déjà été posé par `resolve`.
       confidence = 'basse';
+      debound(item.food.name);
       continue;
     }
 
     counted += 1;
     const ratio = item.quantityG / 100;
     for (const nutrient of NUTRIENTS) {
-      const per100 = item.food.per100g[nutrient];
-      if (per100 === null) {
-        unknown[nutrient].push(item.food.name);
+      const low = item.food.per100g[nutrient];
+      // Même distinction qu'au niveau du repas : pas de table de bornes du
+      // tout = valeurs exactes ; table présente avec un `null` = non borné.
+      const high = item.food.per100gMax === undefined ? low : item.food.per100gMax[nutrient];
+
+      if (low === null && high === null) {
+        unbounded[nutrient].push(item.food.name);
         continue;
       }
-      totals[nutrient] = (totals[nutrient] ?? 0) + per100 * ratio;
+      informed[nutrient] += 1;
+      floors[nutrient] += (low ?? 0) * ratio;
+      if (high === null) unbounded[nutrient].push(item.food.name);
+      else ceilings[nutrient] += high * ratio;
     }
   }
 
   if (counted === 0) {
     // Aucun item exploitable : le repas n'a pas de valeurs, il n'en a pas zéro.
-    return { macros: { ...EMPTY }, confidence: 'basse' };
+    return { min: { ...EMPTY_MACROS }, max: { ...EMPTY_MACROS }, confidence: 'basse' };
   }
 
   for (const nutrient of NUTRIENTS) {
-    const missing = unknown[nutrient];
-    if (missing.length === 0) {
-      totals[nutrient] = round(totals[nutrient]);
+    if (informed[nutrient] === 0) continue;   // reste [null ; null]
+
+    min[nutrient] = round(floors[nutrient]);
+    if (unbounded[nutrient].length === 0) {
+      max[nutrient] = round(ceilings[nutrient]);
       continue;
     }
-    totals[nutrient] = null;
     warnings.push(
-      `${LABELS[nutrient]} : valeur inconnue pour ${missing.join(', ')} — total indisponible`,
+      `${LABELS[nutrient]} : valeur inconnue pour ${unbounded[nutrient].join(', ')} — ` +
+        'le total est un minimum',
     );
   }
 
-  return { macros: totals, confidence };
+  return { min, max, confidence };
 }
-
-const LABELS: Record<Nutrient, string> = {
-  kcal: 'énergie',
-  proteinG: 'protéines',
-  carbG: 'glucides',
-  fatG: 'lipides',
-  fiberG: 'fibres',
-};
 
 /**
  * §8 — part végétale.
@@ -292,7 +353,7 @@ function plantRatio(
 }
 
 function scale(macros: Macros, factor: number): Macros {
-  const out: Macros = { ...EMPTY };
+  const out: Macros = { ...EMPTY_MACROS };
   for (const nutrient of NUTRIENTS) {
     const value = macros[nutrient];
     out[nutrient] = value === null ? null : round(value * factor);

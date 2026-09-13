@@ -5,11 +5,15 @@
  * du repère du jour** (R3) et jamais en grammes bruts : « 18 g de fibres » ne
  * dit rien à personne, « 62 % du repère » se lit d'un coup.
  *
- * Trois états possibles par barre, et il faut les trois :
+ * Quatre états par barre, et il faut les quatre — ils ne disent pas la même
+ * chose et se ressembleraient tous à un chiffre unique :
  *
- *   `disponible`   la valeur est connue pour tous les repas de la journée
- *   `partiel`      un repas au moins n'a pas cette valeur → minorant, signalé
- *   `indisponible` rien de connu → pas de barre, pas de zéro
+ *   `disponible`   valeur exacte
+ *   `encadre`      la source ne donne qu'un intervalle (« < 0,5 g » chez
+ *                  Ciqual) → « entre X et Y »
+ *   `partiel`      un aliment ou un repas échappe au référentiel → « au
+ *                  moins X », le total ne peut que monter
+ *   `indisponible` rien de connu → pas de barre, surtout pas un zéro
  *
  * et, orthogonalement, un repère peut manquer (§9) : la barre existe alors
  * sans pourcentage. On ne remplace jamais un repère absent par celui de la
@@ -18,19 +22,23 @@
 import { NUTRIENTS, type Macros, type Nutrient } from './compute.ts';
 import { findReference, type NutrientReference, type ReferenceTable } from './references.ts';
 
-export type BarState = 'disponible' | 'partiel' | 'indisponible';
+export type BarState = 'disponible' | 'encadre' | 'partiel' | 'indisponible';
 
 export interface NutrientBar {
   nutrient: Nutrient;
   state: BarState;
-  /** Quantité consommée, en grammes (kcal pour l'énergie). `null` si rien n'est connu. */
+  /** Borne basse consommée, en grammes (kcal pour l'énergie). */
   consumed: number | null;
+  /** Borne haute. `null` quand rien ne la borne. */
+  consumedMax: number | null;
   /** Repas de la journée qui ne publient pas cette valeur. */
   missingMeals: number;
   /** `null` quand la tranche d'âge n'est couverte par aucune source (§9). */
   reference: NutrientReference | null;
-  /** % du repère du jour. `null` dès que le repère ou la valeur manque. */
+  /** % du repère du jour, borne basse. `null` dès que le repère manque. */
   percent: number | null;
+  /** % du repère du jour, borne haute. */
+  percentMax: number | null;
 }
 
 /**
@@ -50,6 +58,8 @@ export interface PlantBar {
 
 /** Un repas de la journée, vu depuis une personne. */
 export interface DailyMeal extends Macros {
+  /** Bornes hautes du repas. */
+  max?: Macros | undefined;
   /** Part figée à l'écriture (R2). */
   share: number;
   gramsTotal: number | null;
@@ -81,38 +91,56 @@ export function bilanJournalier(input: BalanceInput): DailyBalance {
 }
 
 function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {
-  let consumed: number | null = null;
+  let floor = 0;
+  let ceiling = 0;
+  let informed = 0;
   let missingMeals = 0;
+  let unbounded = false;
 
   for (const meal of input.meals) {
-    const value = meal[nutrient];
-    if (value === null) {
+    const low = meal[nutrient];
+    // `max` absent = repas écrit avant l'encadrement, donc exact. `max` présent
+    // avec un nutriment à `null` = borne haute **volontairement** absente. Les
+    // confondre ferait passer pour exact un total qui ne peut que monter.
+    const high = meal.max === undefined ? low : meal.max[nutrient];
+
+    if (low === null && high === null) {
       missingMeals += 1;
+      // Le total ne peut que monter : on le dit plutôt que de tout jeter.
+      unbounded = true;
       continue;
     }
-    consumed = (consumed ?? 0) + value * meal.share;
+    informed += 1;
+    floor += (low ?? 0) * meal.share;
+    if (high === null) unbounded = true;
+    else ceiling += high * meal.share;
   }
+
+  const consumed = informed === 0 ? null : round(floor);
+  const consumedMax = informed === 0 || unbounded ? null : round(ceiling);
 
   const reference = findReference(input.references, input.sex, input.age, nutrient);
   const state: BarState =
-    consumed === null ? 'indisponible' : missingMeals > 0 ? 'partiel' : 'disponible';
+    consumed === null
+      ? 'indisponible'
+      : consumedMax === null
+        ? 'partiel'
+        : consumedMax > consumed
+          ? 'encadre'
+          : 'disponible';
 
   // Pas de repère → pas de pourcentage. Pas de valeur → pas de pourcentage non
   // plus : un 0 % serait lu comme « n'a rien mangé », pas comme « on ne sait
   // pas ».
-  const percent =
-    reference === null || consumed === null
-      ? null
-      : Math.round((consumed / reference.value) * 1000) / 10;
+  const percent = percentOf(consumed, reference);
+  const percentMax = percentOf(consumedMax, reference);
 
-  return {
-    nutrient,
-    state,
-    consumed: consumed === null ? null : Math.round(consumed * 100) / 100,
-    missingMeals,
-    reference,
-    percent,
-  };
+  return { nutrient, state, consumed, consumedMax, missingMeals, reference, percent, percentMax };
+}
+
+function percentOf(value: number | null, reference: NutrientReference | null): number | null {
+  if (value === null || reference === null || reference.value === 0) return null;
+  return Math.round((value / reference.value) * 1000) / 10;
 }
 
 /**
@@ -167,4 +195,8 @@ function plantBar(input: BalanceInput): PlantBar {
     coverage,
     householdAverage7d: average,
   };
+}
+
+function round(n: number): number {
+  return Math.round(n * 100) / 100;
 }

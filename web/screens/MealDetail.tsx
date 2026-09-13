@@ -29,6 +29,7 @@ import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
   SLOT_WHEN, longDate,
 } from '../design/vocabulary.ts';
+import { formatPercent, formatRange } from '../design/quantities.ts';
 
 export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactElement {
   const { members } = useSession();
@@ -147,9 +148,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
                   {NUTRIENT_LABELS[nutrient]}
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  {nutrition[nutrient] === null
-                    ? 'valeur inconnue'
-                    : `${round(nutrition[nutrient])} g`}
+                  {formatRange(nutrition[nutrient], nutrition.max[nutrient])}
                 </span>
               </div>
             ))}
@@ -164,7 +163,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 {nutrition.plantRatio === null
                   ? 'origine des aliments inconnue'
-                  : `${nutrition.plantRatio} %`}
+                  : formatPercent(nutrition.plantRatio)}
               </span>
             </div>
             {nutrition.plantRatio !== null

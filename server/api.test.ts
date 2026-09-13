@@ -395,6 +395,74 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
   });
 
+
+  // ── encadrements (bornes publiées par Ciqual) ─────────────────────────────
+
+  describe('bornes de quantification', () => {
+    it('encadre un total plutôt que de le déclarer inconnu', async () => {
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      // La banane : Ciqual publie « < 0,5 » pour les lipides — un majorant.
+      const banane = await insertFood(
+        pool, 'Banane, pulpe, crue',
+        { kcal: 90.5, protein: 1.06, carb: 19.7, fiber: 2.7, fat: 0 },
+        true, { fat: 0.5 },
+      );
+      const beurre = await insertFood(
+        pool, 'Beurre', { kcal: 753, protein: 0.7, carb: 0.9, fiber: 0, fat: 82.9 }, false,
+      );
+
+      const { body } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
+        participants: [{ memberId: adulte }],
+        items: [
+          { foodId: banane, label: 'Banane', quantity: 100, unit: 'g', quantityG: 100 },
+          { foodId: beurre, label: 'Beurre', quantity: 10, unit: 'g', quantityG: 10 },
+        ],
+      });
+
+      // 8,29 g de beurre + entre 0 et 0,5 g de banane.
+      assert.equal(body.meal.nutrition.fatG, 8.29, 'borne basse');
+      assert.equal(body.meal.nutrition.max.fatG, 8.79, 'borne haute');
+      // Et le majorant n'est jamais pris pour une mesure.
+      assert.notEqual(body.meal.nutrition.fatG, 8.79);
+
+      const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const lipides = bilan.dashboard
+        .find((d: any) => d.member.id === adulte)
+        .balance.bars.find((b: any) => b.nutrient === 'fatG');
+      assert.equal(lipides.state, 'encadre');
+      assert.equal(lipides.consumed, 8.29);
+      assert.equal(lipides.consumedMax, 8.79);
+    });
+
+    it('garde ce qui est su quand un aliment échappe au référentiel', async () => {
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7 }, true);
+
+      const { body } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'texte',
+        participants: [{ memberId: adulte }],
+        items: [
+          { foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 },
+          { label: 'Plat de la cantine', quantity: 200, unit: 'g', quantityG: 200 },
+        ],
+      });
+
+      // Le riz est compté, la cantine déborne le haut : « au moins 2,7 g ».
+      assert.equal(body.meal.nutrition.proteinG, 2.7);
+      assert.equal(body.meal.nutrition.max.proteinG, null);
+      assert.equal(body.meal.nutrition.confidence, 'basse');
+
+      const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const proteines = bilan.dashboard
+        .find((d: any) => d.member.id === adulte)
+        .balance.bars.find((b: any) => b.nutrient === 'proteinG');
+      assert.equal(proteines.state, 'partiel');
+      assert.equal(proteines.consumed, 2.7);
+      assert.equal(proteines.consumedMax, null);
+    });
+  });
+
   // ── tables livrées vides ──────────────────────────────────────────────────
 
   describe('tables livrées vides (§17)', () => {
@@ -440,20 +508,31 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   });
 });
 
+type Values = { kcal?: number; protein?: number; carb?: number; fat?: number; fiber?: number };
+
+/**
+ * `maxima` ne porte que les majorants qui diffèrent de la valeur — le cas
+ * « < 0,5 » de Ciqual. Sans lui, les bornes hautes suivent les valeurs.
+ */
 async function insertFood(
   pool: pg.Pool,
   name: string,
-  values: { kcal?: number; protein?: number; carb?: number; fat?: number; fiber?: number },
+  values: Values,
   plantBased: boolean | null,
+  maxima: Values = {},
 ): Promise<string> {
+  const bound = (key: keyof Values): number | null => maxima[key] ?? values[key] ?? null;
   const { rows } = await pool.query<{ id: string }>(
     `insert into food (source, external_id, name, plant_based,
-                       kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g)
-     values ('manuel', $1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+                       kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g,
+                       kcal_100g_max, protein_100g_max, carb_100g_max, fat_100g_max,
+                       fiber_100g_max)
+     values ('manuel', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning id`,
     [
       name, name, plantBased,
       values.kcal ?? null, values.protein ?? null, values.carb ?? null,
       values.fat ?? null, values.fiber ?? null,
+      bound('kcal'), bound('protein'), bound('carb'), bound('fat'), bound('fiber'),
     ],
   );
   return rows[0]!.id;

@@ -50,7 +50,10 @@ interface FoodRow {
   name: string;
   category: string | null;
   plantBased: boolean | null;
+  /** Borne basse par colonne — ce qui est garanti atteint. */
   values: Partial<Record<NutrientColumn, number | null>>;
+  /** Borne haute par colonne. Absente = non bornée. */
+  maxima: Partial<Record<NutrientColumn, number | null>>;
 }
 
 /**
@@ -124,6 +127,7 @@ async function main(): Promise<void> {
       category,
       plantBased,
       values: {},
+      maxima: {},
     });
   }
 
@@ -133,6 +137,7 @@ async function main(): Promise<void> {
     const food = rows.get(row.foodCode);
     if (food === undefined) return;
     food.values[row.column] = row.teneur.value;
+    food.maxima[row.column] = row.teneur.max;
     const perColumn = holes[row.column];
     perColumn[row.teneur.kind] += 1;
   });
@@ -169,28 +174,34 @@ async function upsert(pool: ReturnType<typeof getPool>, batch: FoodRow[]): Promi
       row.category,
       row.plantBased,
       ...COLUMNS.map((c) => row.values[c] ?? null),
+      ...COLUMNS.map((c) => row.maxima[c] ?? null),
     );
-    const holders = Array.from({ length: 4 + COLUMNS.length }, (_, k) => `$${base + k + 1}`);
+    const holders = Array.from({ length: 4 + COLUMNS.length * 2 }, (_, k) => `$${base + k + 1}`);
     return `(${holders.join(',')})`;
   });
 
   // `do update` et non `do nothing` : rejouer le seed après une mise à jour de
   // la table Ciqual doit corriger les valeurs, sinon le seed n'est idempotent
   // qu'en apparence.
+  const maxColumns = COLUMNS.map((c) => `${c}_max`);
   const sql = `
-    insert into food (external_id, name, category, plant_based, ${COLUMNS.join(', ')}, source)
+    insert into food (
+      external_id, name, category, plant_based,
+      ${COLUMNS.join(', ')}, ${maxColumns.join(', ')}, source
+    )
     select v.external_id, v.name, v.category, v.plant_based::boolean,
-           ${COLUMNS.map((c) => `v.${c}::numeric`).join(', ')}, 'ciqual'
+           ${[...COLUMNS, ...maxColumns].map((c) => `v.${c}::numeric`).join(', ')}, 'ciqual'
     -- Une clause values sans types arrive en text : les casts ci-dessus sont
     -- nécessaires, et ils ne convertissent rien — un NULL reste un NULL.
     from (values ${tuples.join(',')}) as v (
-      external_id, name, category, plant_based, ${COLUMNS.join(', ')}
+      external_id, name, category, plant_based,
+      ${COLUMNS.join(', ')}, ${maxColumns.join(', ')}
     )
     on conflict (source, external_id) do update set
       name         = excluded.name,
       category     = excluded.category,
       plant_based  = excluded.plant_based,
-      ${COLUMNS.map((c) => `${c} = excluded.${c}`).join(',\n      ')},
+      ${[...COLUMNS, ...maxColumns].map((c) => `${c} = excluded.${c}`).join(',\n      ')},
       updated_at   = now()
   `;
   const result = await pool.query(sql, params);
@@ -219,14 +230,20 @@ function report(
 ): void {
   const total = rows.size;
   console.log(`${total} aliments Ciqual lus.\n`);
-  console.log('Couverture par colonne (une teneur non publiée reste NULL) :');
+  console.log(
+    'Couverture par colonne. « Encadrée » = la source ne donne qu’un majorant\n' +
+      '(« < 0,5 ») ; il est conservé. « Inconnue » reste NULL, jamais 0.',
+  );
   for (const column of COLUMNS) {
     const h = holes[column];
     const missing = total - h.valeur;
+    // `seuil` n'est plus un trou : la source publie un majorant, on le garde.
+    const unknown = missing - h.seuil;
     console.log(
-      `  ${column.padEnd(13)} ${String(h.valeur).padStart(5)} valeurs, ` +
-        `${String(missing).padStart(4)} NULL ` +
-        `(non déterminée ${h.absente}, traces ${h.traces}, sous seuil ${h.seuil}` +
+      `  ${column.padEnd(13)} ${String(h.valeur).padStart(5)} exactes, ` +
+        `${String(h.seuil).padStart(4)} encadrées (« < X »), ` +
+        `${String(unknown).padStart(4)} inconnues ` +
+        `(non déterminée ${h.absente}, traces ${h.traces}` +
         (h.illisible > 0 ? `, illisible ${h.illisible}` : '') +
         ')',
     );

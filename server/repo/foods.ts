@@ -19,6 +19,8 @@ interface ValuesRow {
   id: string; name: string; plant_based: boolean | null;
   kcal_100g: number | null; protein_100g: number | null; carb_100g: number | null;
   fat_100g: number | null; fiber_100g: number | null;
+  kcal_100g_max: number | null; protein_100g_max: number | null;
+  carb_100g_max: number | null; fat_100g_max: number | null; fiber_100g_max: number | null;
   unit_weights: Record<string, number>;
 }
 
@@ -33,13 +35,24 @@ const toValues = (row: ValuesRow): FoodValues => ({
     fatG: row.fat_100g,
     fiberG: row.fiber_100g,
   },
+  // Bornes hautes : égales à la valeur quand elle est exacte, au seuil quand
+  // la source n'écrit qu'un « < X », nulles quand rien n'est borné.
+  per100gMax: {
+    kcal: row.kcal_100g_max,
+    proteinG: row.protein_100g_max,
+    carbG: row.carb_100g_max,
+    fatG: row.fat_100g_max,
+    fiberG: row.fiber_100g_max,
+  },
 });
 
 export async function loadFoodValues(db: Db, ids: string[]): Promise<Map<string, FoodValues>> {
   if (ids.length === 0) return new Map();
   const { rows } = await db.query<ValuesRow>(
-    `select id, name, plant_based, kcal_100g, protein_100g, carb_100g, fat_100g,
-            fiber_100g, unit_weights
+    `select id, name, plant_based,
+            kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g,
+            kcal_100g_max, protein_100g_max, carb_100g_max, fat_100g_max, fiber_100g_max,
+            unit_weights
      from food where id = any($1::uuid[])`,
     [ids],
   );

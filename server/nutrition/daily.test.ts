@@ -4,10 +4,28 @@ import { bilanJournalier, type DailyMeal } from './daily.ts';
 import { findReference, type ReferenceTable } from './references.ts';
 import { ageAt, ageBracket, isMinor } from './age.ts';
 
-const repas = (over: Partial<DailyMeal>): DailyMeal => ({
-  share: 1, kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null,
-  gramsTotal: null, gramsPlant: null, gramsClassified: null, ...over,
-});
+/** Aucune borne connue — le point de départ de tous les cas. */
+const VIDE = { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null };
+
+/**
+ * Par défaut les bornes hautes suivent les valeurs : une mesure exacte est un
+ * intervalle de largeur nulle. Un test qui veut un total non borné passe
+ * `max` explicitement.
+ */
+const repas = (over: Partial<DailyMeal>): DailyMeal => {
+  const base: DailyMeal = {
+    share: 1, ...VIDE,
+    gramsTotal: null, gramsPlant: null, gramsClassified: null,
+    ...over,
+  };
+  return {
+    ...base,
+    max: over.max ?? {
+      kcal: base.kcal, proteinG: base.proteinG, carbG: base.carbG,
+      fatG: base.fatG, fiberG: base.fiberG,
+    },
+  };
+};
 
 /**
  * Repères fictifs, **de test uniquement**. `nutrient_reference` est livrée
@@ -209,5 +227,58 @@ describe('bilanJournalier — repas dont l’origine est totalement inconnue', (
     });
     assert.equal(result.plant.percent, null);
     assert.equal(result.plant.state, 'indisponible');
+  });
+});
+
+describe('bilanJournalier — encadrements', () => {
+  it('additionne les intervalles au prorata de la part', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [
+        repas({ fatG: 10, max: { ...VIDE, fatG: 12 }, share: 0.5 }),
+        repas({ fatG: 4, max: { ...VIDE, fatG: 4 }, share: 1 }),
+      ],
+    });
+    const lipides = bar(result, 'fatG');
+    assert.equal(lipides.consumed, 9);       // 10×0,5 + 4
+    assert.equal(lipides.consumedMax, 10);   // 12×0,5 + 4
+    assert.equal(lipides.state, 'encadre');
+  });
+
+  it('dit « au moins » quand un repas échappe au référentiel', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [
+        repas({ proteinG: 30, max: { ...VIDE, proteinG: 30 } }),
+        repas({ proteinG: null, max: { ...VIDE } }),
+      ],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.consumed, 30, 'ce qui est garanti atteint survit');
+    assert.equal(proteines.consumedMax, null);
+    assert.equal(proteines.state, 'partiel');
+    assert.equal(proteines.missingMeals, 1);
+    // Le pourcentage du repère suit la borne basse : 30 sur 60.
+    assert.equal(proteines.percent, 50);
+    assert.equal(proteines.percentMax, null);
+  });
+
+  it('reste exact quand toutes les bornes coïncident', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [repas({ proteinG: 30, max: { ...VIDE, proteinG: 30 } })],
+    });
+    assert.equal(bar(result, 'proteinG').state, 'disponible');
+    assert.equal(bar(result, 'proteinG').percentMax, 50);
+  });
+
+  it('donne les deux pourcentages quand la journée est encadrée', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [repas({ fiberG: 15, max: { ...VIDE, fiberG: 18 } })],
+    });
+    // Repère fibres de test : 30 g.
+    assert.equal(bar(result, 'fiberG').percent, 50);
+    assert.equal(bar(result, 'fiberG').percentMax, 60);
   });
 });

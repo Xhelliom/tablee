@@ -59,7 +59,11 @@ export type Confidence = 'haute' | 'moyenne' | 'basse';
 export type Slot = 'petit_dej' | 'dejeuner' | 'gouter' | 'diner' | 'collation';
 export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
 export type Nutrient = 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'fiberG';
-export type BarState = 'disponible' | 'partiel' | 'indisponible';
+/**
+ * `encadre` — la source ne donne qu'un intervalle (« < 0,5 g » chez Ciqual).
+ * `partiel` — un aliment échappe au référentiel : le total ne peut que monter.
+ */
+export type BarState = 'disponible' | 'encadre' | 'partiel' | 'indisponible';
 
 export interface Member {
   id: string;
@@ -78,10 +82,14 @@ export interface Member {
 export interface NutrientBar {
   nutrient: Nutrient;
   state: BarState;
+  /** Borne basse : ce qui est garanti atteint. */
   consumed: number | null;
+  /** Borne haute. `null` quand rien ne la borne. */
+  consumedMax: number | null;
   missingMeals: number;
   reference: { nutrient: string; value: number; unit: string; source: string } | null;
   percent: number | null;
+  percentMax: number | null;
 }
 
 export interface PlantBar {
@@ -129,6 +137,14 @@ export interface Meal {
     carbG: number | null;
     fatG: number | null;
     fiberG: number | null;
+    /** Bornes hautes. `null` = non bornée. */
+    max: {
+      kcal: number | null;
+      proteinG: number | null;
+      carbG: number | null;
+      fatG: number | null;
+      fiberG: number | null;
+    };
     plantRatio: number | null;
     gramsTotal: number | null;
     gramsPlant: number | null;

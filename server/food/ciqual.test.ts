@@ -10,19 +10,32 @@ import {
 } from './ciqual.ts';
 
 describe('parseTeneur', () => {
-  it('lit une valeur à virgule décimale', () => {
-    assert.deepEqual(parseTeneur(' 90,5 '), { value: 90.5, kind: 'valeur' });
-    assert.deepEqual(parseTeneur('0'), { value: 0, kind: 'valeur' });
+  it('lit une valeur à virgule décimale, bornes égales', () => {
+    assert.deepEqual(parseTeneur(' 90,5 '), { value: 90.5, max: 90.5, kind: 'valeur' });
+    assert.deepEqual(parseTeneur('0'), { value: 0, max: 0, kind: 'valeur' });
   });
 
-  // I1 : le cœur du sujet. Ces trois formes sont des absences de mesure, et
-  // les écrire 0 ferait afficher « 0 g de fibres » là où Ciqual dit « on ne
-  // sait pas ». La différence se voit à l'écran, elle doit exister en base.
-  it('ne convertit jamais une absence de mesure en zéro', () => {
-    for (const raw of ['-', '', '   ', 'traces', 'Traces', '< 0,5', '<50']) {
-      const { value } = parseTeneur(raw);
-      assert.equal(value, null, `« ${raw} » devrait valoir null`);
+  // I1 : le cœur du sujet, et il ne bouge pas. Ces deux formes sont des
+  // absences de mesure. Les écrire 0 ferait afficher « 0 g de fibres » là où
+  // Ciqual dit « on ne sait pas » — la différence se voit à l'écran, elle doit
+  // exister en base.
+  it('ne convertit jamais une absence de mesure en zéro ni en borne', () => {
+    for (const raw of ['-', '', '   ', 'traces', 'Traces']) {
+      assert.deepEqual(
+        parseTeneur(raw),
+        { value: null, max: null, kind: raw.trim().toLowerCase() === 'traces' ? 'traces' : 'absente' },
+        `« ${raw} » devrait rester entièrement inconnu`,
+      );
     }
+  });
+
+  // La doc Ciqual (§1.2.1) appelle « <10 » une **valeur maximale**. C'est une
+  // information publiée : on la garde comme majorant, jamais comme mesure.
+  it('garde le majorant d’un « inférieur à », sans le prendre pour une mesure', () => {
+    assert.deepEqual(parseTeneur('< 0,5'), { value: 0, max: 0.5, kind: 'seuil' });
+    assert.deepEqual(parseTeneur('<50'), { value: 0, max: 50, kind: 'seuil' });
+    // Et surtout : la borne n'est pas la valeur.
+    assert.notEqual(parseTeneur('< 2,2').value, 2.2);
   });
 
   it('distingue les raisons de l’absence', () => {
@@ -32,9 +45,8 @@ describe('parseTeneur', () => {
     assert.equal(parseTeneur('abc').kind, 'illisible');
   });
 
-  it('ne retient pas la borne d’un « inférieur à »', () => {
-    // 2,2 serait une valeur plausible et fausse : c'est un majorant.
-    assert.equal(parseTeneur('< 2,2').value, null);
+  it('n’invente pas de borne quand le « < » n’est suivi de rien de lisible', () => {
+    assert.deepEqual(parseTeneur('< '), { value: null, max: null, kind: 'illisible' });
   });
 });
 
@@ -115,6 +127,7 @@ describe('parseCompoChunk', () => {
     assert.deepEqual(rows.map((r) => r.column), ['kcal_100g', 'fiber_100g']);
     assert.equal(rows[0]?.teneur.value, 90.5);
     assert.equal(rows[1]?.teneur.value, null);
+    assert.equal(rows[1]?.teneur.max, null, 'traces reste sans majorant');
   });
 
   it('couvre exactement les cinq macros du §9', () => {

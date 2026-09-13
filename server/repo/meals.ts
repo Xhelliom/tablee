@@ -87,11 +87,20 @@ export interface Meal {
 }
 
 export interface StoredNutrition {
+  /** Bornes basses : ce qui est garanti atteint. */
   kcal: number | null;
   proteinG: number | null;
   carbG: number | null;
   fatG: number | null;
   fiberG: number | null;
+  /** Bornes hautes. `null` = non bornée (un aliment échappe au référentiel). */
+  max: {
+    kcal: number | null;
+    proteinG: number | null;
+    carbG: number | null;
+    fatG: number | null;
+    fiberG: number | null;
+  };
   plantRatio: number | null;
   gramsTotal: number | null;
   gramsPlant: number | null;
@@ -347,17 +356,22 @@ export async function recomputeNutrition(
 
   await client.query(
     `insert into meal_nutrition (meal_id, kcal, protein_g, carb_g, fat_g, fiber_g,
+                                 kcal_max, protein_g_max, carb_g_max, fat_g_max, fiber_g_max,
                                  plant_ratio, grams_total, grams_plant, grams_classified,
                                  confidence, computed_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now())
      on conflict (meal_id) do update set
        kcal = excluded.kcal, protein_g = excluded.protein_g, carb_g = excluded.carb_g,
        fat_g = excluded.fat_g, fiber_g = excluded.fiber_g,
+       kcal_max = excluded.kcal_max, protein_g_max = excluded.protein_g_max,
+       carb_g_max = excluded.carb_g_max, fat_g_max = excluded.fat_g_max,
+       fiber_g_max = excluded.fiber_g_max,
        plant_ratio = excluded.plant_ratio, grams_total = excluded.grams_total,
        grams_plant = excluded.grams_plant, grams_classified = excluded.grams_classified,
        confidence = excluded.confidence, computed_at = now()`,
     [
       mealId, result.kcal, result.proteinG, result.carbG, result.fatG, result.fiberG,
+      result.max.kcal, result.max.proteinG, result.max.carbG, result.max.fatG, result.max.fiberG,
       result.plantRatio, result.gramsTotal, result.gramsPlant, result.gramsClassified,
       result.confidence,
     ],
@@ -372,8 +386,9 @@ const MEAL_SELECT = `
   select m.id, m.eaten_at, m.slot, m.source, m.servings, m.guest_count,
          m.leftover_of, m.note,
          r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
-         n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g, n.plant_ratio,
-         n.grams_total, n.grams_plant, n.grams_classified, n.confidence
+         n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
+         n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
+         n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.confidence
   from meal m
   left join recipe r on r.id = m.recipe_id
   left join meal_nutrition n on n.meal_id = m.id`;
@@ -384,7 +399,10 @@ interface MealRow {
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
   nutri_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
-  fat_g: number | null; fiber_g: number | null; plant_ratio: number | null;
+  fat_g: number | null; fiber_g: number | null;
+  kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
+  fat_g_max: number | null; fiber_g_max: number | null;
+  plant_ratio: number | null;
   grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
   confidence: Confidence | null;
 }
@@ -526,7 +544,12 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
         ? null
         : {
             kcal: row.kcal, proteinG: row.protein_g, carbG: row.carb_g,
-            fatG: row.fat_g, fiberG: row.fiber_g, plantRatio: row.plant_ratio,
+            fatG: row.fat_g, fiberG: row.fiber_g,
+            max: {
+              kcal: row.kcal_max, proteinG: row.protein_g_max, carbG: row.carb_g_max,
+              fatG: row.fat_g_max, fiberG: row.fiber_g_max,
+            },
+            plantRatio: row.plant_ratio,
             gramsTotal: row.grams_total, gramsPlant: row.grams_plant,
             gramsClassified: row.grams_classified, confidence: row.confidence,
           },

@@ -14,6 +14,7 @@
  */
 import type { DailyBalance } from '../api.ts';
 import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, NUTRIENT_SHORT } from '../design/vocabulary.ts';
+import { formatPercentRange } from '../design/quantities.ts';
 
 const HEIGHT = 58;
 
@@ -26,9 +27,9 @@ export function NutrientBars({ balance }: { balance: DailyBalance }): React.Reac
       label: NUTRIENT_LABELS[nutrient],
       color: NUTRIENT_COLOR[nutrient],
       percent: bar?.percent ?? null,
+      percentMax: bar?.percentMax ?? null,
       state: bar?.state ?? 'indisponible',
       hasReference: bar?.reference != null,
-      partial: (bar?.missingMeals ?? 0) > 0,
     };
   });
   columns.push({
@@ -37,10 +38,10 @@ export function NutrientBars({ balance }: { balance: DailyBalance }): React.Reac
     label: 'Végétal',
     color: NUTRIENT_COLOR.plant,
     percent: balance.plant.percent,
+    percentMax: balance.plant.percent,
     state: balance.plant.state,
     // §8 : la barre Végétal n'a pas de cible chiffrée, par construction.
     hasReference: true,
-    partial: balance.plant.state === 'partiel',
   });
 
   return (
@@ -62,18 +63,34 @@ export function NutrientBars({ balance }: { balance: DailyBalance }): React.Reac
   );
 }
 
+/**
+ * Une barre, et ce qu'elle sait de son incertitude.
+ *
+ * La partie pleine va jusqu'à la borne basse — ce qui est garanti atteint. Une
+ * extension translucide monte jusqu'à la borne haute quand la source ne donne
+ * qu'un intervalle. Quand il n'y a pas de borne haute du tout, la hachure dit
+ * que la barre pourrait monter sans dire jusqu'où.
+ *
+ * On ne dessine jamais le milieu d'un intervalle : ce serait un chiffre que
+ * personne n'a mesuré.
+ */
 function Bar(column: {
-  label: string; color: string; percent: number | null;
-  state: string; hasReference: boolean; partial: boolean;
+  label: string; color: string; percent: number | null; percentMax: number | null;
+  state: string; hasReference: boolean;
 }): React.ReactElement {
   const known = column.percent !== null;
-  const height = known ? Math.max(3, Math.min(column.percent ?? 0, 130) / 130 * HEIGHT) : 2;
+  const height = (value: number): number => Math.max(3, Math.min(value, 130) / 130 * HEIGHT);
+  const low = known ? height(column.percent as number) : 2;
+  const high =
+    column.percentMax !== null && column.percentMax > (column.percent ?? 0)
+      ? height(column.percentMax)
+      : low;
 
   const title = !known
     ? column.hasReference
       ? `${column.label} : donnée indisponible`
       : `${column.label} : repère indisponible pour cet âge`
-    : `${column.label} : ${column.percent} %${column.partial ? ' au moins' : ''}`;
+    : `${column.label} : ${formatPercentRange(column.percent, column.percentMax)}`;
 
   return (
     <div
@@ -81,17 +98,27 @@ function Bar(column: {
       aria-label={title}
       style={{
         width: 17, height: HEIGHT, background: 'var(--surface-2)', borderRadius: 3,
-        display: 'flex', alignItems: 'flex-end',
+        display: 'flex', alignItems: 'flex-end', position: 'relative',
         border: '.5px solid var(--border)',
       }}
     >
+      {/* Au-dessus de la borne basse : ce qui est possible sans être acquis. */}
+      {known && high > low ? (
+        <span
+          style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: high,
+            borderRadius: 3, background: column.color, opacity: .28,
+          }}
+        />
+      ) : null}
       <span
         style={{
-          width: '100%', height, borderRadius: 3, display: 'block',
+          width: '100%', height: low, borderRadius: 3, display: 'block',
+          position: 'relative', zIndex: 1,
           background: known ? column.color : 'var(--border-strong)',
-          // Une valeur partielle est un minorant : la hachure dit que la barre
-          // monterait peut-être plus haut, sans prétendre savoir jusqu'où.
-          backgroundImage: known && column.partial
+          // Sans borne haute, le total ne peut que monter : la hachure le dit
+          // sans prétendre savoir jusqu'où.
+          backgroundImage: known && column.state === 'partiel'
             ? 'repeating-linear-gradient(45deg, rgba(255,255,255,.55) 0 3px, transparent 3px 6px)'
             : undefined,
         }}

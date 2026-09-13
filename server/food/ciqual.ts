@@ -51,34 +51,67 @@ export type NutrientColumn = (typeof CIQUAL_NUTRIENTS)[keyof typeof CIQUAL_NUTRI
 export type TeneurKind = 'valeur' | 'absente' | 'traces' | 'seuil' | 'illisible';
 
 export interface Teneur {
+  /** Borne basse : ce qui est garanti atteint. `null` si rien n'est connu. */
   value: number | null;
+  /** Borne haute. `null` si la source ne borne pas. */
+  max: number | null;
   kind: TeneurKind;
 }
 
 /**
- * Interprète une teneur Ciqual.
+ * Interprète une teneur Ciqual, sous forme d'**encadrement**.
  *
- * Quatre formes existent dans l'export :
+ * Quatre formes existent dans l'export, et la documentation officielle de la
+ * table (« Table Ciqual 2020_doc_Excel_FR », §1.2.1) dit ce que chacune veut
+ * dire. C'est elle qui fixe les règles ci-dessous, pas nous :
  *
- *   `12,5`    une valeur — virgule décimale
- *   `-`       non déterminée : Ciqual n'a pas la donnée
- *   `traces`  présent en quantité non quantifiable
- *   `< 2,2`   inférieur au seuil de quantification
+ * | Forme    | Ce qu'en dit l'ANSES                                   | Encadrement     |
+ * |----------|--------------------------------------------------------|-----------------|
+ * | `12,5`   | une mesure                                             | `[12,5 ; 12,5]` |
+ * | `-`      | « teneur pas connue [...] ne pas les assimiler à des zéro » | `[null ; null]` |
+ * | `traces` | « détecté [...] sans pouvoir être précisément quantifié [...] ne peut être considérée nulle » | `[null ; null]` |
+ * | `< 2,2`  | « une valeur maximale »                                | `[0 ; 2,2]`     |
  *
- * **Les trois dernières valent `null`, jamais `0`** (I1, et §5 point 3 de la
- * spec). `traces` n'est pas zéro, et `< 2,2` n'est pas 2,2 : c'est une borne,
- * pas une mesure. Reporter la borne comme une valeur produirait exactement le
- * genre de chiffre plausible et faux que l'app doit refuser d'afficher.
+ * Le cas `< X` est le seul qui apporte de l'information : la source publie un
+ * **majorant**. Les lipides d'une banane sont entre 0 et 0,5 g — le dire vaut
+ * mieux que se taire, et vaut infiniment mieux qu'écrire 0,5 comme si c'était
+ * une mesure (I1).
+ *
+ * `traces` reste sans borne haute : l'ANSES écrit « très faible » sans jamais
+ * donner de seuil. Lui en inventer un serait exactement la valeur plausible et
+ * fausse qu'on refuse — même si la tentation est grande, « traces » n'étant
+ * sûrement pas 10 g.
  */
 export function parseTeneur(raw: string | null | undefined): Teneur {
   const text = (raw ?? '').trim();
-  if (text.length === 0 || text === '-') return { value: null, kind: 'absente' };
-  if (/^traces$/i.test(text)) return { value: null, kind: 'traces' };
-  if (text.startsWith('<')) return { value: null, kind: 'seuil' };
+  if (text.length === 0 || text === '-') return { value: null, max: null, kind: 'absente' };
+  if (/^traces$/i.test(text)) return { value: null, max: null, kind: 'traces' };
 
-  const value = Number(text.replace(/\s| /g, '').replace(',', '.'));
-  if (!Number.isFinite(value)) return { value: null, kind: 'illisible' };
-  return { value, kind: 'valeur' };
+  if (text.startsWith('<')) {
+    const bound = toNumber(text.slice(1));
+    // Un « < » sans nombre lisible derrière n'apprend rien.
+    return bound === null
+      ? { value: null, max: null, kind: 'illisible' }
+      : { value: 0, max: bound, kind: 'seuil' };
+  }
+
+  const value = toNumber(text);
+  if (value === null) return { value: null, max: null, kind: 'illisible' };
+  return { value, max: value, kind: 'valeur' };
+}
+
+/**
+ * Virgule décimale et espaces fines de l'export.
+ *
+ * La chaîne vide est rejetée explicitement : `Number('')` vaut 0, et un « < »
+ * suivi de rien deviendrait sinon un majorant à zéro — c'est-à-dire la
+ * certitude que l'aliment n'en contient pas, tirée d'une case illisible.
+ */
+function toNumber(text: string): number | null {
+  const cleaned = text.replace(/[\s\u202f\u00a0]/g, '').replace(',', '.');
+  if (cleaned.length === 0) return null;
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
 }
 
 /**

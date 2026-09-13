@@ -5,16 +5,38 @@ import type { UnitDefaults } from './units.ts';
 
 const VIDE: UnitDefaults = new Map();
 
-const food = (name: string, per100g: Partial<FoodValues['per100g']>, plantBased: boolean | null): FoodValues => ({
+const food = (
+  name: string,
+  per100g: Partial<FoodValues['per100g']>,
+  plantBased: boolean | null,
+  per100gMax: Partial<FoodValues['per100g']> = {},
+): FoodValues => ({
   name,
   plantBased,
   per100g: { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null, ...per100g },
+  // Par défaut les bornes hautes suivent les valeurs : une mesure exacte est
+  // un intervalle de largeur nulle.
+  per100gMax: {
+    kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null,
+    ...per100g, ...per100gMax,
+  },
 });
 
 const RIZ = food('Riz blanc, cuit', { kcal: 130, proteinG: 2.7, carbG: 28, fatG: 0.3, fiberG: 0.4 }, true);
 const POULET = food('Poulet, blanc, cuit', { kcal: 148, proteinG: 30, carbG: 0, fatG: 3.2, fiberG: 0 }, false);
-/** Ciqual publie « < 0,5 » pour les lipides de la banane : la valeur est NULL. */
-const BANANE = food('Banane, pulpe, crue', { kcal: 90.5, proteinG: 1.06, carbG: 19.7, fiberG: 2.7 }, true);
+/**
+ * Ciqual publie « < 0,5 » pour les lipides de la banane : borne basse 0, borne
+ * haute 0,5. C'est le cas qui a motivé tout l'encadrement.
+ */
+const BANANE = food(
+  'Banane, pulpe, crue',
+  { kcal: 90.5, proteinG: 1.06, carbG: 19.7, fiberG: 2.7, fatG: 0 },
+  true,
+  { fatG: 0.5 },
+);
+
+/** Un aliment dont Ciqual écrit « traces » : non nul, mais sans majorant. */
+const SEL = food('Sel, non iodé', { kcal: 0 }, null);
 
 const item = (label: string, f: FoodValues | null, grams: number | null): NutritionItem => ({
   label, food: f, quantity: grams, unit: 'g', quantityG: grams,
@@ -35,6 +57,8 @@ describe('calculerNutrition — repas Jow', () => {
     assert.equal(result.kcal, 1280);
     assert.equal(result.fiberG, 48);
     assert.equal(result.confidence, 'haute');
+    // Jow ne publie pas de majorants : une valeur est là ou elle ne l'est pas.
+    assert.equal(result.max.kcal, 1280);
   });
 
   it('reprend la confiance de la recette', () => {
@@ -93,16 +117,39 @@ describe('calculerNutrition — somme des items', () => {
     assert.equal(result.confidence, 'haute');
   });
 
-  // I1 : le point le plus important de ce fichier.
-  it('rend null, et non un total sous-estimé, quand un aliment ignore la valeur', () => {
+  // Le cœur du modèle : la source publie un majorant, on le garde.
+  it('encadre un total quand la source ne donne qu’un majorant', () => {
     const result = calculerNutrition(
       meal({ items: [item('Riz', RIZ, 100), item('Banane', BANANE, 100)] }),
       VIDE,
     );
-    assert.equal(result.fatG, null, 'les lipides de la banane sont inconnus');
-    assert.match(result.warnings.join(' '), /lipides : valeur inconnue pour Banane/);
-    // Les autres nutriments, eux, restent sommables.
+    // Riz 0,3 g exact + banane entre 0 et 0,5 g.
+    assert.equal(result.fatG, 0.3, 'borne basse');
+    assert.equal(result.max.fatG, 0.8, 'borne haute');
+    // Et surtout : la borne n'a pas été prise pour une mesure.
+    assert.notEqual(result.fatG, 0.8);
+    // Les autres nutriments restent exacts, bornes égales.
     assert.equal(result.proteinG, 3.76);
+    assert.equal(result.max.proteinG, 3.76);
+  });
+
+  // I1 : la borne haute disparaît, la borne basse survit. « Au moins 2,7 g »
+  // est vrai et utile ; l'ancien « valeur inconnue » jetait ce qu'on savait.
+  it('rend un minorant, et jamais un total présenté comme exact, quand un aliment est inconnu', () => {
+    const result = calculerNutrition(
+      meal({ items: [item('Riz', RIZ, 100), item('Sel', SEL, 5)] }),
+      VIDE,
+    );
+    assert.equal(result.proteinG, 2.7, 'ce qui est garanti atteint');
+    assert.equal(result.max.proteinG, null, 'le total peut monter : pas de majorant');
+    assert.match(result.warnings.join(' '), /protéines : valeur inconnue pour Sel/);
+  });
+
+  it('ne rend aucune borne pour un nutriment dont aucun aliment ne dit rien', () => {
+    const result = calculerNutrition(meal({ items: [item('Sel', SEL, 5)] }), VIDE);
+    // Un plancher à 0 serait exact et parfaitement trompeur à l'écran.
+    assert.equal(result.fiberG, null);
+    assert.equal(result.max.fiberG, null);
   });
 
   it('ignore un item sans aliment rattaché et le dit', () => {
