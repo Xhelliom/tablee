@@ -172,18 +172,126 @@ export async function saveJowRecipe(db: Db, parsed: ParsedRecipe): Promise<Recip
     );
   }
 
+  // Les ingrédients déjà rencontrés sont recâblés immédiatement : une recette
+  // partagée aujourd'hui profite de tout ce qui a été rattaché avant elle.
+  await applyKnownLinks(db, id);
+
   const recipe = await loadRecipe(db, id);
   if (recipe === null) throw new Error('recette introuvable après enregistrement');
   return recipe;
 }
 
-/** Rattache un ingrédient de recette à un aliment du référentiel (§6, étape 2). */
+export interface LinkResult {
+  /** Lignes de `recipe_ingredient` mises à jour, toutes recettes confondues. */
+  propagated: number;
+  /** L'ObjectId Jow, quand l'ingrédient en a un. */
+  jowFoodId: string | null;
+}
+
+/**
+ * Rattache un ingrédient de recette à un aliment du référentiel (§6, étape 2)
+ * — **et à travers lui, l'ingrédient Jow lui-même**.
+ *
+ * L'ObjectId de Jow est stable : « Purée de carotte (surgelée) » porte le même
+ * identifiant dans toutes les recettes. Le rattachement est donc mémorisé dans
+ * `jow_food_link` et propagé à toutes les lignes qui partagent cet identifiant
+ * — les recettes déjà en base comme celles qui arriveront. On ne le fait
+ * qu'une fois dans sa vie, et c'est ce qui rend la part végétale des repas Jow
+ * atteignable sans y passer ses soirées.
+ *
+ * Un ingrédient sans `jow_food_id` (recette manuelle, payload inattendu) ne
+ * met à jour que sa propre ligne : rien à propager sans clé stable.
+ */
 export async function linkIngredientToFood(
   db: Db,
   ingredientId: string,
   foodId: string | null,
-): Promise<void> {
-  await db.query('update recipe_ingredient set food_id = $2 where id = $1', [ingredientId, foodId]);
+  confirmedBy: string | null = null,
+): Promise<LinkResult> {
+  const { rows } = await db.query<{ jow_food_id: string | null; label: string }>(
+    'select jow_food_id, label from recipe_ingredient where id = $1',
+    [ingredientId],
+  );
+  const ingredient = rows[0];
+  if (ingredient === undefined) return { propagated: 0, jowFoodId: null };
+
+  const jowFoodId = ingredient.jow_food_id;
+  if (jowFoodId === null) {
+    const { rowCount } = await db.query(
+      'update recipe_ingredient set food_id = $2 where id = $1',
+      [ingredientId, foodId],
+    );
+    return { propagated: rowCount ?? 0, jowFoodId: null };
+  }
+
+  if (foodId === null) {
+    // Détacher, c'est aussi oublier la correspondance : sinon la prochaine
+    // recette la réappliquerait aussitôt.
+    await db.query('delete from jow_food_link where jow_food_id = $1', [jowFoodId]);
+  } else {
+    await db.query(
+      `insert into jow_food_link (jow_food_id, food_id, label, confirmed_by)
+       values ($1, $2, $3, $4)
+       on conflict (jow_food_id) do update set
+         food_id = excluded.food_id,
+         label = excluded.label,
+         confirmed_by = excluded.confirmed_by,
+         created_at = now()`,
+      [jowFoodId, foodId, ingredient.label, confirmedBy],
+    );
+  }
+
+  const { rowCount } = await db.query(
+    'update recipe_ingredient set food_id = $2 where jow_food_id = $1',
+    [jowFoodId, foodId],
+  );
+  return { propagated: rowCount ?? 0, jowFoodId };
+}
+
+/**
+ * Applique les correspondances connues aux ingrédients d'une recette.
+ *
+ * Appelée juste après la capture : une recette fraîchement partagée arrive
+ * déjà câblée pour tout ingrédient rencontré auparavant. C'est ce qui fait que
+ * l'effort décroît au lieu de se répéter.
+ */
+export async function applyKnownLinks(db: Db, recipeId: string): Promise<number> {
+  const { rowCount } = await db.query(
+    `update recipe_ingredient ri
+     set food_id = l.food_id
+     from jow_food_link l
+     where ri.recipe_id = $1
+       and ri.jow_food_id = l.jow_food_id
+       and ri.food_id is distinct from l.food_id`,
+    [recipeId],
+  );
+  return rowCount ?? 0;
+}
+
+export interface KnownLink {
+  jowFoodId: string;
+  foodId: string;
+  label: string;
+  foodName: string;
+  plantBased: boolean | null;
+}
+
+/** Les correspondances déjà posées — pour les relire et les corriger. */
+export async function listLinks(db: Db): Promise<KnownLink[]> {
+  const { rows } = await db.query<{
+    jow_food_id: string; food_id: string; label: string;
+    food_name: string; plant_based: boolean | null;
+  }>(
+    `select l.jow_food_id, l.food_id, l.label,
+            f.name as food_name, f.plant_based
+     from jow_food_link l
+     join food f on f.id = l.food_id
+     order by l.label`,
+  );
+  return rows.map((r) => ({
+    jowFoodId: r.jow_food_id, foodId: r.food_id, label: r.label,
+    foodName: r.food_name, plantBased: r.plant_based,
+  }));
 }
 
 /** Les ingrédients, vus par le calcul nutritionnel — quantités **par convive**. */

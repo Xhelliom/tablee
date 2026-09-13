@@ -2,9 +2,11 @@
  * §12 — recherche d'aliments, et rattachement d'un ingrédient au référentiel.
  */
 import type { FastifyInstance } from 'fastify';
+import { transaction } from '../db.ts';
 import { body, optionalUuid, str, uuid } from '../http/validate.ts';
 import { createManualFood, searchFoods } from '../repo/foods.ts';
-import { linkIngredientToFood } from '../repo/recipes.ts';
+import { linkIngredientToFood, listLinks } from '../repo/recipes.ts';
+import { recomputeMealsUsingIngredient } from '../repo/meals.ts';
 import type { AppContext } from '../app.ts';
 
 export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -35,6 +37,12 @@ export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
    * C'est le seul chemin par lequel un repas Jow acquiert une part végétale :
    * Jow publie des libellés, pas des codes Ciqual, et rapprocher les deux par
    * ressemblance de chaîne produirait des rattachements faux. On demande.
+   *
+   * Le rattachement vaut pour **l'ingrédient Jow**, pas pour cette ligne de
+   * recette : il se propage à toutes les recettes qui l'emploient, et la
+   * nutrition des repas concernés est recalculée dans la foulée. Sans ce
+   * recalcul, on rattacherait un ingrédient et rien ne bougerait à l'écran —
+   * le geste paraîtrait inutile et personne ne le referait.
    */
   app.post<{ Params: { id: string } }>(
     '/api/recipes/ingredients/:id/food',
@@ -42,8 +50,20 @@ export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
       const ingredientId = uuid(request.params.id, 'id');
       const input = body(request.body);
       const foodId = optionalUuid(input['foodId'], 'foodId');
-      await linkIngredientToFood(ctx.pool, ingredientId, foodId);
-      return { ok: true };
+      const confirmedBy = optionalUuid(input['confirmedBy'], 'confirmedBy');
+      const householdId = request.householdId();
+
+      return transaction(ctx.pool, async (client) => {
+        const link = await linkIngredientToFood(client, ingredientId, foodId, confirmedBy);
+        const recomputed =
+          link.jowFoodId === null
+            ? 0
+            : await recomputeMealsUsingIngredient(client, householdId, link.jowFoodId);
+        return { ok: true, ...link, recomputed };
+      });
     },
   );
+
+  /** Les correspondances Jow → référentiel déjà posées. */
+  app.get('/api/recipes/links', async () => ({ links: await listLinks(ctx.pool) }));
 }

@@ -380,6 +380,33 @@ export async function recomputeNutrition(
   return result;
 }
 
+/**
+ * Recalcule les repas dont une recette emploie cet ingrédient Jow.
+ *
+ * Rattacher « Purée de carotte » ne change aucune valeur nutritionnelle — la
+ * nutrition d'un repas Jow vient du snapshot — mais change la **part
+ * végétale**, qui dépend de `food.plant_based`. Le recalcul est donc ce qui
+ * rend le geste visible.
+ *
+ * Les parts (`meal_participant.share`) ne sont pas touchées : R2 tient, seul
+ * `meal_nutrition` est réécrit.
+ */
+export async function recomputeMealsUsingIngredient(
+  client: pg.PoolClient,
+  householdId: string,
+  jowFoodId: string,
+): Promise<number> {
+  const { rows } = await client.query<{ id: string }>(
+    `select distinct m.id
+     from meal m
+     join recipe_ingredient ri on ri.recipe_id = m.recipe_id
+     where m.household_id = $1 and ri.jow_food_id = $2`,
+    [householdId, jowFoodId],
+  );
+  for (const row of rows) await recomputeNutrition(client, row.id);
+  return rows.length;
+}
+
 // ── lecture ─────────────────────────────────────────────────────────────────
 
 const MEAL_SELECT = `

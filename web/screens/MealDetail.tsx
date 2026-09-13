@@ -416,9 +416,13 @@ function IngredientRow({
 }: { ingredient: RecipeIngredient; onLinked: () => void }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<FoodSummary[]>([]);
+  const [done, setDone] = useState<string | null>(null);
 
   const search = async (): Promise<void> => {
     setOpen(true);
+    // Le libellé Jow sert de requête de départ. Ce sont des suggestions : la
+    // confirmation reste humaine, un rattachement faux faussant la part
+    // végétale sans le dire.
     const { foods } = await api.get<{ foods: FoodSummary[] }>(
       `/api/foods/search?q=${encodeURIComponent(ingredient.label)}&limit=6`,
     );
@@ -426,8 +430,18 @@ function IngredientRow({
   };
 
   const link = async (foodId: string): Promise<void> => {
-    await api.post(`/api/recipes/ingredients/${ingredient.id}/food`, { foodId });
+    const result = await api.post<{ propagated: number; recomputed: number }>(
+      `/api/recipes/ingredients/${ingredient.id}/food`,
+      { foodId },
+    );
     setOpen(false);
+    // Le rattachement vaut pour l'ingrédient Jow, pas pour cette recette : le
+    // dire, sinon le geste paraît coûter un tap pour un seul plat.
+    setDone(
+      result.propagated > 1
+        ? `Rattaché — ${result.propagated} recettes câblées d’un coup`
+        : 'Rattaché, une fois pour toutes',
+    );
     onLinked();
   };
 
@@ -441,7 +455,9 @@ function IngredientRow({
             : `${ingredient.quantity ?? ''} ${ingredient.unit ?? ''} — non converti`}
         </span>
       </div>
-      {ingredient.foodId === null ? (
+      {done !== null ? (
+        <span className="chip chip--success" style={{ marginTop: 5 }}>{done}</span>
+      ) : ingredient.foodId === null ? (
         <button type="button" className="chip chip--warning"
                 style={{ marginTop: 5, cursor: 'pointer' }}
                 onClick={() => { void search(); }}>

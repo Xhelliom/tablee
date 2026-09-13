@@ -463,6 +463,117 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
   });
 
+
+  // ── rattachement des ingrédients Jow ──────────────────────────────────────
+
+  describe('jow_food_link', () => {
+    /** Deux recettes Jow partageant le même ingrédient, comme dans la vraie vie. */
+    const deuxRecettes = async (): Promise<{ a: string; b: string; ingredientA: string }> => {
+      const recipes: string[] = [];
+      for (const [jowId, titre] of [
+        ['650b16ade7cc8d0013ce4a6e', 'Galette végé'],
+        ['650b16ade7cc8d0013ce4a6f', 'Purée du soir'],
+      ] as const) {
+        const { rows } = await pool.query<{ id: string }>(
+          `insert into recipe (source, jow_recipe_id, title, base_servings,
+                               kcal_serving, protein_serving, carb_serving,
+                               fat_serving, fiber_serving)
+           values ('jow', $1, $2, 1, 320, 18, 16, 20, 12) returning id`,
+          [jowId, titre],
+        );
+        const recipeId = rows[0]!.id;
+        await pool.query(
+          `insert into recipe_ingredient
+             (recipe_id, jow_food_id, label, quantity, unit, quantity_g, position)
+           values ($1, '63f4c8cc9b0e113c174f3eb0', 'Purée de carotte (surgelée)',
+                   0.1, 'Kilogramme', 100, 0)`,
+          [recipeId],
+        );
+        recipes.push(recipeId);
+      }
+      const { rows: ing } = await pool.query<{ id: string }>(
+        'select id from recipe_ingredient where recipe_id = $1',
+        [recipes[0]],
+      );
+      return { a: recipes[0]!, b: recipes[1]!, ingredientA: ing[0]!.id };
+    };
+
+    it('propage le rattachement à toutes les recettes qui emploient l’ingrédient', async () => {
+      const { b, ingredientA } = await deuxRecettes();
+      const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33, fiber: 2.8 }, true);
+
+      const { body } = await call(
+        'POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: carotte },
+      );
+      assert.equal(body.jowFoodId, '63f4c8cc9b0e113c174f3eb0');
+      assert.equal(body.propagated, 2, 'les deux recettes doivent être câblées');
+
+      // La seconde recette, jamais ouverte, est câblée elle aussi.
+      const { body: autre } = await call('GET', `/api/recipes/${b}`);
+      assert.equal(autre.recipe.ingredients[0].foodId, carotte);
+    });
+
+    it('câble d’avance une recette partagée après coup', async () => {
+      const { ingredientA } = await deuxRecettes();
+      const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);
+      await call('POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: carotte });
+
+      // Une troisième recette arrive avec le même ingrédient.
+      const { rows } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', '650b16ade7cc8d0013ce4a70', 'Soupe', 1) returning id`,
+      );
+      await pool.query(
+        `insert into recipe_ingredient
+           (recipe_id, jow_food_id, label, quantity, unit, quantity_g, position)
+         values ($1, '63f4c8cc9b0e113c174f3eb0', 'Purée de carotte (surgelée)',
+                 0.2, 'Kilogramme', 200, 0)`,
+        [rows[0]!.id],
+      );
+      const { applyKnownLinks } = await import('./repo/recipes.ts');
+      assert.equal(await applyKnownLinks(pool, rows[0]!.id), 1);
+
+      const { body } = await call('GET', `/api/recipes/${rows[0]!.id}`);
+      assert.equal(body.recipe.ingredients[0].foodId, carotte);
+    });
+
+    it('recalcule la part végétale des repas concernés', async () => {
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const { a, ingredientA } = await deuxRecettes();
+      const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);
+
+      const { body: avant } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
+        recipe_id: a, servings: 2, participants: [{ memberId: adulte }],
+      });
+      // Aucun ingrédient rattaché : pas de part végétale, et surtout pas 0 %.
+      assert.equal(avant.meal.nutrition.plantRatio, null);
+
+      const { body: lien } = await call(
+        'POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: carotte },
+      );
+      assert.equal(lien.recomputed, 1);
+
+      const { body: apres } = await call('GET', `/api/meals/${avant.meal.id}`);
+      assert.equal(apres.meal.nutrition.plantRatio, 100);
+      // Les valeurs nutritionnelles, elles, viennent toujours du snapshot Jow.
+      assert.equal(apres.meal.nutrition.proteinG, 36);
+    });
+
+    it('détacher oublie la correspondance au lieu de la réappliquer', async () => {
+      const { b, ingredientA } = await deuxRecettes();
+      const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);
+      await call('POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: carotte });
+
+      await call('POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: null });
+      const { body } = await call('GET', `/api/recipes/${b}`);
+      assert.equal(body.recipe.ingredients[0].foodId, null);
+
+      const { body: liens } = await call('GET', '/api/recipes/links');
+      assert.deepEqual(liens.links, []);
+    });
+  });
+
   // ── tables livrées vides ──────────────────────────────────────────────────
 
   describe('tables livrées vides (§17)', () => {
