@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablée — maquettes</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --coral:#D85A30; --coral-50:#FAECE7; --coral-100:#F5C4B3; --coral-200:#F0997B;
+  --coral-600:#993C1D; --coral-800:#712B13; --coral-900:#4A1B0C;
+  --n-prot:#7F77DD; --n-gluc:#EF9F27; --n-lip:#378ADD; --n-fibre:#1D9E75; --n-veg:#639922;
+  --green-100:#C0DD97; --green-50:#EAF3DE; --green-600:#3B6D11; --green-900:#173404;
+  --amber-100:#FAC775; --amber-50:#FAEEDA; --amber-600:#854F0B; --amber-900:#412402;
+  --teal-100:#9FE1CB; --teal-900:#04342C;
+  --surface-2:#FFFFFF; --surface-1:#F4F2ED; --surface-0:#EDEAE3;
+  --border:rgba(0,0,0,.13); --border-strong:rgba(0,0,0,.26);
+  --text-primary:#1B1B19; --text-secondary:#5F5E5A; --text-muted:#8D8C85;
+  --bg-accent:#E6F1FB; --text-accent:#185FA5; --border-accent:#85B7EB;
+  --bg-warning:#FAEEDA; --text-warning:#854F0B;
+  --bg-success:#E1F5EE; --text-success:#0F6E56;
+  --radius:8px; --font-voice:'Fraunces',Georgia,serif;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:32px 20px 64px;background:#E8E4DC;font-family:'Inter',system-ui,sans-serif;color:var(--text-primary);-webkit-font-smoothing:antialiased}
+h1{font-family:var(--font-voice);font-weight:400;font-size:30px;margin:0 0 6px}
+.sub{color:var(--text-secondary);font-size:14px;margin:0 0 36px;max-width:640px;line-height:1.6}
+.gallery{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+figure{margin:0}
+figcaption{font-size:12px;color:var(--text-secondary);margin-bottom:10px;letter-spacing:.4px;text-transform:uppercase}
+figcaption b{display:block;font-weight:500;font-size:14px;color:var(--text-primary);text-transform:none;letter-spacing:0;margin-top:2px}
+.phone{width:380px;background:var(--surface-2);border:.5px solid var(--border);border-radius:14px;overflow:hidden}
+.warm{background:rgba(216,90,48,.06)}
+p{margin:0}
+.appbar{background:var(--coral);padding:15px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--coral-50)}
+.logosq{width:23px;height:23px;border-radius:7px;background:var(--coral-50);display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:14px}
+.eyebrow{font-size:12px;color:var(--text-muted);letter-spacing:.4px}
+.display{font-family:var(--font-voice);font-size:34px;line-height:1.05;margin-top:6px}
+.sec{padding:0 18px}
+.card{background:var(--surface-2);border:.5px solid var(--border);border-radius:12px}
+.photo{display:flex;align-items:center;justify-content:center;position:relative}
+.tag{position:absolute;top:10px;left:10px;font-size:11px;padding:3px 9px;border-radius:999px}
+.meta{font-size:12px;color:var(--text-secondary);margin-top:3px}
+.row{display:flex;align-items:center;gap:11px;padding:9px 12px 9px 9px}
+.thumb{width:46px;height:46px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px}
+.nav{border-top:.5px solid var(--border);display:flex;background:var(--surface-2)}
+.nav div{flex:1;padding:10px 0 11px;text-align:center;font-size:21px;color:var(--text-muted)}
+.nav .on{color:var(--coral);border-top:2px solid var(--coral);margin-top:-1px}
+.ring{width:52px;height:52px}
+.ring circle{fill:none;stroke-width:4;stroke-linecap:round}
+.ring .trk{stroke:rgba(216,90,48,.18);stroke-dasharray:17.6 5;stroke-linecap:butt}
+.ring text{font-family:'Inter',sans-serif;font-size:14px;fill:var(--text-primary)}
+.who{text-align:center}
+.who p{margin-top:3px;font-size:11px;color:var(--text-secondary)}
+.legend{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:11px;color:var(--text-secondary)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.seed{width:9px;height:9px;border-radius:50%}
+.chip{font-size:12px;padding:4px 9px;border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary)}
+.btn{text-align:center;padding:12px;border-radius:var(--radius);background:#1B1B19;color:#fff;font-size:15px}
+.seasonitem{text-align:center;width:56px;flex-shrink:0}
+.seasonitem .bubble{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;font-size:24px}
+.seasonitem .todo{background:var(--surface-1);border:.5px dashed var(--border-strong);color:var(--text-muted)}
+.seasonitem .done{position:absolute;bottom:-1px;right:-1px;width:17px;height:17px;border-radius:50%;background:var(--green-600);border:2px solid var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+.seasonitem p{margin-top:5px;font-size:11px;line-height:1.25}
+.bar{width:17px;height:58px;background:var(--surface-2);border-radius:3px;display:flex;align-items:flex-end}
+.bar i{width:100%;border-radius:3px;display:block}
+.barlbl{width:17px;font-size:11px;color:var(--text-muted);text-align:center}
+.note{width:380px;font-size:13px;line-height:1.65;color:var(--text-secondary)}
+.note b{color:var(--text-primary);font-weight:500}
+</style>
+</head>
+<body>
+
+<h1>Tablée — maquettes</h1>
+<p class="sub">Écrans produits pendant la conception. Les aplats de couleur à la place des photos sont des placeholders : en production ce sont les images de plats fournies par Jow (<code>recipe.image_url</code>), qui porteront l'essentiel de la chaleur visuelle.</p>
+
+<div class="gallery">
+
+<figure>
+<figcaption>Itération 1 — écartée<b>Accueil « tableau de bord »</b></figcaption>
+<div class="phone">
+  <div style="padding:14px 16px 12px;border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <div><p style="font-size:17px;font-weight:500">Aujourd'hui</p><p class="meta">Dimanche 13 septembre</p></div>
+    <i class="ti ti-calendar" style="font-size:20px;color:var(--text-secondary)"></i>
+  </div>
+  <div style="padding:14px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+    <div style="background:var(--surface-1);border-radius:var(--radius);padding:12px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><div style="width:24px;height:24px;border-radius:50%;background:var(--bg-accent);color:var(--text-accent);font-size:11px;display:flex;align-items:center;justify-content:center">S</div><span style="font-size:14px;font-weight:500">Stéphane</span></div>
+      <div style="display:flex;gap:7px;align-items:flex-end;justify-content:center;height:58px">
+        <div class="bar"><i style="height:51px;background:#1D9E75"></i></div><div class="bar"><i style="height:42px;background:#1D9E75"></i></div><div class="bar"><i style="height:55px;background:#1D9E75"></i></div><div class="bar"><i style="height:20px;background:#EF9F27"></i></div><div class="bar"><i style="height:26px;background:#1D9E75"></i></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-top:6px"><span class="barlbl">Pr</span><span class="barlbl">Gl</span><span class="barlbl">Li</span><span class="barlbl">Fi</span><span class="barlbl">Vé</span></div>
+    </div>
+    <div style="background:var(--surface-1);border-radius:var(--radius);padding:12px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><div style="width:24px;height:24px;border-radius:50%;background:#FBEAF0;color:#993556;font-size:11px;display:flex;align-items:center;justify-content:center">C</div><span style="font-size:14px;font-weight:500">Claire</span></div>
+      <div style="display:flex;gap:7px;align-items:flex-end;justify-content:center;height:58px">
+        <div class="bar"><i style="height:44px;background:#1D9E75"></i></div><div class="bar"><i style="height:38px;background:#1D9E75"></i></div><div class="bar"><i style="height:47px;background:#1D9E75"></i></div><div class="bar"><i style="height:24px;background:#EF9F27"></i></div><div class="bar"><i style="height:31px;background:#1D9E75"></i></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-top:6px"><span class="barlbl">Pr</span><span class="barlbl">Gl</span><span class="barlbl">Li</span><span class="barlbl">Fi</span><span class="barlbl">Vé</span></div>
+    </div>
+    <div style="background:var(--surface-1);border-radius:var(--radius);padding:12px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><div style="width:24px;height:24px;border-radius:50%;background:#EAF3DE;color:#3B6D11;font-size:11px;display:flex;align-items:center;justify-content:center">L</div><span style="font-size:14px;font-weight:500">Léa</span></div>
+      <div style="display:flex;gap:7px;align-items:flex-end;justify-content:center;height:58px">
+        <div class="bar"><i style="height:36px;background:#1D9E75"></i></div><div class="bar"><i style="height:50px;background:#1D9E75"></i></div><div class="bar"><i style="height:40px;background:#1D9E75"></i></div><div class="bar"><i style="height:2px;background:var(--border-strong)"></i></div><div class="bar"><i style="height:34px;background:#1D9E75"></i></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-top:6px"><span class="barlbl">Pr</span><span class="barlbl">Gl</span><span class="barlbl">Li</span><span class="barlbl">Fi</span><span class="barlbl">Vé</span></div>
+    </div>
+    <div style="background:var(--surface-1);border-radius:var(--radius);padding:12px 10px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px"><div style="width:24px;height:24px;border-radius:50%;background:#FAEEDA;color:#854F0B;font-size:11px;display:flex;align-items:center;justify-content:center">T</div><span style="font-size:14px;font-weight:500">Tom</span></div>
+      <div style="display:flex;gap:7px;align-items:flex-end;justify-content:center;height:58px">
+        <div class="bar"><i style="height:29px;background:#1D9E75"></i></div><div class="bar"><i style="height:33px;background:#1D9E75"></i></div><div class="bar"><i style="height:30px;background:#1D9E75"></i></div><div class="bar"><i style="height:14px;background:#EF9F27"></i></div><div class="bar"><i style="height:22px;background:#1D9E75"></i></div>
+      </div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-top:6px"><span class="barlbl">Pr</span><span class="barlbl">Gl</span><span class="barlbl">Li</span><span class="barlbl">Fi</span><span class="barlbl">Vé</span></div>
+    </div>
+  </div>
+  <div class="sec" style="padding-bottom:14px">
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Repas du jour</p>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--border)"><i class="ti ti-sun" style="font-size:17px;color:var(--text-muted);width:17px"></i><div><p style="font-size:14px">Muffin, œufs, jus d'orange</p><p class="meta">Petit-déj · 4 personnes</p></div></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--border)"><i class="ti ti-soup" style="font-size:17px;color:var(--text-muted);width:17px"></i><div style="flex:1"><p style="font-size:14px">Gratin de courgettes</p><p class="meta">Déjeuner · restes · Stéphane</p></div><span style="font-size:11px;padding:2px 7px;border-radius:var(--radius);background:var(--bg-accent);color:var(--text-accent)">Jow</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--border);opacity:.55"><i class="ti ti-moon" style="font-size:17px;color:var(--text-muted);width:17px"></i><p style="font-size:14px;color:var(--text-secondary)">Dîner — pas encore saisi</p></div>
+  </div>
+  <div style="padding:12px 16px;border-top:.5px solid var(--border);display:flex;justify-content:center">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 22px;border-radius:999px;background:#1B1B19;color:#fff;font-size:14px"><i class="ti ti-plus" style="font-size:17px"></i>Ajouter un repas</div>
+  </div>
+</div>
+</figure>
+
+<figure>
+<figcaption>Itération finale<b>Accueil « journal »</b></figcaption>
+<div class="phone"><div class="warm">
+  <div class="appbar"><div class="brand"><div class="logosq"><i class="ti ti-bowl-spoon"></i></div>Tablée</div><i class="ti ti-settings" style="font-size:19px;color:var(--coral-100)"></i></div>
+  <div style="padding:20px 18px 0"><p class="eyebrow">DIMANCHE 13 SEPTEMBRE</p><p class="display">Deux repas<br>à table</p></div>
+
+  <div style="margin-top:20px;padding:15px 0 16px;background:var(--surface-2);border-top:.5px solid var(--border);border-bottom:.5px solid var(--border)">
+    <div class="sec" style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:13px"><p style="font-size:14px">De saison en septembre</p><span style="font-size:12px;color:var(--coral)">Tout voir</span></div>
+    <div class="sec" style="display:flex;gap:10px">
+      <div class="seasonitem"><div class="bubble" style="background:var(--green-100);color:var(--green-900)"><i class="ti ti-pepper"></i><div class="done"><i class="ti ti-check"></i></div></div><p>Courgette</p></div>
+      <div class="seasonitem"><div class="bubble" style="background:var(--coral-100);color:var(--coral-900)"><i class="ti ti-apple"></i><div class="done"><i class="ti ti-check"></i></div></div><p>Tomate</p></div>
+      <div class="seasonitem"><div class="bubble todo"><i class="ti ti-pumpkin-scary"></i></div><p style="color:var(--text-secondary)">Potimarron</p></div>
+      <div class="seasonitem"><div class="bubble todo"><i class="ti ti-grape"></i></div><p style="color:var(--text-secondary)">Raisin</p></div>
+      <div class="seasonitem"><div class="bubble todo"><i class="ti ti-plant-2"></i></div><p style="color:var(--text-secondary)">Fenouil</p></div>
+    </div>
+    <p class="sec meta" style="margin-top:13px">Le raisin part fin octobre</p>
+  </div>
+
+  <div style="padding:18px 18px 16px;display:flex;gap:13px">
+    <div class="who"><svg class="ring" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle class="trk" cx="26" cy="26" r="18"/><circle cx="26" cy="26" r="18" stroke="var(--n-prot)" stroke-dasharray="15.5 999"/><circle cx="26" cy="26" r="18" stroke="var(--n-gluc)" stroke-dasharray="12.8 999" stroke-dashoffset="-22.6"/><circle cx="26" cy="26" r="18" stroke="var(--n-lip)" stroke-dasharray="16.7 999" stroke-dashoffset="-45.2"/><circle cx="26" cy="26" r="18" stroke="var(--n-fibre)" stroke-dasharray="6.1 999" stroke-dashoffset="-67.9"/><circle cx="26" cy="26" r="18" stroke="var(--n-veg)" stroke-dasharray="7.9 999" stroke-dashoffset="-90.5"/></g><text x="26" y="31" text-anchor="middle">S</text></svg><p>Stéphane</p></div>
+    <div class="who"><svg class="ring" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle class="trk" cx="26" cy="26" r="18"/><circle cx="26" cy="26" r="18" stroke="var(--n-prot)" stroke-dasharray="13.4 999"/><circle cx="26" cy="26" r="18" stroke="var(--n-gluc)" stroke-dasharray="11.6 999" stroke-dashoffset="-22.6"/><circle cx="26" cy="26" r="18" stroke="var(--n-lip)" stroke-dasharray="14.3 999" stroke-dashoffset="-45.2"/><circle cx="26" cy="26" r="18" stroke="var(--n-fibre)" stroke-dasharray="7.3 999" stroke-dashoffset="-67.9"/><circle cx="26" cy="26" r="18" stroke="var(--n-veg)" stroke-dasharray="9.4 999" stroke-dashoffset="-90.5"/></g><text x="26" y="31" text-anchor="middle">C</text></svg><p>Claire</p></div>
+    <div class="who"><svg class="ring" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle class="trk" cx="26" cy="26" r="18"/><circle cx="26" cy="26" r="18" stroke="var(--n-prot)" stroke-dasharray="10.9 999"/><circle cx="26" cy="26" r="18" stroke="var(--n-gluc)" stroke-dasharray="15.2 999" stroke-dashoffset="-22.6"/><circle cx="26" cy="26" r="18" stroke="var(--n-lip)" stroke-dasharray="12.1 999" stroke-dashoffset="-45.2"/><circle cx="26" cy="26" r="18" stroke="var(--n-veg)" stroke-dasharray="10.3 999" stroke-dashoffset="-90.5"/></g><text x="26" y="31" text-anchor="middle">L</text></svg><p>Léa</p></div>
+    <div class="who"><svg class="ring" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle class="trk" cx="26" cy="26" r="18"/><circle cx="26" cy="26" r="18" stroke="var(--n-prot)" stroke-dasharray="8.8 999"/><circle cx="26" cy="26" r="18" stroke="var(--n-gluc)" stroke-dasharray="10 999" stroke-dashoffset="-22.6"/><circle cx="26" cy="26" r="18" stroke="var(--n-lip)" stroke-dasharray="9.1 999" stroke-dashoffset="-45.2"/><circle cx="26" cy="26" r="18" stroke="var(--n-fibre)" stroke-dasharray="4.2 999" stroke-dashoffset="-67.9"/><circle cx="26" cy="26" r="18" stroke="var(--n-veg)" stroke-dasharray="6.7 999" stroke-dashoffset="-90.5"/></g><text x="26" y="31" text-anchor="middle">T</text></svg><p>Tom</p></div>
+  </div>
+
+  <div class="sec legend" style="padding-bottom:14px">
+    <span><span class="dot" style="background:var(--n-prot)"></span>Protéines</span>
+    <span><span class="dot" style="background:var(--n-gluc)"></span>Glucides</span>
+    <span><span class="dot" style="background:var(--n-lip)"></span>Lipides</span>
+    <span><span class="dot" style="background:var(--n-fibre)"></span>Fibres</span>
+    <span><span class="dot" style="background:var(--n-veg)"></span>Végétal</span>
+  </div>
+
+  <div class="sec" style="padding-bottom:18px">
+    <div class="card" style="overflow:hidden;border-radius:14px;margin-bottom:10px">
+      <div class="photo" style="height:118px;background:var(--green-100)"><i class="ti ti-bowl-spoon" style="font-size:40px;color:var(--green-900)"></i><span class="tag" style="background:var(--green-900);color:var(--green-50)"><i class="ti ti-leaf" style="font-size:12px;vertical-align:-1px"></i> 2 légumes de saison</span></div>
+      <div style="padding:13px 14px"><p style="font-size:17px">Gratin de courgettes</p><p class="meta" style="margin-top:4px">Déjeuner · Stéphane</p></div>
+    </div>
+    <div class="card row" style="margin-bottom:10px"><div class="thumb" style="background:var(--amber-100);color:var(--amber-900)"><i class="ti ti-egg-fried"></i></div><div><p style="font-size:14px">Muffin, œufs, jus d'orange</p><p class="meta">Petit-déj · toute la famille</p></div></div>
+    <div class="row" style="border:.5px solid rgba(216,90,48,.3);border-radius:12px"><div class="thumb" style="background:var(--coral);color:#fff"><i class="ti ti-plus"></i></div><div><p style="font-size:14px">Ajouter le dîner</p><p class="meta">Ou partage depuis Jow</p></div></div>
+  </div>
+
+  <div class="nav"><div class="on"><i class="ti ti-home"></i></div><div><i class="ti ti-calendar-week"></i></div><div><i class="ti ti-sparkles"></i></div><div><i class="ti ti-users"></i></div></div>
+</div></div>
+</figure>
+
+<figure>
+<figcaption>Chemin critique<b>Réception d'un partage Jow</b></figcaption>
+<div class="phone"><div class="warm">
+  <div class="appbar"><div class="brand"><i class="ti ti-x" style="font-size:19px"></i>Reçu depuis Jow</div></div>
+  <div style="padding:14px 16px;background:var(--surface-2)">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:54px;height:54px;border-radius:var(--radius);background:var(--green-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-salad" style="font-size:24px;color:var(--green-900)"></i></div>
+      <div><p style="font-size:15px;font-weight:500;line-height:1.35">Galette végé, purée de carotte &amp; tzatziki</p>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="font-size:11px;padding:2px 7px;border-radius:var(--radius);background:var(--bg-success);color:var(--text-success)"><i class="ti ti-check" style="font-size:12px;vertical-align:-1px"></i> Résolue</span><span style="font-size:12px;color:var(--text-secondary)">Nutri-Score B</span></div></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
+      <span class="chip">Steak végétal ×1</span><span class="chip">Purée carotte 100 g</span><span class="chip">Tzatziki 50 g</span>
+      <span class="chip" style="background:var(--bg-warning);color:var(--text-warning)">Salade 1 poignée <i class="ti ti-help-circle" style="font-size:12px;vertical-align:-1px"></i></span>
+    </div>
+  </div>
+  <div style="padding:12px 16px;border-top:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface-2)"><span style="font-size:14px">Quel repas</span><div style="display:flex;gap:5px"><span style="font-size:13px;padding:5px 11px;border-radius:var(--radius);color:var(--text-secondary);border:.5px solid var(--border)">Midi</span><span style="font-size:13px;padding:5px 11px;border-radius:var(--radius);background:var(--coral);color:#fff">Ce soir</span></div></div>
+  <div style="padding:12px 16px;border-top:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface-2)"><div><p style="font-size:14px">Pour combien&nbsp;?</p><p class="meta">Recette prévue pour 4</p></div><div style="display:flex;align-items:center;gap:12px;color:var(--text-secondary)"><i class="ti ti-minus" style="font-size:17px"></i><span style="font-size:17px;font-weight:500;color:var(--text-primary)">4</span><i class="ti ti-plus" style="font-size:17px"></i></div></div>
+  <div style="padding:12px 16px 14px;border-top:.5px solid var(--border);background:var(--surface-2)">
+    <p style="font-size:14px;margin-bottom:10px">Qui était à table&nbsp;?</p>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius);border:.5px solid var(--coral);background:rgba(216,90,48,.08)"><i class="ti ti-check" style="font-size:16px;color:var(--coral-600)"></i><span style="font-size:13px">Stéphane</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius);border:.5px solid var(--coral);background:rgba(216,90,48,.08)"><i class="ti ti-check" style="font-size:16px;color:var(--coral-600)"></i><span style="font-size:13px">Claire</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius);border:.5px solid var(--coral);background:rgba(216,90,48,.08)"><i class="ti ti-check" style="font-size:16px;color:var(--coral-600)"></i><span style="font-size:13px">Léa</span></div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius);border:.5px solid var(--border)"><div style="width:16px;height:16px;border-radius:4px;border:.5px solid var(--border-strong)"></div><span style="font-size:13px;color:var(--text-secondary)">Tom</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:.5px solid var(--border)"><span style="font-size:13px;color:var(--text-secondary)">Invités</span><div style="display:flex;align-items:center;gap:12px;color:var(--text-secondary)"><i class="ti ti-minus" style="font-size:16px"></i><span style="font-size:15px;color:var(--text-primary)">0</span><i class="ti ti-plus" style="font-size:16px"></i></div></div>
+  </div>
+  <div style="padding:12px 16px;border-top:.5px solid var(--border);background:var(--surface-2)"><div class="btn" style="background:var(--coral)">Enregistrer</div></div>
+</div></div>
+</figure>
+
+<figure>
+<figcaption>Levier anti-friction<b>Ajout rapide</b></figcaption>
+<div class="phone"><div class="warm">
+  <div class="appbar"><div class="brand"><i class="ti ti-x" style="font-size:19px"></i>Ajouter un repas</div></div>
+  <div style="padding:14px 18px 0"><p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Habituels</p>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <div class="card" style="padding:12px 11px"><i class="ti ti-egg" style="font-size:19px;color:var(--text-secondary)"></i><p style="font-size:13px;font-weight:500;margin-top:7px">Petit-déj famille</p><p style="font-size:11px;color:var(--text-muted);margin-top:2px">Utilisé 34 fois</p></div>
+      <div class="card" style="padding:12px 11px"><i class="ti ti-cookie" style="font-size:19px;color:var(--text-secondary)"></i><p style="font-size:13px;font-weight:500;margin-top:7px">Goûter des enfants</p><p style="font-size:11px;color:var(--text-muted);margin-top:2px">Utilisé 21 fois</p></div>
+    </div>
+  </div>
+  <div style="padding:14px 18px 0"><p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Restes de…</p>
+    <div class="card row" style="margin-bottom:8px"><i class="ti ti-fridge" style="font-size:18px;color:var(--text-secondary);margin-left:4px"></i><div style="flex:1"><p style="font-size:13px;font-weight:500">Gratin de courgettes</p><p style="font-size:11px;color:var(--text-muted)">Hier soir · 4 parts préparées</p></div><i class="ti ti-chevron-right" style="font-size:17px;color:var(--text-muted)"></i></div>
+    <div class="card row"><i class="ti ti-fridge" style="font-size:18px;color:var(--text-secondary);margin-left:4px"></i><div style="flex:1"><p style="font-size:13px;font-weight:500">Chili sin carne</p><p style="font-size:11px;color:var(--text-muted)">Vendredi · 6 parts préparées</p></div><i class="ti ti-chevron-right" style="font-size:17px;color:var(--text-muted)"></i></div>
+  </div>
+  <div style="padding:14px 18px 18px"><p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Autre</p>
+    <div style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:var(--radius);border:.5px solid var(--border-strong);margin-bottom:8px;background:var(--surface-2)"><i class="ti ti-search" style="font-size:17px;color:var(--text-muted)"></i><span style="font-size:14px;color:var(--text-muted)">big mac + frites moyennes</span></div>
+    <div style="display:flex;gap:8px">
+      <div class="card" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;font-size:13px;color:var(--text-secondary)"><i class="ti ti-camera" style="font-size:17px"></i>Photo</div>
+      <div class="card" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;font-size:13px;color:var(--text-secondary)"><i class="ti ti-pencil" style="font-size:17px"></i>Manuel</div>
+    </div>
+  </div>
+</div></div>
+</figure>
+
+<figure>
+<figcaption>V4 — demande de l'historique<b>Modules mémoire</b></figcaption>
+<div class="phone"><div class="warm" style="padding:18px">
+  <div class="card" style="overflow:hidden;border-radius:14px;margin-bottom:12px">
+    <div class="photo" style="height:92px;background:var(--coral-100)"><i class="ti ti-soup" style="font-size:34px;color:var(--coral-900)"></i><span class="tag" style="background:var(--coral-900);color:var(--coral-50)"><i class="ti ti-clock-hour-3" style="font-size:12px;vertical-align:-1px"></i> Il y a un an</span></div>
+    <div style="padding:12px 14px"><p style="font-size:15px">Soupe de potimarron</p><p class="meta">13 septembre 2025 · toute la famille</p><p style="font-family:var(--font-voice);font-size:14px;color:var(--text-secondary);margin-top:9px">On la refait ce soir ?</p></div>
+  </div>
+
+  <div class="card" style="display:flex;gap:12px;padding:13px 14px;margin-bottom:12px">
+    <div style="width:38px;height:38px;border-radius:50%;background:var(--amber-50);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-star" style="font-size:20px;color:var(--amber-600)"></i></div>
+    <div><p style="font-size:11px;color:var(--amber-600);letter-spacing:.4px">PREMIÈRE FOIS</p><p style="font-size:15px;margin-top:3px">Léa a goûté les épinards</p><p class="meta">37ᵉ aliment découvert cette année</p></div>
+  </div>
+
+  <div class="card" style="padding:14px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><p style="font-size:13px;color:var(--text-secondary)">Aliments différents ce mois</p><p style="font-family:var(--font-voice);font-size:28px;line-height:1">48</p></div>
+    <div id="seeds" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+    <p class="meta" style="margin-top:10px">11 de plus qu'en août</p>
+  </div>
+</div></div>
+</figure>
+
+<div class="note">
+<p><b>Règles d'usage de la couleur.</b> Le terracotta <code>#D85A30</code> est la couleur de marque : bandeau, navigation active, boutons, accents. Les cinq couleurs de nutriments n'apparaissent <b>que sur des données nutritionnelles</b> — anneaux, barres, graphes. Jamais sur un bouton, un onglet, un badge ou un fond.</p>
+<p style="margin-top:14px"><b>Contraste typographique.</b> Fraunces (serif) pour les moments d'affichage, à 28-34 px. Inter pour tout le reste, entre 11 et 17 px. C'est l'écart qui crée le rythme.</p>
+<p style="margin-top:14px"><b>Ce que les placeholders cachent.</b> Chaque aplat de couleur est une photo Jow. Une fois les vraies images en place, le terracotta doit reculer des zones d'image et rester sur le chrome, sinon l'écran devient orange sur orange.</p>
+</div>
+
+</div>
+
+<script>
+const palette=['var(--n-veg)','var(--n-veg)','var(--n-veg)','var(--n-gluc)','var(--n-prot)','var(--n-lip)','var(--n-fibre)','var(--n-veg)'];
+const seeds=document.getElementById('seeds');
+if(seeds){for(let i=0;i<48;i++){const s=document.createElement('span');s.className='seed';s.style.background=palette[i%palette.length];seeds.appendChild(s);}}
+</script>
+
+</body>
+</html>
