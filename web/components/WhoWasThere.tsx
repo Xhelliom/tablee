@@ -6,32 +6,32 @@
  * figées (R2). L'écran n'en montre pas non plus : « 0,167 du plat » n'aide
  * personne à table, et installe la comptabilité que l'app refuse (R7).
  */
-import type { Member } from '../api.ts';
+import type { Eater } from '../api.ts';
 import { IconCheck } from '../icons.tsx';
 import { Stepper } from './Stepper.tsx';
 
 interface Props {
-  members: Member[];
+  eaters: Eater[];
   present: Set<string>;
-  onToggle: (memberId: string) => void;
+  onToggle: (eaterId: string) => void;
   guestCount: number;
   onGuestCount: (count: number) => void;
 }
 
 export function WhoWasThere({
-  members, present, onToggle, guestCount, onGuestCount,
+  eaters, present, onToggle, guestCount, onGuestCount,
 }: Props): React.ReactElement {
   return (
     <div>
       <p style={{ fontSize: 14, marginBottom: 10 }}>Qui était à table&nbsp;?</p>
       <div className="grid2">
-        {members.map((member) => {
-          const on = present.has(member.id);
+        {eaters.map((eater) => {
+          const on = present.has(eater.id);
           return (
             <button
-              key={member.id}
+              key={eater.id}
               type="button"
-              onClick={() => onToggle(member.id)}
+              onClick={() => onToggle(eater.id)}
               aria-pressed={on}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -50,7 +50,7 @@ export function WhoWasThere({
                   border: '.5px solid var(--border-strong)', display: 'block',
                 }} />
               )}
-              <span style={{ fontSize: 13 }}>{member.firstName}</span>
+              <span style={{ fontSize: 13 }}>{eater.firstName}</span>
             </button>
           );
         })}

@@ -25,8 +25,8 @@ export function WeekScreen(): React.ReactElement {
   if (data === null) return <p className="empty">Un instant…</p>;
 
   const days = Array.from({ length: data.days }, (_, i) => addDays(data.from, i));
-  const cell = (date: string, memberId: string) =>
-    data.cells.find((c) => c.date === date && c.memberId === memberId);
+  const cell = (date: string, eaterId: string) =>
+    data.cells.find((c) => c.date === date && c.eaterId === eaterId);
 
   return (
     <>
@@ -59,11 +59,11 @@ export function WeekScreen(): React.ReactElement {
             </tr>
           </thead>
           <tbody>
-            {data.members.map((member) => (
-              <tr key={member.id}>
-                <td style={{ ...td, textAlign: 'left', whiteSpace: 'nowrap' }}>{member.firstName}</td>
+            {data.eaters.map((eater) => (
+              <tr key={eater.id}>
+                <td style={{ ...td, textAlign: 'left', whiteSpace: 'nowrap' }}>{eater.firstName}</td>
                 {days.map((date) => {
-                  const found = cell(date, member.id);
+                  const found = cell(date, eater.id);
                   return (
                     <td key={date} style={td}>
                       <DayCell meals={found?.meals ?? 0} plantRatio={found?.plantRatio ?? null} />
@@ -74,7 +74,7 @@ export function WeekScreen(): React.ReactElement {
             ))}
           </tbody>
         </table>
-        {data.members.length === 0 ? (
+        {data.eaters.length === 0 ? (
           <p className="empty">Personne n’est encore enregistré.</p>
         ) : null}
       </div>

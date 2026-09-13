@@ -17,7 +17,9 @@ import { QuickAddScreen } from './screens/QuickAdd.tsx';
 import { MealDetailScreen } from './screens/MealDetail.tsx';
 import { WeekScreen } from './screens/Week.tsx';
 import { HistoryScreen } from './screens/History.tsx';
-import { MembersScreen } from './screens/Members.tsx';
+import { EatersScreen } from './screens/Eaters.tsx';
+import { HouseholdScreen } from './screens/Household.tsx';
+import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 
 export function App(): ReactElement {
   return (
@@ -29,7 +31,7 @@ export function App(): ReactElement {
 
 function Routes(): ReactElement {
   const segments = useSegments();
-  const { loading, household } = useSession();
+  const { loading, state } = useSession();
 
   if (loading) {
     return (
@@ -39,7 +41,17 @@ function Routes(): ReactElement {
     );
   }
 
-  if (household === null) return <LoginScreen />;
+  /**
+   * L'invitation passe **avant** la porte : son lien doit fonctionner pour
+   * quelqu'un qui n'a pas encore de compte. L'écran affiche alors la connexion
+   * sans quitter l'URL, et l'acceptation reprend ensuite — même règle que pour
+   * `/share`, qui ne doit jamais perdre ce qu'on était en train de faire.
+   */
+  const invitation = segments[0] === 'invitation' ? segments[1] : undefined;
+
+  if (state === 'anonyme') return <LoginScreen />;
+  if (invitation !== undefined) return <AcceptInvitationScreen invitationId={invitation} />;
+  if (state === 'sans_foyer') return <HouseholdScreen />;
 
   switch (segments[0]) {
     case undefined:
@@ -57,7 +69,7 @@ function Routes(): ReactElement {
     case 'historique':
       return <Chrome tab="historique"><HistoryScreen /></Chrome>;
     case 'membres':
-      return <Chrome tab="membres"><MembersScreen /></Chrome>;
+      return <Chrome tab="membres"><EatersScreen /></Chrome>;
     default:
       return (
         <Chrome tab="accueil">

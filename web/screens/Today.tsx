@@ -40,7 +40,7 @@ export function TodayScreen(): React.ReactElement {
     (a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot),
   );
   const [hero, ...rest] = meals;
-  const open = data.dashboard.find((entry) => entry.member.id === openMember) ?? null;
+  const open = data.dashboard.find((entry) => entry.eater.id === openMember) ?? null;
 
   return (
     <>
@@ -52,21 +52,21 @@ export function TodayScreen(): React.ReactElement {
       <SeasonStrip produce={data.seasonal} month={data.month} />
 
       <div className="sec" style={{ padding: '18px 18px 16px', display: 'flex', gap: 13, flexWrap: 'wrap' }}>
-        {data.dashboard.map(({ member, balance }) => (
+        {data.dashboard.map(({ eater, balance }) => (
           <button
-            key={member.id}
+            key={eater.id}
             type="button"
-            onClick={() => setOpenMember((current) => (current === member.id ? null : member.id))}
-            aria-expanded={openMember === member.id}
-            aria-label={`Détail du bilan de ${member.firstName}`}
+            onClick={() => setOpenMember((current) => (current === eater.id ? null : eater.id))}
+            aria-expanded={openMember === eater.id}
+            aria-label={`Détail du bilan de ${eater.firstName}`}
             style={{
               background: 'none', border: 0, padding: 0, textAlign: 'center', cursor: 'pointer',
-              opacity: openMember === null || openMember === member.id ? 1 : .45,
+              opacity: openMember === null || openMember === eater.id ? 1 : .45,
             }}
           >
-            <NutrientRing balance={balance} firstName={member.firstName} />
+            <NutrientRing balance={balance} firstName={eater.firstName} />
             <p style={{ marginTop: 3, fontSize: 11, color: 'var(--text-secondary)' }}>
-              {member.firstName}
+              {eater.firstName}
             </p>
           </button>
         ))}
@@ -84,14 +84,14 @@ export function TodayScreen(): React.ReactElement {
           <div className="card" style={{ padding: '14px 15px' }}>
             <div className="spread" style={{ alignItems: 'flex-start' }}>
               <div>
-                <p style={{ fontSize: 15 }}>{open.member.firstName}</p>
+                <p style={{ fontSize: 15 }}>{open.eater.firstName}</p>
                 <p className="meta" style={{ marginTop: 2 }}>
                   {open.balance.mealCount === 0
                     ? 'Aucun repas enregistré aujourd’hui'
                     : `${open.balance.mealCount} repas aujourd’hui`}
                 </p>
               </div>
-              <NutrientBars balance={open.balance} firstName={open.member.firstName} />
+              <NutrientBars balance={open.balance} firstName={open.eater.firstName} />
             </div>
             {standings(open.balance).length > 0 ? (
               <ul style={{

@@ -24,7 +24,7 @@ import { SLOT_LABELS, currentSlot, relativeDay } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
-  const { members } = useSession();
+  const { eaters } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
@@ -75,7 +75,7 @@ export function QuickAddScreen(): React.ReactElement {
         recipeId: meal.recipe?.id ?? null,
         servings: 1,
         leftoverOf: meal.id,
-        participants: members.map((m) => ({ memberId: m.id, present: true })),
+        participants: eaters.map((m) => ({ eaterId: m.id, present: true })),
       });
       navigate(`/repas/${created.id}`, { replace: true });
     } catch {

@@ -13,32 +13,33 @@
  * question se posera.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { api, type DailyBalance, type DashboardResponse, type Member } from '../api.ts';
+import { api, type DailyBalance, type DashboardResponse, type Eater } from '../api.ts';
 import { useSession } from '../session.tsx';
 import { NutrientBars } from '../components/NutrientBars.tsx';
 import { IconPlus } from '../icons.tsx';
 import { NUTRIENT_COLOR } from '../design/vocabulary.ts';
+import { InviteMembers } from './Invitation.tsx';
 
 /** Repères grossiers du §10 : « démarrer grossier, affiner à l'usage ». */
 const COEF_CHOICES = [0.5, 0.75, 1];
 
-export function MembersScreen(): React.ReactElement {
-  const { members, refreshMembers } = useSession();
+export function EatersScreen(): React.ReactElement {
+  const { eaters, refreshEaters } = useSession();
   const [balances, setBalances] = useState<Map<string, DailyBalance>>(new Map());
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await api.get<DashboardResponse>('/api/dashboard');
-    setBalances(new Map(data.dashboard.map((entry) => [entry.member.id, entry.balance])));
+    setBalances(new Map(data.dashboard.map((entry) => [entry.eater.id, entry.balance])));
   }, []);
 
-  useEffect(() => { void load().catch(() => undefined); }, [load, members]);
+  useEffect(() => { void load().catch(() => undefined); }, [load, eaters]);
 
-  const setCoef = async (member: Member, portionCoef: number): Promise<void> => {
+  const setCoef = async (eater: Eater, portionCoef: number): Promise<void> => {
     try {
-      await api.patch(`/api/members/${member.id}`, { portionCoef });
-      await refreshMembers();
+      await api.patch(`/api/eaters/${eater.id}`, { portionCoef });
+      await refreshEaters();
     } catch {
       setError('la modification n’a pas pu être enregistrée');
     }
@@ -54,19 +55,19 @@ export function MembersScreen(): React.ReactElement {
       {error !== null ? <p className="sec meta" style={{ paddingTop: 10 }}>{error}</p> : null}
 
       <div className="sec stack" style={{ paddingTop: 18 }}>
-        {members.map((member) => (
-          <article key={member.id} className="card" style={{ padding: '14px 15px' }}>
+        {eaters.map((eater) => (
+          <article key={eater.id} className="card" style={{ padding: '14px 15px' }}>
             <div className="spread">
               <div>
-                <p style={{ fontSize: 16 }}>{member.firstName}</p>
+                <p style={{ fontSize: 16 }}>{eater.firstName}</p>
                 <p className="meta" style={{ marginTop: 2 }}>
-                  {member.age} ans
-                  {member.diets.length > 0 ? ` · ${member.diets.join(', ')}` : ''}
+                  {eater.age} ans
+                  {eater.diets.length > 0 ? ` · ${eater.diets.join(', ')}` : ''}
                 </p>
               </div>
-              {balances.get(member.id) !== undefined ? (
-                <NutrientBars balance={balances.get(member.id) as DailyBalance}
-                              firstName={member.firstName} />
+              {balances.get(eater.id) !== undefined ? (
+                <NutrientBars balance={balances.get(eater.id) as DailyBalance}
+                              firstName={eater.firstName} />
               ) : null}
             </div>
 
@@ -77,12 +78,12 @@ export function MembersScreen(): React.ReactElement {
                   <button
                     key={coef}
                     type="button"
-                    onClick={() => { void setCoef(member, coef); }}
+                    onClick={() => { void setCoef(eater, coef); }}
                     className="chip"
                     style={{
                       cursor: 'pointer',
-                      background: member.portionCoef === coef ? 'var(--coral)' : 'var(--surface-1)',
-                      color: member.portionCoef === coef ? '#fff' : 'var(--text-secondary)',
+                      background: eater.portionCoef === coef ? 'var(--coral)' : 'var(--surface-1)',
+                      color: eater.portionCoef === coef ? '#fff' : 'var(--text-secondary)',
                     }}
                   >
                     {coef === 1 ? 'Comme un adulte' : `${coef * 100} %`}
@@ -97,16 +98,16 @@ export function MembersScreen(): React.ReactElement {
           </article>
         ))}
 
-        {members.length === 0 && !adding ? (
+        {eaters.length === 0 && !adding ? (
           <p className="empty" style={{ padding: '10px 0' }}>
-            Personne n’est encore enregistré. Sans membre, impossible de dire qui
-            était à table.
+            Personne n’est encore enregistré. Sans convive, impossible de dire
+            qui était à table.
           </p>
         ) : null}
 
         {adding ? (
           <NewMember
-            onDone={async () => { setAdding(false); await refreshMembers(); }}
+            onDone={async () => { setAdding(false); await refreshEaters(); }}
             onCancel={() => setAdding(false)}
           />
         ) : (
@@ -128,6 +129,14 @@ export function MembersScreen(): React.ReactElement {
           âge, ou que la valeur n’est pas connue — pas qu’elle vaut zéro.
         </p>
       </div>
+
+      {/*
+        Les accès, après les convives, et pas avant : la question courante est
+        « qui mange », pas « qui a un compte ». Un convive n'est pas un compte
+        — les enfants sont ici sans en avoir, et une nounou peut avoir un
+        compte sans figurer au-dessus.
+      */}
+      <AccessSection />
       <div className="fab-space" />
     </>
   );
@@ -147,7 +156,7 @@ function NewMember({
     event.preventDefault();
     setBusy(true);
     try {
-      await api.post('/api/members', { firstName, birthDate, sex, portionCoef });
+      await api.post('/api/eaters', { firstName, birthDate, sex, portionCoef });
       await onDone();
     } catch {
       setError('création impossible — vérifie la date de naissance');
@@ -216,5 +225,67 @@ function NewMember({
         <button type="submit" className="btn" disabled={busy}>Ajouter</button>
       </div>
     </form>
+  );
+}
+
+
+/**
+ * Le compte, le foyer actif, et les invitations.
+ *
+ * Volontairement au bas de l'écran « La famille » plutôt que dans un écran de
+ * réglages à part : gérer les accès est un geste rare, et lui donner un onglet
+ * le mettrait au même niveau que la saisie, qui est quotidienne.
+ */
+function AccessSection(): React.ReactElement {
+  const { user, household, role, households, switchHousehold, signOut } = useSession();
+
+  return (
+    <>
+      <InviteMembers />
+
+      <section className="sec">
+        <h2 className="eyebrow">Votre compte</h2>
+        <p className="meta" style={{ lineHeight: 1.6 }}>
+          {user?.name} · {user?.email}
+          <br />
+          Foyer : <b>{household?.name}</b> — vous y êtes{' '}
+          {role === 'parent' ? 'parent' : 'adulte'}.
+        </p>
+
+        {households.length > 1 ? (
+          <div style={{ marginTop: 14 }}>
+            <p className="label">Changer de foyer</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {households.map((foyer) => (
+                <button
+                  key={foyer.id}
+                  type="button"
+                  className="chip"
+                  style={{
+                    cursor: 'pointer',
+                    background: foyer.id === household?.id ? 'var(--coral)' : 'var(--surface-1)',
+                    color: foyer.id === household?.id ? '#fff' : 'var(--text-secondary)',
+                  }}
+                  onClick={() => {
+                    if (foyer.id !== household?.id) {
+                      void switchHousehold(foyer.organizationId ?? '');
+                    }
+                  }}
+                >
+                  {foyer.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <button
+          type="button" className="btn btn--ghost" style={{ marginTop: 16 }}
+          onClick={() => { void signOut(); }}
+        >
+          Se déconnecter
+        </button>
+      </section>
+    </>
   );
 }

@@ -33,7 +33,7 @@ import {
 import { formatGrams, formatPercent, formatRange } from '../design/quantities.ts';
 
 export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactElement {
-  const { members } = useSession();
+  const { eaters } = useSession();
   const [meal, setMeal] = useState<Meal | null>(null);
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
   if (error !== null) return <p className="empty">{error}</p>;
   if (meal === null) return <p className="empty">Un instant…</p>;
 
-  const present = new Set(meal.participants.map((p) => p.memberId));
+  const present = new Set(meal.participants.map((p) => p.eaterId));
   const nutrition = meal.nutrition;
   const title = meal.recipe?.title ?? meal.items.map((i) => i.label).join(', ') ?? '';
 
@@ -253,14 +253,14 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
 
       <section style={{ ...row, paddingBottom: 14 }}>
         <WhoWasThere
-          members={members}
+          eaters={eaters}
           present={present}
-          onToggle={(memberId) => {
+          onToggle={(eaterId) => {
             const next = new Set(present);
-            if (next.has(memberId)) next.delete(memberId);
-            else next.add(memberId);
+            if (next.has(eaterId)) next.delete(eaterId);
+            else next.add(eaterId);
             void patch({
-              participants: [...next].map((id) => ({ memberId: id, present: true })),
+              participants: [...next].map((id) => ({ eaterId: id, present: true })),
             });
           }}
           guestCount={meal.guestCount}

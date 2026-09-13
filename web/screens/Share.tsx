@@ -24,7 +24,7 @@ import { formatGrams } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
   const { query } = useRoute();
-  const { members } = useSession();
+  const { eaters } = useSession();
 
   // Jow met le titre **et** l'URL dans `text` : c'est `text` qu'il faut parser,
   // pas seulement `url` (§4).
@@ -44,8 +44,8 @@ export function ShareScreen(): React.ReactElement {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setPresent(new Set(members.map((m) => m.id)));
-  }, [members]);
+    setPresent(new Set(eaters.map((m) => m.id)));
+  }, [eaters]);
 
   useEffect(() => {
     if (shared.length === 0) {
@@ -61,11 +61,11 @@ export function ShareScreen(): React.ReactElement {
       .catch(() => setError('La recette n’a pas pu être lue. Le repas peut être saisi à la main.'));
   }, [shared]);
 
-  const toggle = useCallback((memberId: string) => {
+  const toggle = useCallback((eaterId: string) => {
     setPresent((current) => {
       const next = new Set(current);
-      if (next.has(memberId)) next.delete(memberId);
-      else next.add(memberId);
+      if (next.has(eaterId)) next.delete(eaterId);
+      else next.add(eaterId);
       return next;
     });
   }, []);
@@ -80,7 +80,7 @@ export function ShareScreen(): React.ReactElement {
         recipeId: state?.recipe?.id ?? null,
         servings,
         guestCount,
-        participants: [...present].map((memberId) => ({ memberId, present: true })),
+        participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         // Expurgé côté serveur avant insertion, et de nouveau ici par principe.
         rawInput: shared,
       });
@@ -197,7 +197,7 @@ export function ShareScreen(): React.ReactElement {
 
           <section style={{ ...row, paddingBottom: 14 }}>
             <WhoWasThere
-              members={members}
+              eaters={eaters}
               present={present}
               onToggle={toggle}
               guestCount={guestCount}

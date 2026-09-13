@@ -65,7 +65,7 @@ export type Nutrient = 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'fiberG';
  */
 export type BarState = 'disponible' | 'encadre' | 'partiel' | 'indisponible';
 
-export interface Member {
+export interface Eater {
   id: string;
   firstName: string;
   birthDate: string;
@@ -158,7 +158,7 @@ export interface Meal {
   note: string | null;
   recipe: { id: string; title: string; imageUrl: string | null; nutriScore: string | null } | null;
   items: MealItem[];
-  participants: { memberId: string; firstName: string; share: number }[];
+  participants: { eaterId: string; firstName: string; share: number }[];
   /** Produits de saison de la recette ce mois-ci — 0 tant que la table est vide. */
   seasonalCount: number;
   nutrition: {
@@ -198,7 +198,7 @@ export interface DashboardResponse {
   month: number;
   year: number;
   dashboard: {
-    member: { id: string; firstName: string; color: string | null; age: number; minor: boolean };
+    eater: { id: string; firstName: string; color: string | null; age: number; minor: boolean };
     balance: DailyBalance;
   }[];
   meals: Meal[];
@@ -261,7 +261,7 @@ export interface MealTemplate {
   lastUsedAt: string | null;
   payload: {
     items: { foodId: string | null; label: string }[];
-    participants: { memberId: string; present: boolean }[];
+    participants: { eaterId: string; present: boolean }[];
   };
 }
 
@@ -275,6 +275,6 @@ export interface TemplateSuggestion {
 export interface WeekResponse {
   from: string;
   days: number;
-  members: { id: string; firstName: string; color: string | null }[];
-  cells: { date: string; memberId: string; meals: number; plantRatio: number | null }[];
+  eaters: { id: string; firstName: string; color: string | null }[];
+  cells: { date: string; eaterId: string; meals: number; plantRatio: number | null }[];
 }

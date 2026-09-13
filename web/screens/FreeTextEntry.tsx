@@ -28,7 +28,7 @@ interface Draft {
 }
 
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
-  const { members } = useSession();
+  const { eaters } = useSession();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodSummary[]>([]);
   const [items, setItems] = useState<Draft[]>([]);
@@ -39,7 +39,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
-  useEffect(() => { setPresent(new Set(members.map((m) => m.id))); }, [members]);
+  useEffect(() => { setPresent(new Set(eaters.map((m) => m.id))); }, [eaters]);
 
   useEffect(() => {
     window.clearTimeout(timer.current);
@@ -73,11 +73,11 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setQuery('');
   };
 
-  const toggle = useCallback((memberId: string) => {
+  const toggle = useCallback((eaterId: string) => {
     setPresent((current) => {
       const next = new Set(current);
-      if (next.has(memberId)) next.delete(memberId);
-      else next.add(memberId);
+      if (next.has(eaterId)) next.delete(eaterId);
+      else next.add(eaterId);
       return next;
     });
   }, []);
@@ -91,7 +91,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         source: 'texte',
         servings: 1,
         guestCount,
-        participants: [...present].map((memberId) => ({ memberId, present: true })),
+        participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         items: items.map((item) => ({
           foodId: item.foodId,
           label: item.label,
@@ -217,7 +217,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
       </section>
 
       <section style={{ ...row, paddingBottom: 14 }}>
-        <WhoWasThere members={members} present={present} onToggle={toggle}
+        <WhoWasThere eaters={eaters} present={present} onToggle={toggle}
                      guestCount={guestCount} onGuestCount={setGuestCount} />
       </section>
 
