@@ -114,3 +114,51 @@ describe('deriveTargets', () => {
     assert.match(source, /1169\/2011/);
   });
 });
+
+describe('tranches prolongées', () => {
+  /**
+   * L'avis ANSES ne retient un besoin énergétique que jusqu'à 69 ans chez
+   * l'homme. La tranche au-delà reprend la même valeur, mais **pas la même
+   * provenance** : elle sort du périmètre de l'avis, et le dire est tout ce
+   * qui sépare une prolongation assumée d'un repère inventé (I1).
+   */
+  const SOURCÉ = 'ANSES 2016, § besoin énergétique';
+  const PROLONGÉ = 'ANSES 2016 — valeur des 18-69 ans, prolongée au-delà de 69 ans';
+
+  it('ne fusionne pas une tranche prolongée avec la tranche sourcée', () => {
+    const derived = deriveTargets(
+      [pct('protein_g', 'IR_MIN', 10, 18, 120)],
+      [
+        { sex: 'M', ageMin: 18, ageMax: 69, kcal: 2600, source: SOURCÉ },
+        { sex: 'M', ageMin: 70, ageMax: 120, kcal: 2600, source: PROLONGÉ },
+      ],
+    );
+    const hommes = derived.filter((d) => d.sex === 'M');
+
+    // Même valeur des deux côtés, et pourtant deux lignes : c'est la source
+    // qui diffère, et elle doit rester lisible.
+    assert.deepEqual(
+      hommes.map((d) => [d.ageMin, d.ageMax, d.value]),
+      [[18, 69, 65], [70, 120, 65]],
+    );
+    assert.match(hommes[0]?.source ?? '', /§ besoin énergétique/);
+    assert.match(hommes[1]?.source ?? '', /prolongée au-delà de 69 ans/);
+  });
+
+  it('couvre tout âge adulte une fois la prolongation en place', () => {
+    const derived = deriveTargets(
+      [pct('protein_g', 'IR_MIN', 10, 18, 120)],
+      [
+        { sex: 'M', ageMin: 18, ageMax: 69, kcal: 2600, source: SOURCÉ },
+        { sex: 'M', ageMin: 70, ageMax: 120, kcal: 2600, source: PROLONGÉ },
+      ],
+    );
+    const couvre = (age: number): boolean =>
+      derived.some((d) => d.sex === 'M' && age >= d.ageMin && age <= d.ageMax);
+    for (const age of [18, 40, 69, 70, 85, 120]) {
+      assert.ok(couvre(age), `${age} ans devrait avoir un repère`);
+    }
+    // Et toujours rien là où aucune source ne parle.
+    assert.equal(couvre(3), false, 'aucune prolongation vers le bas');
+  });
+});

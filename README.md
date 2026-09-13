@@ -107,10 +107,18 @@ un repère **de population**, pour une activité physique moyenne.
 Le besoin énergétique ne sort jamais à l'écran : I5 interdit un objectif
 chiffré de calories sur un profil mineur, et il ne sert ici qu'au calcul.
 
-**Tranches non couvertes** : 0 à 3 ans, les hommes de plus de 69 ans et les
-femmes de plus de 59 ans. Les avis ne retiennent pas de besoin énergétique pour
-eux. Les barres concernées affichent « repère indisponible » — prolonger la
-tranche voisine serait inventer un repère.
+**Tranches prolongées** : l'avis ne retient un besoin énergétique que jusqu'à
+69 ans chez l'homme et 59 ans chez la femme. Au-delà, la valeur de la dernière
+tranche est reprise, pour qu'un repère existe quel que soit l'âge. Ces lignes
+portent une `source` qui le dit, et ce texte remonte à l'écran — l'app ne fait
+jamais dire à l'ANSES ce qu'elle ne dit pas. Le besoin énergétique baissant
+avec l'âge, ces cibles sont probablement un peu hautes ; une valeur plus juste
+existe sans doute dans le rapport annexe Anses 2017d, non consulté.
+
+**Tranche non couverte** : 0 à 3 ans. Pas de prolongation vers le bas — les
+besoins d'un nourrisson ne sont pas ceux d'un enfant de 4 ans en plus petit, et
+c'est l'âge où une valeur plausible et fausse fait le plus de dégâts. Les
+barres affichent « repère indisponible ».
 
 ### Ce qu'il y a à peser pour `unit_default`
 
