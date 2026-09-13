@@ -42,6 +42,13 @@ export interface NutrientReference {
   unit: string;
   kind: ReferenceKind;
   basis: ReferenceBasis;
+  /**
+   * `true` quand la valeur est calculée à partir d'autres lignes sourcées
+   * plutôt que recopiée d'un tableau — le cas des cibles en grammes déduites
+   * d'un intervalle en % de l'AET. `source` porte alors la chaîne complète.
+   * L'interface le montre : une arithmétique vérifiable n'est pas une mesure.
+   */
+  derived: boolean;
   /** Obligatoire (I1). Une ligne sans source n'a rien à faire dans la table. */
   source: string;
 }
@@ -88,17 +95,45 @@ export function findReference(
   age: number,
   nutrient: Nutrient,
 ): NutrientReference | null {
-  const matches = candidates(table, sex, age, nutrient).filter((row) => row.basis === 'absolu');
+  const matches = candidates(table, sex, age, nutrient).filter(
+    (row) => row.basis === 'absolu' && row.kind !== 'IR_MAX',
+  );
   // Entre deux natures, la plus engageante d'abord : une RNP couvre le besoin,
-  // un AS n'est qu'un apport observé jugé satisfaisant.
-  const order: ReferenceKind[] = ['RNP', 'RN', 'AS', 'IR_MIN', 'IR_MAX'];
+  // un AS n'est qu'un apport observé jugé satisfaisant, une borne basse
+  // d'intervalle n'est qu'un plancher. `IR_MAX` est exclu d'emblée : un
+  // plafond n'est pas une cible, et le prendre pour tel ferait viser le
+  // maximum.
+  const order: ReferenceKind[] = ['RNP', 'RN', 'AS', 'IR_MIN'];
   const row = [...matches].sort(
     (a, b) => order.indexOf(a.kind) - order.indexOf(b.kind),
   )[0];
-  if (row === undefined) return null;
+  return row === undefined ? null : strip(row);
+}
+
+/**
+ * Le plafond : ce qu'il vaut mieux ne pas dépasser, quand la source en publie
+ * un. Les lipides d'un adulte ont un intervalle 35-40 % de l'AET, dont la
+ * borne haute devient une quantité comme une autre.
+ *
+ * Les fibres n'en ont pas : leur repère est un apport satisfaisant, pas un
+ * intervalle. Rien à dépasser.
+ */
+export function findCeiling(
+  table: ReferenceTable[],
+  sex: 'F' | 'M',
+  age: number,
+  nutrient: Nutrient,
+): NutrientReference | null {
+  const row = candidates(table, sex, age, nutrient).find(
+    (candidate) => candidate.basis === 'absolu' && candidate.kind === 'IR_MAX',
+  );
+  return row === undefined ? null : strip(row);
+}
+
+function strip(row: ReferenceTable): NutrientReference {
   return {
     nutrient: row.nutrient, value: row.value, unit: row.unit,
-    kind: row.kind, basis: row.basis, source: row.source,
+    kind: row.kind, basis: row.basis, derived: row.derived, source: row.source,
   };
 }
 

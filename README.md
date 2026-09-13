@@ -70,7 +70,8 @@ changent sous les pieds entre deux redémarrages, ce sont des conseils destinés
 
 | Table | État | Ce que fait l'app |
 |---|---|---|
-| `nutrient_reference` | **Fibres remplies** (ANSES, 4-17 ans et adulte). Protéines, lipides et glucides chargés en % de l'AET mais pas encore affichés — voir ci-dessous. | La barre Fibres est en % du repère. Les trois autres affichent « repère indisponible ». |
+| `nutrient_reference` | **Remplie** pour les quatre macronutriments, de 4 à 17 ans et pour les adultes | Les barres se remplissent vers une cible et disent ce qui manque ou ce qui est dépassé. |
+| `energy_reference` | **Remplie** (EFSA 2017 pour les enfants, ANSES 2016 pour les adultes) | Terme de calcul uniquement. Jamais affiché : I5. |
 | `unit_default` | Vide — cinq pesées à faire | Une unité non convertible est signalée et la quantité est demandée. La nutrition d'un repas Jow reste exacte : elle vient du snapshot par portion. |
 | `seasonal_produce` | Gabarit de 43 produits, mois à saisir depuis un calendrier au choix | La bande « De saison en … » ne s'affiche pas, et le badge des cartes non plus. |
 
@@ -80,20 +81,36 @@ npm run seed:refs     # les tables de référence seules
 npm run seed:refs -- --dry-run
 ```
 
-### Ce que l'ANSES publie réellement
+### Comment les repères sont obtenus
 
-Des quatre macronutriments de la V1, **seules les fibres ont une valeur
-absolue** : 30 g/j pour l'adulte, 14 / 16 / 19 / 21 g/j pour les 4-6, 7-10,
+Des quatre macronutriments de la V1, **seules les fibres ont une valeur absolue
+publiée** : 30 g/j pour l'adulte, 14 / 16 / 19 / 21 g/j pour les 4-6, 7-10,
 11-14 et 15-17 ans. Protéines, lipides et glucides sont publiés en
-**pourcentage de l'apport énergétique total**, sous forme d'intervalle et sans
-distinction de sexe. Les convertir en grammes demanderait une cible calorique
-par âge, que l'app refuse d'installer (R7, I5) — et la RNP des protéines
-s'exprime par kilogramme de poids corporel, donnée que le §10 ne stocke pas.
+**pourcentage de l'apport énergétique total**, sous forme d'intervalle.
 
-Ces intervalles sont donc chargés et sourcés (`basis = 'pct_aet'`), mais
-`findReference` les écarte délibérément : les traiter comme des grammes
-afficherait « 30 g sur un repère de 10 ». Ce qu'on en fait à l'écran reste à
-décider.
+Or un pourcentage d'énergie est un **ratio**, pas un compteur : il converge au
+fil de la journée au lieu de progresser, et ne répond donc pas à « qu'est-ce
+qu'il me manque ? ». Les intervalles sont traduits en grammes au moment du
+seed :
+
+```
+cible_g = intervalle (% AET) × besoin énergétique (kcal) / facteur (kcal/g)
+```
+
+Les trois termes sont sourcés — avis ANSES pour l'intervalle, EFSA 2017 / ANSES
+2016 pour le besoin énergétique, Règlement (UE) n° 1169/2011 Annexe XIV pour
+les facteurs, qui est la convention sous laquelle Ciqual publie son énergie.
+Le produit, lui, n'est publié nulle part tel quel : ces lignes portent
+`derived = true` et leur `source` contient la chaîne de calcul complète. C'est
+un repère **de population**, pour une activité physique moyenne.
+
+Le besoin énergétique ne sort jamais à l'écran : I5 interdit un objectif
+chiffré de calories sur un profil mineur, et il ne sert ici qu'au calcul.
+
+**Tranches non couvertes** : 0 à 3 ans, les hommes de plus de 69 ans et les
+femmes de plus de 59 ans. Les avis ne retiennent pas de besoin énergétique pour
+eux. Les barres concernées affichent « repère indisponible » — prolonger la
+tranche voisine serait inventer un repère.
 
 ### Ce qu'il y a à peser pour `unit_default`
 

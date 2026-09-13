@@ -79,6 +79,20 @@ export interface Member {
   minor: boolean;
 }
 
+export interface NutrientReference {
+  nutrient: string;
+  value: number;
+  unit: string;
+  kind: 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX';
+  basis: 'absolu' | 'pct_aet';
+  /** Calculée à partir d'autres lignes sourcées, pas recopiée d'un tableau. */
+  derived: boolean;
+  source: string;
+}
+
+/** Où en est la journée : ce qui manque, ce qui est atteint, ce qui est dépassé. */
+export type Standing = 'sous' | 'dans' | 'au_dela';
+
 export interface NutrientBar {
   nutrient: Nutrient;
   state: BarState;
@@ -87,9 +101,17 @@ export interface NutrientBar {
   /** Borne haute. `null` quand rien ne la borne. */
   consumedMax: number | null;
   missingMeals: number;
-  reference: { nutrient: string; value: number; unit: string; source: string } | null;
+  /** La cible du jour, à atteindre. */
+  reference: NutrientReference | null;
+  /** Le plafond, quand la source publie un intervalle. `null` pour les fibres. */
+  referenceMax: NutrientReference | null;
   percent: number | null;
   percentMax: number | null;
+  /** Grammes restants pour atteindre la cible. `0` une fois atteinte. */
+  remaining: number | null;
+  /** Grammes au-delà du plafond. `null` tant qu'il n'est pas dépassé. */
+  excess: number | null;
+  standing: Standing | null;
 }
 
 export interface PlantBar {

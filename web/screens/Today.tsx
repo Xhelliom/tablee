@@ -15,7 +15,7 @@ import { IconPlus } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_ORDER, longDate,
 } from '../design/vocabulary.ts';
-import { formatPercent } from '../design/quantities.ts';
+import { formatGrams, formatPercent } from '../design/quantities.ts';
 
 export function TodayScreen(): React.ReactElement {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -93,8 +93,19 @@ export function TodayScreen(): React.ReactElement {
               </div>
               <NutrientBars balance={open.balance} />
             </div>
+            {standings(open.balance).length > 0 ? (
+              <ul style={{
+                listStyle: 'none', padding: 0, margin: '12px 0 0',
+                display: 'flex', flexDirection: 'column', gap: 3,
+                fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
+              }}>
+                {standings(open.balance).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
             {open.balance.bars.some((b) => b.state === 'encadre' || b.state === 'partiel') ? (
-              <p className="meta" style={{ marginTop: 10, lineHeight: 1.5 }}>
+              <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
                 {uncertaintySentence(open.balance)}
               </p>
             ) : null}
@@ -116,9 +127,9 @@ export function TodayScreen(): React.ReactElement {
             fontSize: 12, lineHeight: 1.5, padding: '10px 12px', borderRadius: 'var(--radius)',
             background: 'var(--bg-warning)', color: 'var(--text-warning)',
           }}>
-            Les repères nutritionnels ne sont pas encore chargés : les anneaux ne
-            montrent que la part végétale. Les valeurs de l’ANSES sont à saisir
-            dans <code>nutrient_reference</code>, avec leur source.
+            Les repères nutritionnels ne sont pas chargés : les anneaux ne
+            montrent que la part végétale. Lancer <code>npm run seed:refs</code>,
+            ou compléter <code>db/seeds/</code>.
           </p>
         </div>
       ) : null}
@@ -162,6 +173,34 @@ function headline(count: number): string {
 
 function addLabel(count: number): string {
   return count === 0 ? 'Enregistrer un repas' : 'Ajouter un repas';
+}
+
+/**
+ * Ce qui manque et ce qui est dépassé, en une ligne par nutriment concerné.
+ *
+ * C'est le but de l'écran : savoir où on en est sans lire un tableau. Le ton
+ * reste un constat, jamais un reproche (R7) — « il manque » et non « tu n'as
+ * pas assez », « au-delà du repère » et non « trop ».
+ */
+function standings(balance: DashboardResponse['dashboard'][number]['balance']): string[] {
+  const lines: string[] = [];
+
+  for (const bar of balance.bars) {
+    if (bar.standing === null) continue;
+    const label = NUTRIENT_LABELS[bar.nutrient].toLowerCase();
+
+    if (bar.standing === 'au_dela' && bar.excess !== null) {
+      lines.push(`${label} : ${formatGrams(bar.excess)} au-delà du repère`);
+      continue;
+    }
+    if (bar.standing === 'sous' && bar.remaining !== null && bar.remaining > 0) {
+      // Une valeur seulement encadrée par le bas se dit au conditionnel : on
+      // ne réclame pas ce qui a peut-être déjà été mangé.
+      const nuance = bar.state === 'partiel' ? ' au plus' : '';
+      lines.push(`${label} : il manque ${formatGrams(bar.remaining)}${nuance}`);
+    }
+  }
+  return lines;
 }
 
 /**

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { bilanJournalier, type DailyMeal } from './daily.ts';
-import { findEnergyShareRange, findReference, type ReferenceTable } from './references.ts';
+import {
+  findCeiling, findEnergyShareRange, findReference, type ReferenceTable,
+} from './references.ts';
 import { ageAt, ageBracket, isMinor } from './age.ts';
 
 /** Aucune borne connue — le point de départ de tous les cas. */
@@ -34,14 +36,14 @@ const repas = (over: Partial<DailyMeal>): DailyMeal => {
  * la base.
  */
 const REPERES_DE_TEST: ReferenceTable[] = [
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', kind: 'RNP', basis: 'absolu', value: 60, unit: 'g', source: 'fixture de test' },
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', value: 30, unit: 'g', source: 'fixture de test' },
-  { sex: 'F', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', value: 250, unit: 'g', source: 'fixture de test' },
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', value: 300, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'protein_g', kind: 'RNP', basis: 'absolu', derived: false, value: 60, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', derived: false, value: 30, unit: 'g', source: 'fixture de test' },
+  { sex: 'F', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', derived: false, value: 250, unit: 'g', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'carb_g', kind: 'RNP', basis: 'absolu', derived: false, value: 300, unit: 'g', source: 'fixture de test' },
   // Un intervalle en % de l'AET, tel que l'ANSES le publie pour les lipides :
   // il ne doit jamais servir de dénominateur à une consommation en grammes.
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MIN', basis: 'pct_aet', value: 35, unit: '%', source: 'fixture de test' },
-  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MAX', basis: 'pct_aet', value: 40, unit: '%', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MIN', basis: 'pct_aet', derived: false, value: 35, unit: '%', source: 'fixture de test' },
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MAX', basis: 'pct_aet', derived: false, value: 40, unit: '%', source: 'fixture de test' },
 ];
 
 const bar = (result: ReturnType<typeof bilanJournalier>, nutrient: string) => {
@@ -312,9 +314,93 @@ describe('natures de repère', () => {
 
   it('préfère une RNP à un AS quand les deux existent', () => {
     const table: ReferenceTable[] = [
-      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', value: 30, unit: 'g', source: 'a' },
-      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'RNP', basis: 'absolu', value: 25, unit: 'g', source: 'b' },
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'AS', basis: 'absolu', derived: false, value: 30, unit: 'g', source: 'a' },
+      { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fiber_g', kind: 'RNP', basis: 'absolu', derived: false, value: 25, unit: 'g', source: 'b' },
     ];
     assert.equal(findReference(table, 'M', 40, 'fiberG')?.kind, 'RNP');
+  });
+});
+
+describe('bilanJournalier — progression, manque et dépassement', () => {
+  /** Un homme adulte tel que le seed le produit : cible 65 g, plafond 130 g. */
+  const PROTEINES: ReferenceTable[] = [
+    { sex: 'M', ageMin: 18, ageMax: 69, nutrient: 'protein_g', kind: 'IR_MIN', basis: 'absolu', derived: true, value: 65, unit: 'g', source: 'dérivé : 10 % AET × 2600 kcal ÷ 4 kcal/g' },
+    { sex: 'M', ageMin: 18, ageMax: 69, nutrient: 'protein_g', kind: 'IR_MAX', basis: 'absolu', derived: true, value: 130, unit: 'g', source: 'dérivé : 20 % AET × 2600 kcal ÷ 4 kcal/g' },
+  ];
+
+  it('dit ce qui manque tant que la cible n’est pas atteinte', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: PROTEINES,
+      meals: [repas({ proteinG: 45 })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.reference?.value, 65);
+    assert.equal(proteines.percent, 69.2);
+    assert.equal(proteines.remaining, 20);
+    assert.equal(proteines.standing, 'sous');
+    assert.equal(proteines.excess, null);
+  });
+
+  it('dit que c’est atteint sans réclamer davantage', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: PROTEINES,
+      meals: [repas({ proteinG: 90 })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.remaining, 0);
+    assert.equal(proteines.standing, 'dans');
+    assert.equal(proteines.excess, null, '90 g est dans l’intervalle, pas au-delà');
+  });
+
+  it('compte le dépassement à partir du plafond, pas de la cible', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: PROTEINES,
+      meals: [repas({ proteinG: 145 })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.standing, 'au_dela');
+    assert.equal(proteines.excess, 15);        // 145 - 130, pas 145 - 65
+    assert.equal(proteines.referenceMax?.value, 130);
+  });
+
+  // R7 : on n'adresse pas un reproche sur une incertitude. Tant que seule la
+  // borne haute dépasse, rien n'est dépassé.
+  it('ne déclare pas un dépassement sur une borne haute incertaine', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: PROTEINES,
+      meals: [repas({ proteinG: 120, max: { kcal: null, proteinG: 140, carbG: null, fatG: null, fiberG: null } })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.standing, 'dans');
+    assert.equal(proteines.excess, null);
+    assert.equal(proteines.consumedMax, 140, 'la borne haute reste visible');
+  });
+
+  it('n’a ni plafond ni dépassement pour les fibres', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST,
+      meals: [repas({ fiberG: 40 })],
+    });
+    const fibres = bar(result, 'fiberG');
+    assert.equal(fibres.referenceMax, null);
+    assert.equal(findCeiling(REPERES_DE_TEST, 'M', 40, 'fiberG'), null);
+    assert.equal(fibres.standing, 'dans');
+    assert.equal(fibres.excess, null, 'un apport satisfaisant ne se dépasse pas');
+  });
+
+  it('ne prend jamais un plafond pour une cible', () => {
+    const plafondSeul: ReferenceTable[] = [PROTEINES[1] as ReferenceTable];
+    // Viser le maximum serait le contraire de ce que dit la source.
+    assert.equal(findReference(plafondSeul, 'M', 40, 'proteinG'), null);
+  });
+
+  it('ne dit rien du tout sans repère', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: [], meals: [repas({ proteinG: 45 })],
+    });
+    const proteines = bar(result, 'proteinG');
+    assert.equal(proteines.remaining, null);
+    assert.equal(proteines.standing, null);
+    assert.equal(proteines.consumed, 45, 'la consommation reste connue');
   });
 });

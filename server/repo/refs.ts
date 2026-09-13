@@ -31,15 +31,15 @@ export async function loadReferences(db: Db): Promise<ReferenceTable[]> {
   const { rows } = await db.query<{
     sex: 'F' | 'M' | 'ALL'; age_min: number; age_max: number;
     nutrient: string; kind: ReferenceKind; basis: ReferenceBasis;
-    value: number; unit: string; source: string;
+    value: number; unit: string; derived: boolean; source: string;
   }>(
-    `select sex, age_min, age_max, nutrient, kind, basis, value, unit, source
+    `select sex, age_min, age_max, nutrient, kind, basis, value, unit, derived, source
      from nutrient_reference`,
   );
   return rows.map((r) => ({
     sex: r.sex, ageMin: r.age_min, ageMax: r.age_max,
     nutrient: r.nutrient, kind: r.kind, basis: r.basis,
-    value: r.value, unit: r.unit, source: r.source,
+    value: r.value, unit: r.unit, derived: r.derived, source: r.source,
   }));
 }
 

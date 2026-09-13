@@ -20,9 +20,17 @@
  * tranche d'âge voisine.
  */
 import { NUTRIENTS, type Macros, type Nutrient } from './compute.ts';
-import { findReference, type NutrientReference, type ReferenceTable } from './references.ts';
+import {
+  findCeiling, findReference, type NutrientReference, type ReferenceTable,
+} from './references.ts';
 
 export type BarState = 'disponible' | 'encadre' | 'partiel' | 'indisponible';
+
+/**
+ * Où en est la journée par rapport au repère. C'est ce que la barre doit dire
+ * d'un coup d'œil : ce qui manque, ce qui est atteint, ce qui est dépassé.
+ */
+export type Standing = 'sous' | 'dans' | 'au_dela';
 
 export interface NutrientBar {
   nutrient: Nutrient;
@@ -33,12 +41,25 @@ export interface NutrientBar {
   consumedMax: number | null;
   /** Repas de la journée qui ne publient pas cette valeur. */
   missingMeals: number;
-  /** `null` quand la tranche d'âge n'est couverte par aucune source (§9). */
+  /**
+   * La cible du jour, à atteindre. `null` quand la tranche d'âge n'est
+   * couverte par aucune source (§9).
+   */
   reference: NutrientReference | null;
+  /**
+   * Le plafond, quand la source publie un intervalle. `null` pour les fibres,
+   * dont le repère est un apport satisfaisant : rien à dépasser.
+   */
+  referenceMax: NutrientReference | null;
   /** % du repère du jour, borne basse. `null` dès que le repère manque. */
   percent: number | null;
   /** % du repère du jour, borne haute. */
   percentMax: number | null;
+  /** Grammes restants pour atteindre la cible. `0` une fois atteinte. */
+  remaining: number | null;
+  /** Grammes au-delà du plafond. `null` tant qu'il n'est pas dépassé. */
+  excess: number | null;
+  standing: Standing | null;
 }
 
 /**
@@ -120,6 +141,8 @@ function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {
   const consumedMax = informed === 0 || unbounded ? null : round(ceiling);
 
   const reference = findReference(input.references, input.sex, input.age, nutrient);
+  const referenceMax = findCeiling(input.references, input.sex, input.age, nutrient);
+
   const state: BarState =
     consumed === null
       ? 'indisponible'
@@ -135,7 +158,48 @@ function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {
   const percent = percentOf(consumed, reference);
   const percentMax = percentOf(consumedMax, reference);
 
-  return { nutrient, state, consumed, consumedMax, missingMeals, reference, percent, percentMax };
+  return {
+    nutrient,
+    state,
+    consumed,
+    consumedMax,
+    missingMeals,
+    reference,
+    referenceMax,
+    percent,
+    percentMax,
+    ...position(consumed, reference, referenceMax),
+  };
+}
+
+/**
+ * Ce qui manque, ce qui est dépassé, et où on en est.
+ *
+ * Le manque se compte sur la **borne basse** de ce qui a été mangé : c'est un
+ * minorant de la consommation, donc un majorant de ce qui reste — on ne
+ * promet pas d'avoir fini alors qu'on n'en sait rien.
+ *
+ * Le dépassement, lui, ne se déclare que si la borne basse elle-même passe le
+ * plafond. Annoncer « tu as dépassé » sur une incertitude serait un reproche
+ * adressé à quelqu'un qui n'a peut-être rien dépassé du tout (R7).
+ */
+function position(
+  consumed: number | null,
+  reference: NutrientReference | null,
+  referenceMax: NutrientReference | null,
+): { remaining: number | null; excess: number | null; standing: Standing | null } {
+  if (consumed === null || reference === null) {
+    return { remaining: null, excess: null, standing: null };
+  }
+
+  const remaining = Math.max(0, round(reference.value - consumed));
+  const over = referenceMax !== null && consumed > referenceMax.value;
+
+  return {
+    remaining,
+    excess: over ? round(consumed - (referenceMax as NutrientReference).value) : null,
+    standing: over ? 'au_dela' : remaining > 0 ? 'sous' : 'dans',
+  };
 }
 
 function percentOf(value: number | null, reference: NutrientReference | null): number | null {

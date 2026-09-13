@@ -27,6 +27,7 @@ import {
   requiredText,
   SeedError,
 } from '../server/food/seeds.ts';
+import { deriveTargets, type EnergyReference, type PercentReference } from '../server/nutrition/derive.ts';
 import { closePool, getPool } from '../server/db.ts';
 
 const DIR = fileURLToPath(new URL('../db/seeds/', import.meta.url));
@@ -83,9 +84,8 @@ async function loadReferences(db: pg.Pool): Promise<void> {
       await db.query(
         `insert into nutrient_reference (sex, age_min, age_max, nutrient, kind, basis, value, unit, source)
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         on conflict (sex, age_min, age_max, nutrient, kind) do update set
-           basis = excluded.basis, value = excluded.value,
-           unit = excluded.unit, source = excluded.source`,
+         on conflict (sex, age_min, age_max, nutrient, kind, basis) do update set
+           value = excluded.value, unit = excluded.unit, source = excluded.source`,
         [sex, ageMin, ageMax, nutrient, kind, basis, value,
          requiredText(file, row, 'unit'), source],
       );
@@ -96,6 +96,84 @@ async function loadReferences(db: pg.Pool): Promise<void> {
   reports.push({
     file, written, skipped,
     reason: 'lignes sans valeur — tranche d’âge non couverte par la source',
+  });
+}
+
+// ── energy_reference, puis dérivation des cibles (§9) ───────────────────────
+
+async function loadEnergy(db: pg.Pool): Promise<void> {
+  const file = 'energy-reference.csv';
+  const { rows } = await read(file);
+  let written = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const kcal = optionalNumber(file, row, 'kcal');
+    if (kcal === null) { skipped += 1; continue; }
+    if (kcal <= 0) throw new SeedError(file, row.line, 'un besoin énergétique doit être positif');
+
+    const source = requireSource(file, row);
+    const sex = requiredText(file, row, 'sex').toUpperCase();
+    if (sex !== 'F' && sex !== 'M') throw new SeedError(file, row.line, `sexe inconnu : ${sex}`);
+
+    if (!dryRun) {
+      await db.query(
+        `insert into energy_reference (sex, age_min, age_max, kcal, pal, source)
+         values ($1, $2, $3, $4, $5, $6)
+         on conflict (sex, age_min, age_max) do update set
+           kcal = excluded.kcal, pal = excluded.pal, source = excluded.source`,
+        [
+          sex, requiredNumber(file, row, 'age_min'), requiredNumber(file, row, 'age_max'),
+          kcal, optionalNumber(file, row, 'pal'), source,
+        ],
+      );
+    }
+    written += 1;
+  }
+
+  reports.push({ file, written, skipped, reason: 'tranches sans besoin énergétique' });
+}
+
+/**
+ * Traduit les intervalles en % de l'AET en cibles en grammes.
+ *
+ * Rejouée à chaque seed et **remplacée intégralement** : ces lignes sont un
+ * produit, pas une saisie. Si un intervalle ou un besoin énergétique change,
+ * les cibles suivent sans laisser de reliquat.
+ */
+async function deriveAbsoluteTargets(db: pg.Pool): Promise<void> {
+  const { rows: percents } = await db.query<PercentReference>(
+    `select sex, age_min as "ageMin", age_max as "ageMax", nutrient, kind, value, source
+     from nutrient_reference
+     where basis = 'pct_aet'`,
+  );
+  const { rows: energies } = await db.query<EnergyReference>(
+    `select sex, age_min as "ageMin", age_max as "ageMax", kcal, source
+     from energy_reference`,
+  );
+
+  const derived = deriveTargets(percents, energies);
+
+  if (!dryRun) {
+    await db.query("delete from nutrient_reference where derived and basis = 'absolu'");
+    for (const row of derived) {
+      await db.query(
+        `insert into nutrient_reference
+           (sex, age_min, age_max, nutrient, kind, basis, value, unit, source, derived)
+         values ($1, $2, $3, $4, $5, 'absolu', $6, 'g', $7, true)
+         on conflict (sex, age_min, age_max, nutrient, kind, basis) do update set
+           value = excluded.value, unit = excluded.unit,
+           source = excluded.source, derived = true`,
+        [row.sex, row.ageMin, row.ageMax, row.nutrient, row.kind, row.value, row.source],
+      );
+    }
+  }
+
+  reports.push({
+    file: '(dérivé)',
+    written: derived.length,
+    skipped: 0,
+    reason: '',
   });
 }
 
@@ -190,18 +268,33 @@ async function loadSeasonal(db: pg.Pool): Promise<void> {
 
 async function main(): Promise<void> {
   const files = await readdir(DIR);
-  const expected = ['nutrient-reference.csv', 'unit-default.csv', 'seasonal-produce.csv'];
+  const expected = [
+    'nutrient-reference.csv', 'energy-reference.csv',
+    'unit-default.csv', 'seasonal-produce.csv',
+  ];
   const missing = expected.filter((f) => !files.includes(f));
   if (missing.length > 0) throw new Error(`fichier(s) de seed absent(s) : ${missing.join(', ')}`);
 
   const pool = getPool();
   try {
     await loadReferences(pool);
+    await loadEnergy(pool);
+    // Après les deux, puisqu'elle les croise.
+    await deriveAbsoluteTargets(pool);
     await loadUnits(pool);
     await loadSeasonal(pool);
 
     console.log(dryRun ? 'Simulation — rien n’a été écrit.\n' : '');
     for (const report of reports) {
+      if (report.file === '(dérivé)') {
+        console.log('cibles dérivées');
+        console.log(
+          `  ${report.written} repère(s) en grammes, calculés depuis les intervalles\n` +
+            '  en % de l’AET et les besoins énergétiques. Marqués `derived` en base,\n' +
+            '  avec leur chaîne de calcul complète en source.',
+        );
+        continue;
+      }
       console.log(`${report.file}`);
       console.log(`  ${report.written} ligne(s) chargée(s)`);
       if (report.skipped > 0) {
@@ -209,7 +302,7 @@ async function main(): Promise<void> {
       }
     }
 
-    const empty = reports.filter((r) => r.written === 0).map((r) => r.file);
+    const empty = reports.filter((r) => r.written === 0 && r.file !== '(dérivé)').map((r) => r.file);
     if (empty.length > 0) {
       console.log(
         `\n${empty.join(', ')} : encore vide(s). C’est un état nominal — l’app\n` +
