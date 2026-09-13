@@ -214,6 +214,97 @@ describe('étanchéité entre foyers (§16)', { skip: enabled ? false : SKIP_MES
     });
   });
 
+  // ── La gestion du foyer ───────────────────────────────────────────────────
+
+  describe('gérer le foyer', () => {
+    it('laisse un parent renommer le foyer et changer son fuseau', async () => {
+      const { status, body } = await call('PATCH', '/api/household', nous.cookie, {
+        name: 'La maison', timezone: 'Indian/Reunion',
+      });
+      assert.equal(status, 200);
+      assert.equal(body.household.name, 'La maison');
+      assert.equal(body.household.timezone, 'Indian/Reunion');
+    });
+
+    /**
+     * Le fuseau n'est pas un réglage d'affichage : il décide où s'arrête une
+     * journée, dans le SQL. Une valeur fantaisiste acceptée fausserait tous les
+     * bilans en silence.
+     */
+    it('refuse un fuseau qui n’existe pas', async () => {
+      const { status, body } = await call('PATCH', '/api/household', nous.cookie, {
+        timezone: 'Europe/Nulle-Part',
+      });
+      assert.equal(status, 400);
+      assert.equal(body.error.code, 'fuseau_inconnu');
+
+      // Et le foyer n'a pas bougé.
+      const après = await call('GET', '/api/household', nous.cookie);
+      assert.equal(après.body.household.timezone, 'Europe/Paris');
+    });
+
+    it('n’autorise pas un adulte à changer le foyer', async () => {
+      const nounou = await signUp(auth, 'nounou-foyer@exemple.test');
+      await inviteAndAccept(auth, nous, nounou, 'adulte');
+
+      const { status, body } = await call('PATCH', '/api/household', nounou.cookie, {
+        name: 'Chez moi maintenant',
+      });
+      assert.equal(status, 403);
+      assert.equal(body.error.code, 'droits_insuffisants');
+    });
+
+    it('ne laisse pas modifier le foyer du voisin', async () => {
+      await call('PATCH', '/api/household', voisins.cookie, { name: 'Renommé par eux' });
+      // Chacun n'a touché qu'au sien : la route ne prend aucun identifiant du
+      // client, c'est la session qui le donne.
+      const chezNous = await call('GET', '/api/household', nous.cookie);
+      assert.equal(chezNous.body.household.name, 'Chez nous');
+    });
+
+    /**
+     * Le §16 en fait une exigence produit : pouvoir retirer ses données d'une
+     * machine qui n'est pas la sienne. Encore faut-il que la cascade traverse
+     * la RLS — ce n'était pas acquis.
+     */
+    it('supprime le foyer et tout ce qu’il contient', async () => {
+      const { eaterId, mealId } = await repasChezLesVoisins();
+      assert.ok(eaterId !== undefined && mealId !== undefined);
+
+      const avant = await pool.query<{ n: number }>(
+        'select count(*)::int as n from meal_participant',
+      );
+      assert.equal(avant.rows[0]?.n, 1, 'table sans RLS : le compte est réel');
+
+      const suppression = await app.inject({
+        method: 'POST', url: '/api/auth/organization/delete',
+        headers: { cookie: voisins.cookie, origin: TEST_BASE_URL },
+        payload: { organizationId: voisins.organizationId },
+      });
+      assert.equal(suppression.statusCode, 200);
+
+      // Les tables filles n'ont pas de RLS : leur compte est le vrai. Elles
+      // ne contenaient que les données des voisins, donc elles sont vides.
+      for (const table of ['meal_participant', 'meal_item']) {
+        const { rows } = await pool.query<{ n: number }>(
+          `select count(*)::int as n from ${table}`,
+        );
+        assert.equal(rows[0]?.n, 0, `${table} devrait être vide après suppression`);
+      }
+
+      // Et il reste exactement un foyer : le nôtre, intact. Une suppression qui
+      // emporterait le voisin serait le pire des bugs possibles ici.
+      const { rows: restants } = await pool.query<{ n: number; name: string }>(
+        'select count(*)::int as n, min(name) as name from household',
+      );
+      assert.equal(restants[0]?.n, 1);
+      assert.equal(restants[0]?.name, 'Chez nous');
+
+      const nôtre = await call('GET', '/api/household', nous.cookie);
+      assert.equal(nôtre.status, 200);
+    });
+  });
+
   // ── Les comptes, eux aussi, restent chez eux ──────────────────────────────
 
   describe('les comptes', () => {

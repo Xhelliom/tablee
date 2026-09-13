@@ -18,7 +18,7 @@ import { useSession } from '../session.tsx';
 import { NutrientBars } from '../components/NutrientBars.tsx';
 import { IconPlus } from '../icons.tsx';
 import { NUTRIENT_COLOR } from '../design/vocabulary.ts';
-import { InviteMembers } from './Invitation.tsx';
+import { navigate } from '../router.tsx';
 
 /** Repères grossiers du §10 : « démarrer grossier, affiner à l'usage ». */
 const COEF_CHOICES = [0.5, 0.75, 1];
@@ -230,62 +230,58 @@ function NewMember({
 
 
 /**
- * Le compte, le foyer actif, et les invitations.
+ * Un pied d'écran, pas un tableau de bord.
  *
- * Volontairement au bas de l'écran « La famille » plutôt que dans un écran de
- * réglages à part : gérer les accès est un geste rare, et lui donner un onglet
- * le mettrait au même niveau que la saisie, qui est quotidienne.
+ * Le détail de la gestion — qui a accès, les rôles, le fuseau, la suppression —
+ * vit sur son propre écran. Ici on rappelle seulement où l'on est, et on y
+ * mène : c'est un geste rare, il n'a pas à encombrer l'écran quotidien.
  */
 function AccessSection(): React.ReactElement {
-  const { user, household, role, households, switchHousehold, signOut } = useSession();
+  const { user, household, role, households, switchHousehold } = useSession();
 
   return (
-    <>
-      <InviteMembers />
+    <section className="sec">
+      <h2 className="eyebrow">Votre compte</h2>
+      <p className="meta" style={{ lineHeight: 1.6 }}>
+        {user?.name} · {user?.email}
+        <br />
+        Foyer : <b>{household?.name}</b> — vous y êtes{' '}
+        {role === 'parent' ? 'parent' : 'adulte'}.
+      </p>
 
-      <section className="sec">
-        <h2 className="eyebrow">Votre compte</h2>
-        <p className="meta" style={{ lineHeight: 1.6 }}>
-          {user?.name} · {user?.email}
-          <br />
-          Foyer : <b>{household?.name}</b> — vous y êtes{' '}
-          {role === 'parent' ? 'parent' : 'adulte'}.
-        </p>
-
-        {households.length > 1 ? (
-          <div style={{ marginTop: 14 }}>
-            <p className="label">Changer de foyer</p>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {households.map((foyer) => (
-                <button
-                  key={foyer.id}
-                  type="button"
-                  className="chip"
-                  style={{
-                    cursor: 'pointer',
-                    background: foyer.id === household?.id ? 'var(--coral)' : 'var(--surface-1)',
-                    color: foyer.id === household?.id ? '#fff' : 'var(--text-secondary)',
-                  }}
-                  onClick={() => {
-                    if (foyer.id !== household?.id) {
-                      void switchHousehold(foyer.organizationId ?? '');
-                    }
-                  }}
-                >
-                  {foyer.name}
-                </button>
-              ))}
-            </div>
+      {households.length > 1 ? (
+        <div style={{ marginTop: 14 }}>
+          <p className="label">Changer de foyer</p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {households.map((foyer) => (
+              <button
+                key={foyer.id}
+                type="button"
+                className="chip"
+                style={{
+                  cursor: 'pointer',
+                  background: foyer.id === household?.id ? 'var(--coral)' : 'var(--surface-1)',
+                  color: foyer.id === household?.id ? '#fff' : 'var(--text-secondary)',
+                }}
+                onClick={() => {
+                  if (foyer.id !== household?.id) {
+                    void switchHousehold(foyer.organizationId ?? '');
+                  }
+                }}
+              >
+                {foyer.name}
+              </button>
+            ))}
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        <button
-          type="button" className="btn btn--ghost" style={{ marginTop: 16 }}
-          onClick={() => { void signOut(); }}
-        >
-          Se déconnecter
-        </button>
-      </section>
-    </>
+      <button
+        type="button" className="btn btn--ghost" style={{ marginTop: 16 }}
+        onClick={() => navigate('/foyer')}
+      >
+        Gérer le foyer et les accès
+      </button>
+    </section>
   );
 }

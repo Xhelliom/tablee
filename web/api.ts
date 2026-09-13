@@ -15,6 +15,32 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Deux formats d'erreur cohabitent, et les confondre rend l'app muette.
+ *
+ * Les routes du §12 répondent `{ error: { code, message } }`. Celles de
+ * better-auth, sous `/api/auth/*`, répondent `{ message, code }` à plat. Sans
+ * ce second cas, **toutes** les erreurs d'authentification — mot de passe
+ * faux, adresse déjà prise, invitation expirée, « il doit rester un parent » —
+ * se réduisaient à « le serveur a refusé la demande », et les traductions des
+ * écrans ne voyaient jamais le vrai message.
+ */
+function toApiError(status: number, payload: unknown): ApiError {
+  const enveloppé = (payload as ApiErrorBody | undefined)?.error;
+  if (enveloppé !== undefined && enveloppé !== null) {
+    return new ApiError(status, enveloppé.code ?? 'erreur', enveloppé.message ?? 'le serveur a refusé la demande');
+  }
+
+  const plat = payload as { message?: unknown; code?: unknown } | undefined;
+  const message = typeof plat?.message === 'string' ? plat.message : null;
+  const code = typeof plat?.code === 'string' ? plat.code : null;
+  return new ApiError(
+    status,
+    code ?? 'erreur',
+    message ?? 'le serveur a refusé la demande',
+  );
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
     method,
@@ -34,12 +60,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   if (!response.ok) {
-    const error = (payload as ApiErrorBody).error;
-    throw new ApiError(
-      response.status,
-      error?.code ?? 'erreur',
-      error?.message ?? 'le serveur a refusé la demande',
-    );
+    throw toApiError(response.status, payload);
   }
   return payload as T;
 }

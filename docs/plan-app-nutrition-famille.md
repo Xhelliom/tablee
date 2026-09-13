@@ -990,6 +990,21 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `DELETE` | `/api/templates/:id` | |
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
 > | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
+>
+> **Ajoutées le 13/09/2026 avec les comptes** (§7 renversé) :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `GET` | `/api/me` | Les trois états d'authentification. Voir l'encart du §7. |
+> | `GET` | `/api/household` | Le foyer courant, pour que l'écran de gestion se rafraîchisse sans recharger la session. |
+> | `PATCH` | `/api/household` | Nom et fuseau, réservé au rôle `parent`. Le fuseau n'est pas un réglage d'affichage : il découpe les journées et les mois de saisonnalité **dans le SQL**, d'où une validation stricte plutôt qu'un texte libre. |
+> | `GET` | `/api/invitations/:id/lien` | L'URL à transmettre. Sans SMTP, l'invitation est un lien qu'on copie. |
+>
+> Tout le reste de la gestion — comptes, rôles, invitations, suppression du
+> foyer — est servi par better-auth sous `/api/auth/organization/*` et n'a pas
+> de route propre : la réécrire serait dupliquer des garde-fous déjà éprouvés,
+> à commencer par les trois refus qui empêchent le dernier parent de se
+> verrouiller dehors de son propre foyer.
 
 **`POST /api/meals` — corps :**
 

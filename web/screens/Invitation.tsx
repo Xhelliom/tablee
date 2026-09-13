@@ -98,7 +98,7 @@ interface Invitation {
   lien: string;
 }
 
-export function InviteMembers(): React.ReactElement | null {
+export function InviteMembers({ onInvited }: { onInvited?: () => void } = {}): React.ReactElement | null {
   const { role, household } = useSession();
   const [email, setEmail] = useState('');
   const [asParent, setAsParent] = useState(false);
@@ -124,6 +124,7 @@ export function InviteMembers(): React.ReactElement | null {
       );
       setCréées((liste) => [{ id: invitation.id, email: email.trim(), role: rôle, lien: url }, ...liste]);
       setEmail('');
+      onInvited?.();
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : 'invitation impossible');
     }

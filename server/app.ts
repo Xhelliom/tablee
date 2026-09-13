@@ -21,6 +21,7 @@ import { ApiError } from './http/errors.ts';
 import { authRoutes } from './routes/auth.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
+import { householdRoutes } from './routes/household.ts';
 import { mealRoutes } from './routes/meals.ts';
 import { eaterRoutes } from './routes/eaters.ts';
 import { recipeRoutes } from './routes/recipes.ts';
@@ -176,6 +177,7 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
 
   authRoutes(app, ctx);
   eaterRoutes(app, ctx);
+  householdRoutes(app, ctx);
   recipeRoutes(app, ctx);
   foodRoutes(app, ctx);
   mealRoutes(app, ctx);
