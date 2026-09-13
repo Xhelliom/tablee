@@ -211,6 +211,39 @@ export function ingredientsAsItems(
 }
 
 /**
+ * Ce qui manque dans une recette déjà enregistrée.
+ *
+ * Les warnings du parseur ne sont produits qu'au moment du fetch. Une recette
+ * repartagée n'est pas refetchée (§4, point 2) : sans cette fonction, l'écran
+ * de confirmation d'un deuxième partage n'afficherait plus rien, alors que les
+ * mêmes ingrédients sont toujours non convertis. Une donnée manquante doit se
+ * voir à chaque fois, pas seulement la première.
+ */
+export function recipeGaps(recipe: Recipe): string[] {
+  const warnings: string[] = [];
+
+  const missing = Object.entries(recipe.snapshot.perServing)
+    .filter(([, value]) => value === null)
+    .length;
+  if (missing > 0) {
+    warnings.push(`${missing} valeur(s) nutritionnelle(s) sur 5 absente(s) de la recette`);
+  }
+
+  for (const ingredient of recipe.ingredients) {
+    if (ingredient.quantityG !== null) continue;
+    if (ingredient.quantity === null || ingredient.unit === null) {
+      warnings.push(`« ${ingredient.label} » : quantité non publiée par Jow`);
+      continue;
+    }
+    warnings.push(
+      `« ${ingredient.label} » : ${ingredient.quantity} ${ingredient.unit} ` +
+        'non convertible en grammes sans source',
+    );
+  }
+  return warnings;
+}
+
+/**
  * Badge « N produits de saison » d'une carte de repas (§8bis).
  *
  * Le croisement passe par `recipe_ingredient.food_id` × `seasonal_produce`,

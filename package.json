@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --import tsx --test \"server/**/*.test.ts\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.json",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
     "jow:capture": "node --import tsx scripts/jow-capture.ts",
     "migrate": "node --import tsx scripts/migrate.ts",
@@ -16,12 +16,19 @@
     "start": "node --import tsx server/index.ts",
     "dev": "node --import tsx --watch server/index.ts",
     "household": "node --import tsx scripts/create-household.ts",
-    "test:db": "node --import tsx --test \"server/**/*.test.ts\""
+    "test:db": "node --import tsx --test \"server/**/*.test.ts\"",
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "icons": "node --import tsx scripts/make-icons.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^8.3.0"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
@@ -29,6 +36,8 @@
     "@node-rs/argon2": "^2.2.1",
     "@types/pg": "^8.23.1",
     "fastify": "^5.12.4",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

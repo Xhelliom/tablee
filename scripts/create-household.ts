@@ -25,14 +25,36 @@ if (login === undefined || login.length === 0) {
   process.exit(1);
 }
 
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-const password = await rl.question('Mot de passe du foyer (8 caractères minimum) : ');
-const again = await rl.question('Confirmation : ');
-rl.close();
+const [password, again] = await readPassword();
 
 if (password !== again) {
   console.error('les deux saisies diffèrent');
   process.exit(1);
+}
+
+/**
+ * Deux saisies quand quelqu'un tape, une seule lecture quand la commande est
+ * scriptée. Sans ce cas, un `printf … | npm run household` reste bloqué sur la
+ * confirmation, la ligne suivante n'arrivant jamais.
+ */
+async function readPassword(): Promise<[string, string]> {
+  if (!process.stdin.isTTY) {
+    let input = '';
+    for await (const chunk of process.stdin) input += chunk;
+    const lines = input.split(/\r?\n/).filter((l) => l.length > 0);
+    const first = lines[0];
+    if (first === undefined) {
+      console.error('aucun mot de passe reçu sur l’entrée standard');
+      process.exit(1);
+    }
+    return [first, lines[1] ?? first];
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const typed = await rl.question('Mot de passe du foyer (8 caractères minimum) : ');
+  const confirmation = await rl.question('Confirmation : ');
+  rl.close();
+  return [typed, confirmation];
 }
 
 const hash = await hashPassword(password);

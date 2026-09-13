@@ -6,7 +6,8 @@
  * `household_id` de la session**. Aucune requête de ce dépôt ne prend un
  * `household_id` depuis le client : c'est la session qui le donne, toujours.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
@@ -40,9 +41,11 @@ const PUBLIC_API = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/se
 
 export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): FastifyInstance {
   const app = Fastify({
-    logger: false,
+    // Silencieux par défaut : l'app tourne chez l'utilisateur, un log par
+    // requête ne sert à personne. `TABLEE_LOG=1` le rallume pour diagnostiquer.
+    logger: process.env['TABLEE_LOG'] === '1',
     // Un partage Jow arrive en GET avec un texte long dans la query.
-    maxParamLength: 500,
+    routerOptions: { maxParamLength: 500 },
   });
 
   app.decorateRequest('session', null);
@@ -106,6 +109,16 @@ function registerWeb(app: FastifyInstance, webDir?: string): void {
     return;
   }
 
+  // La coquille est lue une fois et servie telle quelle. `reply.sendFile` sait
+  // le faire, mais passe par une négociation de chemin qui répond 403 sur « / » :
+  // pour un fichier unique, lu une fois, ça ne vaut pas le détour.
+  const shell = readFileSync(join(root, 'index.html'), 'utf8');
+
+  // Servie explicitement : le plugin statique capte « / » avec son propre
+  // joker et répondrait 403 sur un dossier avant d'atteindre le gestionnaire
+  // de 404.
+  app.get('/', async (_request, reply) => reply.type('text/html; charset=utf-8').send(shell));
+
   app.register(fastifyStatic, { root, index: false });
 
   app.setNotFoundHandler(async (request, reply) => {
@@ -114,6 +127,6 @@ function registerWeb(app: FastifyInstance, webDir?: string): void {
         error: { code: 'introuvable', message: 'route inconnue' },
       });
     }
-    return reply.sendFile('index.html');
+    return reply.type('text/html; charset=utf-8').send(shell);
   });
 }

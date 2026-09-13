@@ -14,8 +14,11 @@
 import type { FastifyInstance } from 'fastify';
 import { parseShareText, redactShareText } from '../jow/share.ts';
 import { resolveShare } from '../jow/index.ts';
-import { body, str } from '../http/validate.ts';
-import { findRecipeByJowId, saveJowRecipe, seasonalCount } from '../repo/recipes.ts';
+import { ApiError } from '../http/errors.ts';
+import { body, str, uuid } from '../http/validate.ts';
+import {
+  findRecipeByJowId, loadRecipe, recipeGaps, saveJowRecipe, seasonalCount,
+} from '../repo/recipes.ts';
 import type { AppContext } from '../app.ts';
 
 export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -32,7 +35,9 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
           recipe: known,
           seasonal: await seasonalCount(ctx.pool, known.id, new Date().getMonth() + 1),
           fetched: false,
-          warnings: [],
+          // Reconstruits depuis la recette : un deuxième partage doit montrer
+          // les mêmes trous que le premier.
+          warnings: recipeGaps(known),
         };
       }
     }
@@ -50,6 +55,20 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
       seasonal: await seasonalCount(ctx.pool, recipe.id, new Date().getMonth() + 1),
       fetched: true,
       warnings: parsed.warnings,
+    };
+  });
+
+  /**
+   * Une recette et ses ingrédients — l'écran de détail d'un repas s'en sert
+   * pour proposer de rattacher chaque ingrédient au référentiel.
+   */
+  app.get<{ Params: { id: string } }>('/api/recipes/:id', async (request) => {
+    const recipe = await loadRecipe(ctx.pool, uuid(request.params.id, 'id'));
+    if (recipe === null) throw ApiError.notFound('recette introuvable');
+    return {
+      recipe,
+      seasonal: await seasonalCount(ctx.pool, recipe.id, new Date().getMonth() + 1),
+      warnings: recipeGaps(recipe),
     };
   });
 
