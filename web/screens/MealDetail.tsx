@@ -22,6 +22,7 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { GramsInput } from '../components/GramsInput.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl, IconClose, IconPlus, IconStar, IconTrash } from '../icons.tsx';
@@ -29,7 +30,7 @@ import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
   SLOT_WHEN, longDate,
 } from '../design/vocabulary.ts';
-import { formatPercent, formatRange } from '../design/quantities.ts';
+import { formatGrams, formatPercent, formatRange } from '../design/quantities.ts';
 
 export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactElement {
   const { members } = useSession();
@@ -207,9 +208,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
             {meal.items.map((item) => (
               <div key={item.id} className="spread">
                 <span style={{ fontSize: 13 }}>{item.label}</span>
-                <span className="meta">
-                  {item.quantityG !== null ? `${round(item.quantityG)} g` : 'quantité inconnue'}
-                </span>
+                <span className="meta">{formatGrams(item.quantityG)}</span>
               </div>
             ))}
           </div>
@@ -333,24 +332,22 @@ function Composition({
       <div className="stack" style={{ gap: 7 }}>
         {draft.map((item, index) => (
           <div key={item.id} className="spread">
-            <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{item.label}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              defaultValue={item.quantityG ?? ''}
-              placeholder="g"
-              aria-label={`Quantité de ${item.label} en grammes`}
+            <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
+              {item.label}
+              {item.quantityG === null ? (
+                <span className="meta" style={{ display: 'block' }}>
+                  quantité à préciser — sans elle, l’aliment n’est pas compté
+                </span>
+              ) : null}
+            </span>
+            <GramsInput
+              value={item.quantityG}
+              label={item.label}
               disabled={busy}
-              onBlur={(e) => {
-                const grams = e.target.value === '' ? null : Number(e.target.value);
-                if (grams === item.quantityG) return;
-                send(draft.map((d, i) => (i === index ? { ...d, quantityG: grams } : d)));
-              }}
-              style={{
-                width: 74, padding: '6px 9px', borderRadius: 'var(--radius)',
-                border: '.5px solid var(--border)', fontFamily: 'inherit', fontSize: 13,
-              }}
+              resetKey={item.id}
+              onCommit={(grams) =>
+                send(draft.map((d, i) => (i === index ? { ...d, quantityG: grams } : d)))
+              }
             />
             <button type="button" className="appbar__action" disabled={busy}
                     style={{ color: 'var(--text-muted)' }}
@@ -451,8 +448,8 @@ function IngredientRow({
         <span style={{ fontSize: 13 }}>{ingredient.label}</span>
         <span className="meta">
           {ingredient.quantityG !== null
-            ? `${round(ingredient.quantityG)} g / convive`
-            : `${ingredient.quantity ?? ''} ${ingredient.unit ?? ''} — non converti`}
+            ? `${formatGrams(ingredient.quantityG)} par convive`
+            : `${ingredient.quantity ?? ''} ${(ingredient.unit ?? '').toLowerCase()} — non converti`}
         </span>
       </div>
       {done !== null ? (
@@ -495,6 +492,3 @@ const action: React.CSSProperties = {
   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
   padding: 11, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer',
 };
-
-const round = (value: number | null): string =>
-  value === null ? '—' : String(Math.round(value * 10) / 10);

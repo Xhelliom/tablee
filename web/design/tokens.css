@@ -197,6 +197,14 @@ a { color: inherit; }
 
 .label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 
+/* Les flèches natives d'un input[type=number] volent la place de l'unité sur
+   un champ étroit, et n'aident personne au doigt. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .row {
   display: flex; align-items: center; gap: 11px;
   padding: 9px 12px 9px 9px;

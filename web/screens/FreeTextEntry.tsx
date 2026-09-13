@@ -16,6 +16,7 @@ import { api, type FoodSummary, type Meal, type Slot } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
+import { GramsInput } from '../components/GramsInput.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconClose, IconSearch } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
@@ -160,32 +161,27 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               <div key={`${item.label}-${index}`} className="spread">
                 <span style={{ fontSize: 14, flex: 1, minWidth: 0 }}>
                   {item.label}
+                  {/* Dire avant l'enregistrement ce qui ne sera pas compté, plutôt
+                      que de le découvrir après coup sur un badge « à vérifier ». */}
                   {item.foodId === null ? (
                     <span className="meta" style={{ display: 'block' }}>
                       aliment non rattaché — sans valeurs nutritionnelles
                     </span>
+                  ) : item.grams === null ? (
+                    <span className="meta" style={{ display: 'block' }}>
+                      quantité à préciser — sans elle, l’aliment n’est pas compté
+                    </span>
                   ) : null}
                 </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={item.grams ?? ''}
-                  placeholder="g"
-                  aria-label={`Quantité de ${item.label} en grammes`}
-                  onChange={(e) =>
+                <GramsInput
+                  value={item.grams}
+                  label={item.label}
+                  resetKey={`${item.label}-${index}`}
+                  onCommit={(grams) =>
                     setItems((current) =>
-                      current.map((draft, i) =>
-                        i === index
-                          ? { ...draft, grams: e.target.value === '' ? null : Number(e.target.value) }
-                          : draft,
-                      ),
+                      current.map((draft, i) => (i === index ? { ...draft, grams } : draft)),
                     )
                   }
-                  style={{
-                    width: 74, padding: '7px 9px', borderRadius: 'var(--radius)',
-                    border: '.5px solid var(--border)', fontFamily: 'inherit', fontSize: 14,
-                  }}
                 />
                 <button type="button" className="appbar__action"
                         style={{ color: 'var(--text-muted)' }}

@@ -36,6 +36,18 @@ export function formatPercentRange(min: number | null, max: number | null): stri
   return `entre ${nf.format(min)} et ${nf.format(max)} %`;
 }
 
+/**
+ * Une masse, avec son unité. Passe au kilogramme au-delà de 1 000 g, parce que
+ * « 1,2 kg » se lit et « 1200 g » se compte.
+ *
+ * L'unité fait partie du retour : une quantité sans unité n'est pas une
+ * quantité, et l'oubli ne se voit qu'une fois à l'écran.
+ */
+export function formatGrams(grams: number | null): string {
+  if (grams === null) return 'quantité inconnue';
+  return grams >= 1000 ? `${nf.format(grams / 1000)} kg` : `${nf.format(grams)} g`;
+}
+
 /** Un pourcentage simple, à une décimale, en français. */
 export function formatPercent(value: number | null): string {
   return value === null ? 'indisponible' : `${nf.format(value)} %`;

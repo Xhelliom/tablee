@@ -20,6 +20,7 @@ import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
+import { formatGrams } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
   const { query } = useRoute();
@@ -227,8 +228,6 @@ const row: React.CSSProperties = {
   background: 'var(--surface-2)',
 };
 
-const trim = (value: number): string => String(Math.round(value * 100) / 100);
-
-function formatGrams(grams: number): string {
-  return grams >= 1000 ? `${trim(grams / 1000)} kg` : `${trim(grams)} g`;
-}
+/** Quantité Jow brute (« 0,25 Pièce ») : la fraction se lit mieux en décimal. */
+const trim = (value: number): string =>
+  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value);
