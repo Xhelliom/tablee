@@ -128,32 +128,43 @@ function plantBar(input: BalanceInput): PlantBar {
   let total = 0;
   let plant = 0;
   let classified = 0;
-  let known = 0;
+  /** Tous les grammes de la journée, y compris ceux des repas écartés. */
+  let allGrams = 0;
+  let counted = 0;
 
   for (const meal of input.meals) {
     if (meal.gramsTotal === null) continue;
-    known += 1;
-    total += meal.gramsTotal * meal.share;
+    const grams = meal.gramsTotal * meal.share;
+    allGrams += grams;
+
+    // Un repas dont **aucun** gramme n'est classé n'a pas de part végétale du
+    // tout (§11 : « jamais 0 par défaut »). Le compter au dénominateur
+    // reviendrait à le traiter comme entièrement non végétal, c'est-à-dire à
+    // réintroduire à l'échelle de la journée le zéro qu'on vient de refuser à
+    // l'échelle du repas. C'est le cas courant d'un repas Jow dont les
+    // ingrédients ne sont pas encore rattachés à Ciqual.
+    if ((meal.gramsClassified ?? 0) === 0) continue;
+
+    counted += 1;
+    total += grams;
     plant += (meal.gramsPlant ?? 0) * meal.share;
     classified += (meal.gramsClassified ?? 0) * meal.share;
   }
 
   const average = input.householdPlantAverage7d ?? null;
+  // Part des grammes de la journée dont l'origine est connue — y compris ceux
+  // des repas écartés, sans quoi la couverture dirait 100 % d'un jour dont on
+  // ignore l'essentiel.
+  const coverage = allGrams === 0 ? null : Math.round((classified / allGrams) * 1000) / 10;
 
-  // Aucun gramme classé : « 0 % végétal » serait faux, pas prudent.
-  if (total === 0 || classified === 0) {
-    return {
-      state: 'indisponible',
-      percent: null,
-      coverage: total === 0 ? null : 0,
-      householdAverage7d: average,
-    };
+  if (total === 0) {
+    return { state: 'indisponible', percent: null, coverage, householdAverage7d: average };
   }
 
   return {
-    state: known < input.meals.length || classified < total ? 'partiel' : 'disponible',
+    state: counted < input.meals.length || classified < total ? 'partiel' : 'disponible',
     percent: Math.round((plant / total) * 1000) / 10,
-    coverage: Math.round((classified / total) * 1000) / 10,
+    coverage,
     householdAverage7d: average,
   };
 }

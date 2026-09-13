@@ -121,6 +121,8 @@ export interface Meal {
   recipe: { id: string; title: string; imageUrl: string | null; nutriScore: string | null } | null;
   items: MealItem[];
   participants: { memberId: string; firstName: string; share: number }[];
+  /** Produits de saison de la recette ce mois-ci — 0 tant que la table est vide. */
+  seasonalCount: number;
   nutrition: {
     kcal: number | null;
     proteinG: number | null;

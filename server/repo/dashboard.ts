@@ -114,8 +114,14 @@ export async function weekGrid(
     `select (m.eaten_at at time zone $4)::date::text as date,
             mp.member_id,
             count(*)::int as meals,
-            sum(n.grams_plant * mp.share) as plant,
-            sum(n.grams_total * mp.share) as total,
+            -- Même règle que bilanJournalier : un repas dont aucun gramme
+            -- n'est classé est écarté du rapport, pas compté comme non
+            -- végétal. Sinon la grille de la semaine et le bilan du jour
+            -- donneraient deux chiffres différents pour la même journée.
+            sum(n.grams_plant * mp.share)
+              filter (where coalesce(n.grams_classified, 0) > 0) as plant,
+            sum(n.grams_total * mp.share)
+              filter (where coalesce(n.grams_classified, 0) > 0) as total,
             sum(n.grams_classified * mp.share) as classified
      from meal m
      join meal_participant mp on mp.meal_id = m.id

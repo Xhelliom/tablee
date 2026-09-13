@@ -264,6 +264,137 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
   });
 
+
+  // ── anti-friction : templates et restes (§6bis) ───────────────────────────
+
+  describe('templates et restes', () => {
+    it('rejoue un template avec les coefficients du jour, pas ceux d’hier', async () => {
+      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const enfant = await addMember('Enfant', '2016-01-01', 0.5);
+      const pain = await insertFood(pool, 'Pain complet', { kcal: 250, protein: 9 }, true);
+
+      const { body: origine } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
+        participants: [{ memberId: papa }, { memberId: enfant }],
+        items: [{ foodId: pain, label: 'Pain', quantity: 100, unit: 'g', quantityG: 100 }],
+      });
+
+      const { status, body: cree } = await call('POST', '/api/templates', {
+        mealId: origine.meal.id, name: 'Petit-déj de la maison',
+      });
+      assert.equal(status, 201);
+      assert.equal(cree.template.useCount, 0);
+
+      // L'enfant grandit entre la création du template et son usage.
+      await call('PATCH', `/api/members/${enfant}`, { portionCoef: 1 });
+
+      const applique = await call('POST', `/api/templates/${cree.template.id}/apply`, {
+        slot: 'petit_dej',
+      });
+      assert.equal(applique.status, 201);
+      for (const p of applique.body.meal.participants) assert.equal(p.share, 0.5);
+      assert.equal(applique.body.meal.nutrition.kcal, 250);
+      assert.equal(applique.body.meal.source, 'template');
+
+      // Le repas d'origine, lui, n'a pas bougé (R2).
+      const { body: inchange } = await call('GET', `/api/meals/${origine.meal.id}`);
+      const parts = Object.fromEntries(
+        inchange.meal.participants.map((p: any) => [p.memberId, p.share]),
+      );
+      assert.equal(parts[papa], 0.667);
+      assert.equal(parts[enfant], 0.333);
+
+      const { body: liste } = await call('GET', '/api/templates');
+      assert.equal(liste.templates[0].useCount, 1);
+    });
+
+    it('ne propose en restes que les plats à recette des 3 derniers jours', async () => {
+      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const { rows } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Gratin de courgettes', 4) returning id`,
+      );
+      const recipeId = rows[0]!.id;
+
+      // Un plat d'hier, avec recette : proposé.
+      const hier = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { body: source } = await call('POST', '/api/meals', {
+        eaten_at: hier, slot: 'diner', source: 'jow', recipe_id: recipeId, servings: 4,
+        participants: [{ memberId: papa }],
+      });
+      // Un repas sans recette : jamais proposé, il n'y a rien à resservir.
+      await call('POST', '/api/meals', {
+        eaten_at: hier, slot: 'dejeuner', source: 'texte',
+        participants: [{ memberId: papa }],
+      });
+      // Un plat d'il y a dix jours : hors fenêtre.
+      await pool.query(
+        `insert into meal (household_id, eaten_at, slot, source, recipe_id)
+         values ($1, now() - interval '10 days', 'diner', 'jow', $2)`,
+        [householdId, recipeId],
+      );
+
+      const { body } = await call('GET', '/api/meals/leftovers?days=3');
+      assert.equal(body.meals.length, 1);
+      assert.equal(body.meals[0].id, source.meal.id);
+
+      // Le 2e service pointe la même recette et garde sa traçabilité, sans
+      // contrainte sur la somme des parts (§6bis).
+      const { body: restes } = await call('POST', '/api/meals', {
+        eaten_at: new Date().toISOString(), slot: 'dejeuner', source: 'jow',
+        recipe_id: recipeId, servings: 1.5, leftover_of: source.meal.id,
+        participants: [{ memberId: papa }],
+      });
+      assert.ok(restes.meal !== undefined, JSON.stringify(restes));
+      assert.equal(restes.meal.leftoverOf, source.meal.id);
+      assert.equal(restes.meal.recipe.id, recipeId);
+
+      // Et il ne se propose pas lui-même comme reste d'un reste.
+      const { body: apres } = await call('GET', '/api/meals/leftovers?days=3');
+      assert.equal(apres.meals.length, 1);
+    });
+
+    it('repère un repas qui revient trois fois, et se tait après le template', async () => {
+      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
+
+      for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
+        await call('POST', '/api/meals', {
+          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          participants: [{ memberId: papa }],
+          items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
+        });
+      }
+
+      const { body } = await call('GET', '/api/templates/suggestions');
+      assert.equal(body.suggestions.length, 1);
+      assert.equal(body.suggestions[0].occurrences, 3);
+      assert.equal(body.suggestions[0].slot, 'petit_dej');
+
+      // Une fois le template créé, la suggestion disparaît : on ne propose pas
+      // de créer ce qui existe.
+      await call('POST', '/api/templates', {
+        mealId: body.suggestions[0].mealId, name: 'Petit-déj',
+      });
+      const { body: apres } = await call('GET', '/api/templates/suggestions');
+      assert.deepEqual(apres.suggestions, []);
+    });
+
+    it('ne suggère rien pour deux occurrences', async () => {
+      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
+      for (const day of ['2026-09-12', '2026-09-13']) {
+        await call('POST', '/api/meals', {
+          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          participants: [{ memberId: papa }],
+          items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
+        });
+      }
+      const { body } = await call('GET', '/api/templates/suggestions');
+      assert.deepEqual(body.suggestions, []);
+    });
+  });
+
   // ── tables livrées vides ──────────────────────────────────────────────────
 
   describe('tables livrées vides (§17)', () => {

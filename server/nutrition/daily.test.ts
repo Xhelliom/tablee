@@ -183,3 +183,31 @@ describe('age', () => {
     assert.throws(() => ageAt('pas une date'));
   });
 });
+
+describe('bilanJournalier — repas dont l’origine est totalement inconnue', () => {
+  it('ne les compte pas comme non végétaux', () => {
+    // Un repas Jow dont aucun ingrédient n'est rattaché à Ciqual : sa part
+    // végétale est `null`, pas 0. L'agrégat journalier doit l'ignorer, sinon
+    // le zéro refusé au niveau du repas se réintroduit au niveau du jour.
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: [],
+      meals: [
+        repas({ share: 1, gramsTotal: 300, gramsPlant: 300, gramsClassified: 300 }),
+        repas({ share: 1, gramsTotal: 700, gramsPlant: 0, gramsClassified: 0 }),
+      ],
+    });
+    assert.equal(result.plant.percent, 100);
+    assert.equal(result.plant.state, 'partiel', 'un repas a été écarté : il faut le dire');
+    // 300 g classés sur les 1 000 g de la journée : la couverture le dit.
+    assert.equal(result.plant.coverage, 30);
+  });
+
+  it('reste indisponible si aucun repas n’est classé', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: [],
+      meals: [repas({ share: 1, gramsTotal: 700, gramsPlant: 0, gramsClassified: 0 })],
+    });
+    assert.equal(result.plant.percent, null);
+    assert.equal(result.plant.state, 'indisponible');
+  });
+});

@@ -96,7 +96,8 @@ export function HistoryScreen(): React.ReactElement {
               {[...dayMeals]
                 .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
                 .map((meal) => (
-                  <MealCard key={meal.id} meal={meal} onOpen={(id) => navigate(`/repas/${id}`)} />
+                  <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
+                            onOpen={(id) => navigate(`/repas/${id}`)} />
                 ))}
             </div>
           </section>

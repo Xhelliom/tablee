@@ -78,6 +78,12 @@ export interface Meal {
   items: MealItem[];
   participants: MealParticipant[];
   nutrition: StoredNutrition | null;
+  /**
+   * Nombre de produits de saison de la recette, ce mois-ci (§8bis) — le badge
+   * de la carte de repas. Vaut 0 tant que `seasonal_produce` n'est pas saisie,
+   * et le badge ne s'affiche alors pas.
+   */
+  seasonalCount: number;
 }
 
 export interface StoredNutrition {
@@ -103,7 +109,10 @@ export async function createMeal(
   const { rows } = await client.query<{ id: string }>(
     `insert into meal (household_id, eaten_at, slot, source, recipe_id, servings,
                        leftover_of, guest_count, raw_input, note, created_by)
-     values ($1, $2, $3, $4, $5, coalesce($6, 1), $7, coalesce($8, 0), $9, $10, $11)
+     -- Les casts ne sont pas décoratifs : sans eux Postgres déduit le type du
+     -- littéral de coalesce, et « 2,5 parts » échoue en entier invalide.
+     values ($1, $2::timestamptz, $3, $4, $5, coalesce($6::numeric, 1), $7,
+             coalesce($8::int, 0), $9, $10, $11)
      returning id`,
     [
       householdId, input.eatenAt, input.slot, input.source, input.recipeId ?? null,
@@ -448,6 +457,20 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
     [ids],
   );
 
+  // Croisement recipe_ingredient × seasonal_produce pour tous les repas d'un
+  // coup : une requête par carte affichée serait un N+1 pour un badge.
+  const { rows: seasonRows } = await db.query<{ meal_id: string; count: number }>(
+    `select m.id as meal_id, count(distinct sp.id)::int as count
+     from meal m
+     join recipe_ingredient ri on ri.recipe_id = m.recipe_id
+     join seasonal_produce sp on sp.food_id = ri.food_id
+     where m.id = any($1::uuid[])
+       and extract(month from m.eaten_at) = any(sp.months)
+     group by m.id`,
+    [ids],
+  );
+  const seasonal = new Map(seasonRows.map((r) => [r.meal_id, r.count]));
+
   const { rows: partRows } = await db.query<{
     meal_id: string; member_id: string; first_name: string; share: number;
   }>(
@@ -497,6 +520,7 @@ async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
           },
     items: itemsByMeal.get(row.id) ?? [],
     participants: partsByMeal.get(row.id) ?? [],
+    seasonalCount: seasonal.get(row.id) ?? 0,
     nutrition:
       row.confidence === null
         ? null

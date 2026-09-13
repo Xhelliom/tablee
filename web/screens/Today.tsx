@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type DashboardResponse } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { MealCard } from '../components/MealCard.tsx';
+import { NutrientBars } from '../components/NutrientBars.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
 import { IconPlus } from '../icons.tsx';
@@ -18,6 +19,8 @@ import {
 export function TodayScreen(): React.ReactElement {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Anneau ouvert : les cinq barres en % de la personne (§13). */
+  const [openMember, setOpenMember] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -36,6 +39,7 @@ export function TodayScreen(): React.ReactElement {
     (a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot),
   );
   const [hero, ...rest] = meals;
+  const open = data.dashboard.find((entry) => entry.member.id === openMember) ?? null;
 
   return (
     <>
@@ -51,8 +55,13 @@ export function TodayScreen(): React.ReactElement {
           <button
             key={member.id}
             type="button"
-            onClick={() => navigate(`/membres?membre=${member.id}`)}
-            style={{ background: 'none', border: 0, padding: 0, textAlign: 'center', cursor: 'pointer' }}
+            onClick={() => setOpenMember((current) => (current === member.id ? null : member.id))}
+            aria-expanded={openMember === member.id}
+            aria-label={`Détail du bilan de ${member.firstName}`}
+            style={{
+              background: 'none', border: 0, padding: 0, textAlign: 'center', cursor: 'pointer',
+              opacity: openMember === null || openMember === member.id ? 1 : .45,
+            }}
           >
             <NutrientRing balance={balance} firstName={member.firstName} />
             <p style={{ marginTop: 3, fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -66,6 +75,29 @@ export function TodayScreen(): React.ReactElement {
           </button>
         ) : null}
       </div>
+
+      {/* §13 — « les 5 barres en % » par personne. L'anneau les résume, le
+          détail les déplie : un tap, sans quitter l'accueil. */}
+      {open !== null ? (
+        <section className="sec" style={{ paddingBottom: 16 }}>
+          <div className="card" style={{ padding: '14px 15px' }}>
+            <div className="spread" style={{ alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontSize: 15 }}>{open.member.firstName}</p>
+                <p className="meta" style={{ marginTop: 2 }}>
+                  {open.balance.mealCount === 0
+                    ? 'Aucun repas enregistré aujourd’hui'
+                    : `${open.balance.mealCount} repas aujourd’hui`}
+                </p>
+              </div>
+              <NutrientBars balance={open.balance} />
+            </div>
+            <p className="meta" style={{ marginTop: 12, lineHeight: 1.5 }}>
+              {plantSentence(open.balance)}
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <Legend />
 
@@ -87,10 +119,12 @@ export function TodayScreen(): React.ReactElement {
 
       <div className="sec stack" style={{ paddingBottom: 18 }}>
         {hero !== undefined ? (
-          <MealCard meal={hero} hero onOpen={(id) => navigate(`/repas/${id}`)} />
+          <MealCard meal={hero} hero seasonalCount={hero.seasonalCount}
+                    onOpen={(id) => navigate(`/repas/${id}`)} />
         ) : null}
         {rest.map((meal) => (
-          <MealCard key={meal.id} meal={meal} onOpen={(id) => navigate(`/repas/${id}`)} />
+          <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
+                    onOpen={(id) => navigate(`/repas/${id}`)} />
         ))}
 
         <button
@@ -122,6 +156,21 @@ function headline(count: number): string {
 
 function addLabel(count: number): string {
   return count === 0 ? 'Enregistrer un repas' : 'Ajouter un repas';
+}
+
+/**
+ * §8 — la barre Végétal se lit en tendance, pas en objectif : la valeur du
+ * jour et la moyenne du foyer sur sept jours. Aucune cible chiffrée (R7, I5).
+ */
+function plantSentence(balance: { plant: { percent: number | null; householdAverage7d: number | null } }): string {
+  const { percent, householdAverage7d } = balance.plant;
+  if (percent === null) {
+    return 'Part végétale indisponible : les aliments du jour ne sont pas rattachés au référentiel.';
+  }
+  if (householdAverage7d === null) {
+    return `Part végétale du jour : ${percent} %.`;
+  }
+  return `Part végétale du jour : ${percent} % — moyenne du foyer sur 7 jours : ${householdAverage7d} %.`;
 }
 
 function Legend(): React.ReactElement {
