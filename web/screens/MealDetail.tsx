@@ -15,16 +15,19 @@
  * l'on change qui était à table.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { api, type FoodSummary, type Meal, type RecipeIngredient } from '../api.ts';
+import {
+  api, type FoodSummary, type Meal, type MealItem, type RecipeIngredient,
+} from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
-import { IconBowl, IconStar, IconTrash } from '../icons.tsx';
+import { IconBowl, IconClose, IconPlus, IconStar, IconTrash } from '../icons.tsx';
 import {
-  BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, longDate,
+  BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
+  SLOT_WHEN, longDate,
 } from '../design/vocabulary.ts';
 
 export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactElement {
@@ -189,25 +192,53 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
         </section>
       ) : null}
 
-      {meal.items.length > 0 ? (
+      {/* V2 — éditer un repas passé : le créneau et la composition, pas
+          seulement les convives. Une erreur de saisie se corrige la semaine
+          suivante, quand on la voit dans l'historique. */}
+      {meal.recipe === null ? (
+        <Composition
+          items={meal.items}
+          busy={busy}
+          onChange={(items) => { void patch({ items }); }}
+        />
+      ) : meal.items.length > 0 ? (
         <section style={row}>
-          <p className="label">Composition</p>
+          <p className="label">Ajouté au plat</p>
           <div className="stack" style={{ gap: 7 }}>
             {meal.items.map((item) => (
               <div key={item.id} className="spread">
                 <span style={{ fontSize: 13 }}>{item.label}</span>
                 <span className="meta">
-                  {item.quantityG !== null
-                    ? `${round(item.quantityG)} g`
-                    : item.unit !== null
-                      ? `${item.quantity ?? ''} ${item.unit} — à préciser`
-                      : 'quantité inconnue'}
+                  {item.quantityG !== null ? `${round(item.quantityG)} g` : 'quantité inconnue'}
                 </span>
               </div>
             ))}
           </div>
         </section>
       ) : null}
+
+      <section className="spread" style={row}>
+        <span style={{ fontSize: 14 }}>Quel repas</span>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {SLOT_ORDER.map((option) => (
+            <button
+              key={option}
+              type="button"
+              disabled={busy}
+              onClick={() => { void patch({ slot: option }); }}
+              style={{
+                fontSize: 13, padding: '5px 11px', borderRadius: 'var(--radius)',
+                border: option === meal.slot ? '.5px solid var(--coral)' : '.5px solid var(--border)',
+                background: option === meal.slot ? 'var(--coral)' : 'transparent',
+                color: option === meal.slot ? '#fff' : 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              {SLOT_WHEN[option]}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* ── Édition (V2) ──────────────────────────────────────────────────── */}
       <section className="spread" style={row}>
@@ -255,6 +286,121 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       </section>
       <div className="fab-space" />
     </div>
+  );
+}
+
+/**
+ * La composition d'un repas hors-Jow, éditable.
+ *
+ * Les modifications partent au serveur au `blur` et non à chaque frappe : une
+ * requête par caractère ferait recalculer la nutrition dix fois pour rien.
+ */
+function Composition({
+  items, busy, onChange,
+}: {
+  items: MealItem[];
+  busy: boolean;
+  onChange: (items: { foodId: string | null; label: string; quantity: number | null; unit: string | null; quantityG: number | null }[]) => void;
+}): React.ReactElement {
+  const [draft, setDraft] = useState(items);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<FoodSummary[]>([]);
+
+  useEffect(() => { setDraft(items); }, [items]);
+
+  const send = (next: MealItem[]): void => {
+    setDraft(next);
+    onChange(next.map((item) => ({
+      foodId: item.foodId,
+      label: item.label,
+      quantity: item.quantityG,
+      unit: item.quantityG === null ? null : 'g',
+      quantityG: item.quantityG,
+    })));
+  };
+
+  const search = async (text: string): Promise<void> => {
+    setQuery(text);
+    if (text.trim().length < 2) { setResults([]); return; }
+    const { foods } = await api.get<{ foods: FoodSummary[] }>(
+      `/api/foods/search?q=${encodeURIComponent(text)}&limit=6`,
+    );
+    setResults(foods);
+  };
+
+  return (
+    <section style={row}>
+      <p className="label">Composition</p>
+      <div className="stack" style={{ gap: 7 }}>
+        {draft.map((item, index) => (
+          <div key={item.id} className="spread">
+            <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{item.label}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              defaultValue={item.quantityG ?? ''}
+              placeholder="g"
+              aria-label={`Quantité de ${item.label} en grammes`}
+              disabled={busy}
+              onBlur={(e) => {
+                const grams = e.target.value === '' ? null : Number(e.target.value);
+                if (grams === item.quantityG) return;
+                send(draft.map((d, i) => (i === index ? { ...d, quantityG: grams } : d)));
+              }}
+              style={{
+                width: 74, padding: '6px 9px', borderRadius: 'var(--radius)',
+                border: '.5px solid var(--border)', fontFamily: 'inherit', fontSize: 13,
+              }}
+            />
+            <button type="button" className="appbar__action" disabled={busy}
+                    style={{ color: 'var(--text-muted)' }}
+                    aria-label={`Retirer ${item.label}`}
+                    onClick={() => send(draft.filter((_, i) => i !== index))}>
+              <IconClose size={16} />
+            </button>
+          </div>
+        ))}
+        {draft.length === 0 ? <p className="meta">Rien d’enregistré dans ce repas.</p> : null}
+      </div>
+
+      <input
+        className="field"
+        style={{ marginTop: 10, fontSize: 14 }}
+        value={query}
+        placeholder="Ajouter un aliment…"
+        onChange={(e) => { void search(e.target.value); }}
+      />
+      {results.length > 0 ? (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0' }}>
+          {results.map((food) => (
+            <li key={food.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  send([
+                    ...draft,
+                    { id: food.id, foodId: food.id, label: food.name, quantity: null,
+                      unit: null, quantityG: null, position: draft.length,
+                      foodName: food.name, plantBased: food.plantBased },
+                  ]);
+                  setQuery('');
+                  setResults([]);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+                  padding: '7px 2px', fontSize: 13, background: 'none', border: 0,
+                  borderBottom: '.5px solid var(--border)', textAlign: 'left', cursor: 'pointer',
+                }}
+              >
+                <IconPlus size={14} />
+                {food.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
