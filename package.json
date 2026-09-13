@@ -12,7 +12,11 @@
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
     "jow:capture": "node --import tsx scripts/jow-capture.ts",
     "migrate": "node --import tsx scripts/migrate.ts",
-    "seed:food": "node --import tsx scripts/seed-food.ts"
+    "seed:food": "node --import tsx scripts/seed-food.ts",
+    "start": "node --import tsx server/index.ts",
+    "dev": "node --import tsx --watch server/index.ts",
+    "household": "node --import tsx scripts/create-household.ts",
+    "test:db": "node --import tsx --test \"server/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -20,7 +24,11 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/static": "^10.1.3",
+    "@node-rs/argon2": "^2.2.1",
     "@types/pg": "^8.23.1",
+    "fastify": "^5.12.4",
     "pg": "^8.23.0"
   }
 }

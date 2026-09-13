@@ -64,6 +64,18 @@ export interface ParsedRecipe {
   greenScore: string | null;
   confidence: Confidence;
   /**
+   * Le nœud `props.pageProps.recipe` tel que publié, destiné à `recipe.raw`.
+   *
+   * C'est la seule partie exploitable de `__NEXT_DATA__` — le reste est de la
+   * plomberie Next.js. Le garder permet de rejouer un parsing sans refetcher
+   * le jour où Jow bouge, ce qui est précisément le scénario contre lequel le
+   * contrat met en garde (§1 de `docs/jow-contract.md`).
+   *
+   * Il ne contient aucun secret de partage : il vient de la page publique, pas
+   * du texte partagé, et c'est ce dernier seul qui porte `key` / `userId` (I6).
+   */
+  raw: unknown;
+  /**
    * Ce qui manquait ou n'a pas pu être résolu. Destiné à être remonté à
    * l'utilisateur, pas seulement loggué : une donnée absente doit se voir.
    */
