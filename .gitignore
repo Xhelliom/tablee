@@ -1,5 +1,23 @@
 node_modules/
 dist/
+
+# Secrets : identifiants Postgres, clé API du LLM (R4 — elle ne doit jamais
+# atteindre le bundle client, ni le dépôt).
 .env
 .env.*
 !.env.example
+
+# Données du foyer. Rien de tout ça n'a sa place dans un dépôt : prénoms,
+# dates de naissance, allergènes, photos de repas vivent en base sur le
+# serveur, et nulle part ailleurs.
+uploads/
+photos/
+*.dump
+*.sql.gz
+db/backups/
+db/seed-foyer*.sql
+
+# Exports Ciqual / Open Food Facts : volumineux, et rejouables par
+# `scripts/seed-food.ts` depuis la source d'origine.
+data/ciqual/
+data/off/

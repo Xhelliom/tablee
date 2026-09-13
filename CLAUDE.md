@@ -178,3 +178,15 @@ Une tâche est terminée quand :
 
 Signaler explicitement tout endroit où une donnée manquait et a été laissée
 vide : c'est le comportement attendu, pas un échec.
+
+---
+
+## Ce qui ne rentre jamais dans le dépôt
+
+Le code et les documents sont génériques. Les données du foyer vivent en base
+sur le serveur, jamais ici : prénoms, dates de naissance, allergènes, photos de
+repas, textes de partage bruts (ils portent le token `key`), dumps Postgres.
+
+Un seed qui crée un foyer de démonstration utilise des prénoms fictifs. Le
+`.gitignore` couvre les cas connus ; y ajouter un chemin coûte moins cher que
+de réécrire l'historique.
