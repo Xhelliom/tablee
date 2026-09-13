@@ -28,21 +28,21 @@ describe('calculerShares', () => {
 
   it('répartit proportionnellement aux coefficients', () => {
     const shares = calculerShares([
-      { memberId: 'papa', portionCoef: 1 },
-      { memberId: 'lea', portionCoef: 0.5 },
+      { memberId: 'adulte', portionCoef: 1 },
+      { memberId: 'enfant', portionCoef: 0.5 },
     ]);
     assert.deepEqual(shares, [
-      { memberId: 'papa', share: 0.667 },
-      { memberId: 'lea', share: 0.333 },
+      { memberId: 'adulte', share: 0.667 },
+      { memberId: 'enfant', share: 0.333 },
     ]);
   });
 
   // ── Test structurant n° 2 (§15) ────────────────────────────────────────────
   it('avec des invités, Σ < 1 et les assiettes du foyer ne gonflent pas', () => {
     const foyer = [
-      { memberId: 'papa', portionCoef: 1 },
-      { memberId: 'maman', portionCoef: 1 },
-      { memberId: 'lea', portionCoef: 0.5 },
+      { memberId: 'adulte-1', portionCoef: 1 },
+      { memberId: 'adulte-2', portionCoef: 1 },
+      { memberId: 'enfant', portionCoef: 0.5 },
     ];
     const sans = calculerShares(foyer, 0);
     const avec = calculerShares(foyer, 2);
@@ -62,8 +62,8 @@ describe('calculerShares', () => {
   });
 
   it('un invité compte pour un adulte de référence', () => {
-    const seul = calculerShares([{ memberId: 'papa', portionCoef: 1 }], 1);
-    assert.deepEqual(seul, [{ memberId: 'papa', share: 0.5 }]);
+    const seul = calculerShares([{ memberId: 'adulte', portionCoef: 1 }], 1);
+    assert.deepEqual(seul, [{ memberId: 'adulte', share: 0.5 }]);
   });
 
   it('ne rend rien quand personne n’était à table', () => {

@@ -3,8 +3,8 @@
  *
  * Le client envoie qui était présent ; **jamais les parts** (§12). Celles-ci
  * sont calculées par le serveur depuis les `portion_coef` du moment, puis
- * figées (R2). L'écran n'en montre pas non plus : « Léa a eu 0,167 du plat »
- * n'aide personne et installe une comptabilité que l'app refuse.
+ * figées (R2). L'écran n'en montre pas non plus : « 0,167 du plat » n'aide
+ * personne à table, et installe la comptabilité que l'app refuse (R7).
  */
 import type { Member } from '../api.ts';
 import { IconCheck } from '../icons.tsx';

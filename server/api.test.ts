@@ -132,40 +132,40 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('repas', () => {
     it('calcule les parts côté serveur, et refuse celles du client', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const enfant = await addMember('Enfant', '2016-01-01', 0.5);
 
       const refuse = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ member_id: papa, share: 0.9 }],
+        participants: [{ member_id: adulte, share: 0.9 }],
       });
       assert.equal(refuse.status, 400);
 
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }, { memberId: enfant }],
+        participants: [{ memberId: adulte }, { memberId: enfant }],
       });
       const shares = Object.fromEntries(
         body.meal.participants.map((p: { memberId: string; share: number }) => [p.memberId, p.share]),
       );
-      assert.equal(shares[papa], 0.667);
+      assert.equal(shares[adulte], 0.667);
       assert.equal(shares[enfant], 0.333);
-      assert.equal(shares[papa] + shares[enfant], 1);
+      assert.equal(shares[adulte] + shares[enfant], 1);
     });
 
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
-      const maman = await addMember('Maman', '1987-01-01', 1);
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
+      const adulte2 = await addMember('Adulte deux', '1987-01-01', 1);
 
       const sans = await call('POST', '/api/meals', {
         eaten_at: '2026-09-12T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }, { memberId: maman }],
+        participants: [{ memberId: adulte }, { memberId: adulte2 }],
       });
       const avec = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
         guest_count: 2,
-        participants: [{ memberId: papa }, { memberId: maman }],
+        participants: [{ memberId: adulte }, { memberId: adulte2 }],
       });
 
       const total = (b: any): number =>
@@ -178,12 +178,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
     // ── Test structurant n° 3 (§15) — R2 ────────────────────────────────────
     it('modifier un portion_coef ne change aucun repas passé', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const enfant = await addMember('Enfant', '2016-01-01', 0.5);
 
       const { body: avant } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }, { memberId: enfant }],
+        participants: [{ memberId: adulte }, { memberId: enfant }],
       });
       const mealId = avant.meal.id;
       const partsAvant = avant.meal.participants.map((p: any) => [p.memberId, p.share]).sort();
@@ -200,19 +200,19 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       // Et le repas suivant, lui, prend bien le nouveau coefficient.
       const { body: suivant } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-14T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }, { memberId: enfant }],
+        participants: [{ memberId: adulte }, { memberId: enfant }],
       });
       for (const p of suivant.meal.participants) assert.equal(p.share, 0.5);
     });
 
     it('recalcule la nutrition à la modification, sans toucher aux parts', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const enfant = await addMember('Enfant', '2016-01-01', 0.5);
       const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
 
       const { body: creation } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
-        participants: [{ memberId: papa }, { memberId: enfant }],
+        participants: [{ memberId: adulte }, { memberId: enfant }],
         items: [{ foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 }],
       });
       assert.equal(creation.meal.nutrition.kcal, 130);
@@ -226,10 +226,10 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('n’écrit jamais le jeton d’un lien de partage dans raw_input (I6)', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
         raw_input:
           'Galette végé https://jow.fr/r?recipeId=650b16ade7cc8d0013ce4a6e&key=SECRET42&userId=abc123',
       });
@@ -243,10 +243,10 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne rend que les repas du foyer de la session', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
       });
 
       const { rows } = await pool.query<{ id: string }>(
@@ -269,13 +269,13 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   describe('templates et restes', () => {
     it('rejoue un template avec les coefficients du jour, pas ceux d’hier', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const enfant = await addMember('Enfant', '2016-01-01', 0.5);
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250, protein: 9 }, true);
 
       const { body: origine } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
-        participants: [{ memberId: papa }, { memberId: enfant }],
+        participants: [{ memberId: adulte }, { memberId: enfant }],
         items: [{ foodId: pain, label: 'Pain', quantity: 100, unit: 'g', quantityG: 100 }],
       });
 
@@ -301,7 +301,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const parts = Object.fromEntries(
         inchange.meal.participants.map((p: any) => [p.memberId, p.share]),
       );
-      assert.equal(parts[papa], 0.667);
+      assert.equal(parts[adulte], 0.667);
       assert.equal(parts[enfant], 0.333);
 
       const { body: liste } = await call('GET', '/api/templates');
@@ -309,7 +309,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne propose en restes que les plats à recette des 3 derniers jours', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const { rows } = await pool.query<{ id: string }>(
         `insert into recipe (source, jow_recipe_id, title, base_servings)
          values ('jow', '650b16ade7cc8d0013ce4a6e', 'Gratin de courgettes', 4) returning id`,
@@ -320,12 +320,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const hier = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const { body: source } = await call('POST', '/api/meals', {
         eaten_at: hier, slot: 'diner', source: 'jow', recipe_id: recipeId, servings: 4,
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
       });
       // Un repas sans recette : jamais proposé, il n'y a rien à resservir.
       await call('POST', '/api/meals', {
         eaten_at: hier, slot: 'dejeuner', source: 'texte',
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
       });
       // Un plat d'il y a dix jours : hors fenêtre.
       await pool.query(
@@ -343,7 +343,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { body: restes } = await call('POST', '/api/meals', {
         eaten_at: new Date().toISOString(), slot: 'dejeuner', source: 'jow',
         recipe_id: recipeId, servings: 1.5, leftover_of: source.meal.id,
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
       });
       assert.ok(restes.meal !== undefined, JSON.stringify(restes));
       assert.equal(restes.meal.leftoverOf, source.meal.id);
@@ -355,13 +355,13 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('repère un repas qui revient trois fois, et se tait après le template', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
 
       for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
-          participants: [{ memberId: papa }],
+          participants: [{ memberId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
       }
@@ -381,12 +381,12 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('ne suggère rien pour deux occurrences', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
       for (const day of ['2026-09-12', '2026-09-13']) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
-          participants: [{ memberId: papa }],
+          participants: [{ memberId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
       }
@@ -421,11 +421,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
 
     it('demande l’unité plutôt que de la deviner tant que unit_default est vide', async () => {
-      const papa = await addMember('Papa', '1985-01-01', 1, 'M');
+      const adulte = await addMember('Adulte', '1985-01-01', 1, 'M');
       const salade = await insertFood(pool, 'Salade verte', { kcal: 15 }, true);
       const { body } = await call('POST', '/api/meals', {
         eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
-        participants: [{ memberId: papa }],
+        participants: [{ memberId: adulte }],
         items: [{ foodId: salade, label: 'Salade', quantity: 1, unit: 'Poignée', quantityG: null }],
       });
       assert.equal(body.meal.items[0].quantityG, null);
