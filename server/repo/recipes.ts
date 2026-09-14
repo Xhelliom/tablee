@@ -39,6 +39,94 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
+/**
+ * Une recette du foyer, telle que la liste la montre — sans ses ingrédients,
+ * qui ne servent qu'à l'écran de détail.
+ *
+ * `lastEatenAt` est ce qui rend la liste utile : ce qui n'a jamais été mangé
+ * est ce qu'on cherche, et ce qui l'a été hier est ce qu'on ne veut pas
+ * reproposer. Les deux se distinguent ici, pas dans l'écran.
+ */
+export interface RecipeSummary {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  baseServings: number;
+  nutriScore: string | null;
+  confidence: Confidence;
+  /** `null` = importée, jamais enregistrée comme repas. */
+  lastEatenAt: string | null;
+  timesEaten: number;
+}
+
+/**
+ * Marque une recette comme connue du foyer courant (011).
+ *
+ * ⚠️ Sans cet appel, une recette Jow lue mais jamais mangée n'est rattachée à
+ * **aucun** foyer : elle est globale par construction (007). Elle
+ * n'apparaîtrait donc dans la liste de personne — et lister les recettes
+ * globales à la place montrerait à chaque foyer ce que ses voisins ont lu.
+ *
+ * Idempotent : on repasse ici à chaque lecture du même partage.
+ */
+export async function markRecipeKnown(
+  db: HouseholdDb, householdId: string, recipeId: string,
+): Promise<void> {
+  await db.query(
+    `insert into household_recipe (household_id, recipe_id)
+     values ($1, $2) on conflict do nothing`,
+    [householdId, recipeId],
+  );
+}
+
+/**
+ * Les recettes que **ce foyer** connaît, la moins récemment mangée d'abord.
+ *
+ * Elles sont déjà toutes en base : `saveJowRecipe` écrit la recette à la
+ * lecture du partage, avant que le repas soit enregistré. Une recette lue puis
+ * abandonnée reste donc là — c'est exactement le stock que cette liste rend
+ * visible, et il n'y avait jusqu'ici aucun écran pour le voir.
+ *
+ * Le passage par `household_recipe` n'est pas une précaution de style : une
+ * recette Jow est globale, et lire `recipe` directement rendrait aussi celles
+ * des autres foyers (§16).
+ *
+ * Les restes (`leftover_of`) comptent comme un repas de plus : ils disent que
+ * le plat a bien été mangé, ce jour-là, par ces convives.
+ */
+export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeSummary[]> {
+  const { rows } = await db.query<{
+    id: string; title: string; image_url: string | null; base_servings: number;
+    nutri_score: string | null; confidence: Confidence;
+    last_eaten_at: Date | null; times_eaten: string;
+  }>(
+    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.confidence,
+            max(m.eaten_at) as last_eaten_at,
+            count(m.id)     as times_eaten
+     from household_recipe hr
+     join recipe r on r.id = hr.recipe_id
+     -- Les repas sont déjà filtrés au foyer courant par la RLS : le compte est
+     -- celui de cette table, pas celui de l'instance.
+     left join meal m on m.recipe_id = r.id
+     group by r.id, hr.first_seen_at
+     -- nulls first : jamais mangée passe devant, c'est ce qu'on cherche.
+     order by max(m.eaten_at) asc nulls first, hr.first_seen_at desc
+     limit $1`,
+    [limit],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    imageUrl: row.image_url,
+    baseServings: row.base_servings,
+    nutriScore: row.nutri_score,
+    confidence: row.confidence,
+    lastEatenAt: row.last_eaten_at === null ? null : row.last_eaten_at.toISOString(),
+    timesEaten: Number(row.times_eaten),
+  }));
+}
+
 export async function findRecipeByJowId(db: HouseholdDb, jowRecipeId: string): Promise<Recipe | null> {
   const { rows } = await db.query<{ id: string }>(
     "select id from recipe where source = 'jow' and jow_recipe_id = $1",

@@ -72,7 +72,14 @@ export interface RecipeSnapshot {
 }
 
 export interface MealInput {
-  /** Parts préparées. Le snapshot Jow est par portion : il se multiplie. */
+  /**
+   * Parts **mangées à ce repas** — le snapshot Jow est par portion, il se
+   * multiplie, et le total est ensuite réparti entre les convives présents
+   * (§11). Ce n'est donc pas ce qui est sorti de la casserole : un plat pour 4
+   * mangé à moitié vaut 2 ici, et le reste est un second repas le lendemain
+   * (§6bis). L'écran disait « parts préparées », ce qui invitait à compter des
+   * portions que personne n'avait mangées — corrigé le 14/09/2026.
+   */
   servings: number;
   source: 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
   recipe: RecipeSnapshot | null;

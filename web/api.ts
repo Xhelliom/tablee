@@ -276,6 +276,19 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
+/** Une recette du foyer, telle que la liste « Mes recettes » la montre. */
+export interface RecipeSummary {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  baseServings: number;
+  nutriScore: string | null;
+  confidence: Confidence;
+  /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
+  lastEatenAt: string | null;
+  timesEaten: number;
+}
+
 export interface ResolveResponse {
   recipe: Recipe | null;
   /** Présent seulement si la recette n'a pas pu être persistée. */

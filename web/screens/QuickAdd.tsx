@@ -23,18 +23,19 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import {
-  IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
+  IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
 } from '../icons.tsx';
 import { SLOT_LABELS, currentSlot, relativeDay } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
 import { JowLink } from './JowLink.tsx';
+import { Recipes } from './Recipes.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
   const { eaters } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
-  const [mode, setMode] = useState<'menu' | 'manuel' | 'lien'>('menu');
+  const [mode, setMode] = useState<'menu' | 'manuel' | 'lien' | 'recettes'>('menu');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +101,7 @@ export function QuickAddScreen(): React.ReactElement {
 
   if (mode === 'manuel') return <FreeTextEntry onClose={() => setMode('menu')} />;
   if (mode === 'lien') return <JowLink onClose={() => setMode('menu')} />;
+  if (mode === 'recettes') return <Recipes onClose={() => setMode('menu')} />;
 
   return (
     <div className="app">
@@ -182,7 +184,7 @@ export function QuickAddScreen(): React.ReactElement {
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {capitalize(relativeDay(meal.eatenAt))} · {trim(meal.servings)} part
-                    {meal.servings > 1 ? 's' : ''} préparée{meal.servings > 1 ? 's' : ''}
+                    {meal.servings > 1 ? 's' : ''} mangée{meal.servings > 1 ? 's' : ''}
                   </span>
                 </span>
                 <IconChevron size={17} style={{ color: 'var(--text-muted)' }} />
@@ -192,7 +194,13 @@ export function QuickAddScreen(): React.ReactElement {
         )}
       </Section>
 
-      <Section title="Depuis Jow">
+      <Section title="Recettes">
+        {/* Devant le collage : ce qui est déjà connu se rejoue sans réseau, et
+            c'est le cas le plus fréquent une fois quelques plats enregistrés. */}
+        <button type="button" onClick={() => setMode('recettes')} style={entry}>
+          <IconBowl size={17} />
+          <span style={{ fontSize: 14 }}>Mes recettes</span>
+        </button>
         <button type="button" onClick={() => setMode('lien')} style={entry}>
           <IconLink size={17} />
           <span style={{ fontSize: 14 }}>Coller un lien Jow</span>

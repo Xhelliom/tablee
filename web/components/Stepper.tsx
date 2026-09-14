@@ -1,5 +1,5 @@
 /**
- * Le « − 4 + » des maquettes : parts préparées, invités.
+ * Le « − 4 + » des maquettes : parts mangées, invités.
  *
  * Un pas, pas un clavier. Saisir « pour combien ? » au clavier numérique sur
  * un téléphone coûte trois gestes de plus, et l'app se joue à un tap près.

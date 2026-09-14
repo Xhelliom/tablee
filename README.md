@@ -62,7 +62,7 @@ TEST_DATABASE_URL=postgres://…/tablee_test npm test   # + tests d'intégration
 
 Sans `TEST_DATABASE_URL`, les suites qui touchent à Postgres sont **sautées
 avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 205
-sur 289, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
+sur 292, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
 l'étanchéité entre eux et au contrat d'API — c'est-à-dire ce qui casse mal.
 
 Le rôle Postgres de cette base **ne doit pas être superutilisateur** — il

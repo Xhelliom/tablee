@@ -284,6 +284,22 @@ friction et des chiffres bidouillés.
 `leftover_of` est facultatif et sert à la traçabilité (afficher « 2ᵉ service du
 plat du 12/09 »). Il n'entre dans aucun calcul.
 
+> **Corrigé le 14/09/2026 — les écrans disaient l'inverse de ce calcul.**
+>
+> `servings` est le nombre de parts **mangées à ce repas** : la nutrition vaut
+> `parts × valeurs par portion`, puis se répartit entre les convives présents
+> (§11). L'exemple ci-dessus le dit déjà — 2,5 puis 1,5 pour un plat prévu
+> pour 4.
+>
+> Les écrans, eux, affichaient « parts préparées », repris des maquettes
+> (`docs/mockups-tablee.html`, la carte « Pour combien ? » et la liste
+> « Restes de… »). Cuisiner pour 4 et en laisser la moitié invitait donc à
+> saisir 4, et le foyer se voyait attribuer deux portions que personne n'avait
+> mangées. Les écrans disent maintenant « parts mangées à ce repas », et
+> proposent « Restes de… » dès que le nombre saisi passe sous `base_servings`.
+> Les maquettes gardent l'ancien mot : elles font autorité sur la mise en page,
+> pas sur la sémantique du calcul.
+
 **Le point critique est dans l'UI, pas dans le modèle.** L'écran d'ajout doit
 proposer un bouton **« Restes de… »** listant les repas des 3 derniers jours
 ayant une `recipe_id` : un tap, on choisit qui mange, c'est enregistré. Sans
@@ -1075,6 +1091,12 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `DELETE` | `/api/templates/:id` | |
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
 > | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
+>
+> **Ajoutée le 14/09/2026** :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
 >
 > **Ajoutées le 13/09/2026 avec les comptes** (§7 renversé) :
 >

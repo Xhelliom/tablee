@@ -292,7 +292,7 @@ npm run build:web && npm start          # dans cet ordre, voir ci-dessous
 
 - **Sans `TEST_DATABASE_URL`, les suites Postgres sont sautées.** Avec un
   message, jamais silencieusement vertes — mais un « tout passe » qui ne prouve
-  rien reste un « tout passe ». Un `npm test` nu en passe 205 sur 289, et
+  rien reste un « tout passe ». Un `npm test` nu en passe 205 sur 292, et
   laisse de côté tout ce qui touche aux comptes, aux foyers, à l'étanchéité et
   au contrat d'API : exactement ce qui casse mal.
 - **Le rôle Postgres ne doit pas être superutilisateur.** Il contournerait la

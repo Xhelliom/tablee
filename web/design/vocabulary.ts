@@ -2,7 +2,7 @@
  * Le vocabulaire produit, en un seul endroit (§8ter).
  *
  * « Qui était à table ? » plutôt que « participants ». « Pour combien ? »
- * plutôt que « parts préparées ». « Ce soir » plutôt que « créneau dîner ».
+ * plutôt que « servings ». « Ce soir » plutôt que « créneau dîner ».
  * Le vocabulaire système est la moitié de l'effet tableau de bord, et il se
  * réintroduit tout seul dès qu'on nomme un libellé depuis le champ de la base.
  *

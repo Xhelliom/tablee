@@ -31,7 +31,7 @@ export function JowLink({ onClose }: { onClose: () => void }): React.ReactElemen
   if (shared !== null) {
     return (
       <SharedRecipe
-        shared={shared}
+        source={{ kind: 'partage', text: shared }}
         heading="Depuis un lien Jow"
         onClose={onClose}
         onManual={() => setShared(null)}
