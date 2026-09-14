@@ -3,15 +3,20 @@
  *
  * Ordre d'apparition, et il compte : la date et ce qui s'est passé, la bande
  * de saison, les anneaux, puis les repas. Le chiffre n'ouvre pas l'écran.
+ * L'assistant de recettes vient en dernier : on le demande, il ne s'impose pas.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { api, type DashboardResponse } from '../api.ts';
+import {
+  ApiError, api, type AssistantRecipesResponse, type DashboardResponse,
+} from '../api.ts';
 import { navigate } from '../router.tsx';
+import { useSession } from '../session.tsx';
+import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientBars } from '../components/NutrientBars.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
-import { IconPlus } from '../icons.tsx';
+import { IconBowl, IconPlus } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_ORDER, longDate,
 } from '../design/vocabulary.ts';
@@ -159,6 +164,8 @@ export function TodayScreen(): React.ReactElement {
           </span>
         </button>
       </div>
+
+      <AssistantRecipes />
       <div className="fab-space" />
     </>
   );
@@ -260,6 +267,119 @@ function Legend(): React.ReactElement {
           {entry.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * « Demander à l'assistant des recettes » : des plats qui rapprochent la
+ * semaine des repères, sur demande et jamais d'office (I4).
+ *
+ * Les recettes affichées viennent de la base — le titre, la photo, la
+ * confiance de Jow ; du modèle ne reviennent qu'un choix et une phrase. Les
+ * idées, elles, viennent du modèle seul : aucune valeur, et un badge qui le
+ * dit (R6). Le texte envoyé se relit sous la liste : ce qui sort du foyer doit
+ * pouvoir se vérifier (R5).
+ *
+ * Absent sans clé API côté serveur, comme l'onglet « Conseils » : pas de bouton
+ * qui mènerait à un refus.
+ */
+function AssistantRecipes(): React.ReactElement | null {
+  const { ia } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [response, setResponse] = useState<AssistantRecipesResponse | null>(null);
+
+  if (!ia) return null;
+
+  const ask = async (): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      setResponse(await api.post<AssistantRecipesResponse>('/api/assistant/recipes'));
+    } catch (caught) {
+      setResponse(null);
+      setError(caught instanceof ApiError ? caught.message : 'l’assistant n’a pas pu être joint');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sec" style={{ paddingBottom: 18 }}>
+      <button type="button" className="btn btn--ghost" disabled={busy}
+              onClick={() => { void ask(); }}>
+        {busy ? 'L’assistant cherche…' : 'Demander à l’assistant des recettes'}
+      </button>
+      {error !== null ? (
+        <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>{error}</p>
+      ) : null}
+
+      {response !== null ? (
+        <div className="stack" style={{ marginTop: 12 }}>
+          {response.proposals.length === 0 && response.ideas.length === 0 ? (
+            <p className="meta">L’assistant n’a retenu aucune recette cette fois.</p>
+          ) : null}
+          {response.proposals.map(({ recipe, reason }) => (
+            <div key={recipe.id} className="card row" style={{ cursor: 'default' }}>
+              {recipe.imageUrl !== null ? (
+                <img src={recipe.imageUrl} alt="" className="thumb" />
+              ) : (
+                <span className="thumb"><IconBowl size={20} /></span>
+              )}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
+                  {recipe.url !== null ? (
+                    <a href={recipe.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+                      {recipe.title}
+                    </a>
+                  ) : recipe.title}
+                </span>
+                {reason !== null ? (
+                  <span className="meta" style={{ display: 'block', marginTop: 3, lineHeight: 1.5 }}>
+                    {reason}
+                  </span>
+                ) : null}
+                {recipe.confidence !== 'haute' ? (
+                  <ConfidenceBadge confidence={recipe.confidence} />
+                ) : null}
+              </span>
+            </div>
+          ))}
+          {response.ideas.length > 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              Idées hors de vos recettes
+            </p>
+          ) : null}
+          {response.ideas.map((idea) => (
+            <div key={idea.title} className="card row" style={{ cursor: 'default' }}>
+              <span className="thumb"><IconBowl size={20} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
+                  {idea.title}
+                </span>
+                <span className="meta" style={{ display: 'block', margin: '3px 0 6px', lineHeight: 1.5 }}>
+                  {idea.reason}
+                </span>
+                {/* R6 : aucune valeur ne vient avec une idée, et ça se voit. */}
+                <ConfidenceBadge confidence="basse" label="Idée de l’assistant — à vérifier" />
+              </span>
+            </div>
+          ))}
+          {response.proposals.length > 0 || response.ideas.length > 0 ? (
+            <p className="meta" style={{ lineHeight: 1.5 }}>
+              L’assistant ne connaît ni les prénoms ni les allergies du foyer :
+              vérifiez ce qu’il propose.
+            </p>
+          ) : null}
+          <details className="meta">
+            <summary style={{ cursor: 'pointer' }}>Ce que l’assistant a reçu</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+              {response.facts}
+            </pre>
+          </details>
+        </div>
+      ) : null}
     </div>
   );
 }

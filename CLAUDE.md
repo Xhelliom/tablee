@@ -56,7 +56,8 @@ server/
   food/           export Ciqual : source épinglée, lecture, mapping des groupes
   jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
   llm/            l'IA (V3) : la seule porte vers Anthropic (index.ts), le
-                  découpage d'un texte libre, l'assistant
+                  découpage d'un texte libre, l'assistant, les recettes de
+                  l'accueil
   test-support/   fabriques de comptes/foyers, base de test, migrations
   *.test.ts       les suites d'intégration vivent à la racine de server/
 web/
@@ -301,6 +302,15 @@ l'invérifiable.
 > l'empêche de glisser vers un jugement sur un enfant ; il ne reçoit **pas
 > l'énergie** ; et **rien n'est stocké**. Brancher `family_note` ou un
 > historique de conversation, c'est la synthèse : relire le §14 d'abord.
+>
+> **Les recettes de l'accueil ont suivi, toujours à sa demande** (bouton
+> « Demander à l'assistant des recettes », `server/llm/recettes.ts`). Même
+> résumé du foyer que les Conseils, plus la liste des recettes Jow connues. Le
+> modèle y **choisit par numéro** — une recette hors liste est jetée — et
+> avance une ou deux idées **sans aucune valeur**, marquées « à vérifier ». Ne
+> pas lui laisser écrire une teneur, ni proposer une recette manuelle : leur
+> titre est écrit par le foyer. Le modèle de toute la couche se règle par
+> `TABLEE_LLM_MODEL` (Sonnet 5 par défaut). Ce qu'il approxime : dette n° 20.
 
 ---
 
