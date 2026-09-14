@@ -456,8 +456,15 @@ est la principale façon de faire échouer la V1.
 >   passe sur le compte qu'il ouvrira ensuite par Google. Sans `TABLEE_MAIL`,
 >   aucune adresse n'est confirmée : la personne entre avec son mot de passe,
 >   et l'écran le lui dit.
-> - **Le retour de Google garde le chemin, pas la query.** Une invitation
->   survit ; un partage Jow reçu sans session est à refaire (dette n° 17).
+> - **Le retour de Google garde l'URL, jetons Jow retirés.** Une invitation
+>   survit, un partage Jow reçu sans session aussi : sa query passe par
+>   `redactRequestUrl` avant d'être confiée à better-auth, qui la garde en base
+>   le temps de l'aller-retour (I6).
+> - **Un compte ouvert par mot de passe lie Google depuis les réglages du
+>   foyer**, en étant connecté. La session prouve le compte, Google prouve le
+>   sien : les deux adresses peuvent différer (`allowDifferentEmails`), à la
+>   différence de la liaison implicite à la connexion. C'est la porte des
+>   comptes jamais confirmés.
 
 
 **Un compte par foyer. Pas de compte individuel.**
