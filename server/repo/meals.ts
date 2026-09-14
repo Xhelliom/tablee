@@ -351,7 +351,9 @@ export async function recomputeNutrition(
   // les redériver, et l'écran de détail peut montrer ce qui a été résolu.
   for (const [index, item] of result.items.entries()) {
     const row = itemRows[index];
-    if (row === undefined || row.quantity_g === item.quantityG) continue;
+    // Une estimation ne se fige pas : elle se redérive à chaque calcul, et suit
+    // les conversions quand le seed change. Seules les mesures sont réécrites.
+    if (row === undefined || row.quantity_g === item.quantityG || item.conversion !== null) continue;
     await client.query('update meal_item set quantity_g = $2 where id = $1', [
       row.id,
       item.quantityG,

@@ -242,6 +242,34 @@ Trois voies, par priorité d'usage :
 > et `Litre` en sont volontairement absents : une pièce de poulet et une pièce
 > de radis n'ont rien en commun, et ces deux-là relèvent de `food.unit_weights`,
 > au cas par cas.
+>
+> **Précisé le 14/09/2026 — `food.unit_weights` a son seed.** Une recherche de
+> sources publiées n'a trouvé **aucune** équivalence générique défendable : la
+> cuillère à soupe va de 5 g (parmesan râpé) à 16 g (beurre de cacahuète), la
+> gousse d'ail de 3 g (USDA) à 5-8 g (Aprifel). Les conversions sourcées sont
+> toutes propres à un aliment ; elles vivent dans `db/seeds/food-unit-weight.csv`
+> (code Ciqual, unité, grammes, source), chargé par `seed:refs`, qui remplace
+> `food.unit_weights` en entier. Deux changements suivent : une conversion par
+> aliment sort en `confidence='moyenne'`, plus en `haute` — une pièce ou une
+> cuillère n'est pas une pesée, et une valeur USDA décrit un produit américain
+> (R6) ; et le déploiement charge Ciqual **avant** les repères, puisque ce fichier
+> s'y rattache par code. Les pesées maison y ont leur place, source datée.
+>
+> **Complété le même jour — un repli dégradé, par forme.** Quand l'aliment n'a
+> pas sa conversion, `unit_default` (migration 013) donne une valeur par unité
+> **et par forme** : une cuillère à soupe vaut 15 g (médiane de 14 mesures USDA
+> de liquides, pâtes et grains), 6,5 g pour une épice ; une cuillère à café 5 g
+> ou 2,2 g ; un litre 1 kg. La forme vient de `food.category`, jamais du nom.
+> Le point 3 ci-dessous change donc : ce repli sort en `confidence='basse'` —
+> « À vérifier » — et non plus `moyenne`. Une cuillère n'est pas une mesure, et
+> ce que ce repli approxime est consigné (dette n° 18). Pièce, poignée, gousse,
+> bouquet et tranche n'en ont pas : aucun volume sur quoi s'appuyer.
+>
+> Deux défauts de branchement corrigés au passage : les ingrédients d'une
+> recette Jow ne passaient jamais par la résolution d'unité — une cuillère de
+> sauce ne comptait pas dans la part végétale —, et l'écran de la recette
+> montrait les grammes figés à l'import. Il les résout maintenant à la lecture,
+> avec leur confiance.
 
 Les recettes Jow utilisent des unités non métriques (`1 poignée`, `1/10 botte`,
 `×1 steak`). Le calcul nutritionnel exige des grammes.

@@ -1,42 +1,53 @@
-# unit_default — équivalences génériques d'unités en grammes (§6 de la spec)
+# unit_default — le dernier recours d'une unité vers des grammes (§6 de la spec)
 #
 # RÈGLE ABSOLUE : aucune ligne sans `source`. Le chargeur refuse un fichier qui
-# en manque une. Tant qu'une unité n'est pas ici, l'app **demande la quantité à
-# l'utilisateur** au lieu de la deviner — c'est le comportement attendu, pas
-# une panne.
+# en manque une.
 #
-# ── Ce qu'il y a à peser ────────────────────────────────────────────────────
+# ⚠️ Renversé le 14/09/2026. Ce fichier attendait des pesées maison, une valeur
+# par unité pour tous les aliments. Une recherche de sources publiées a montré
+# qu'aucune équivalence générique ne tient : une cuillère à soupe pèse de 13,5 à
+# 21 g d'un liquide, d'une pâte ou de grains, et 6 à 7 g d'une épice en poudre.
+# Ce qui est sourcé est propre à un aliment, et vit dans `food-unit-weight.csv`.
 #
-# Les unités ci-dessous sont celles que Jow emploie réellement, inventoriées au
-# §4 de docs/jow-contract.md sur 8 recettes. Pour les remplir : un bol sur la
-# balance, tare, et on pèse. Trois fois, on garde la moyenne. « Pesée maison,
-# <date> » est une source parfaitement valable — c'est même la meilleure, parce
-# que c'est votre poignée, pas celle d'une moyenne nationale.
+# Ce fichier porte donc le **dernier recours** : une valeur par unité et par
+# forme, médiane de ces mesures publiées. L'app l'affiche « À vérifier »
+# (confidence='basse'). Une cuillère n'est pas un instrument : à quelques
+# grammes près, c'est ce qu'on sait dire. Il ne sert que quand l'aliment n'a pas
+# sa propre conversion.
 #
-# ── Deux unités volontairement absentes de ce fichier ───────────────────────
+# ── Formes (migration 013) ──────────────────────────────────────────────────
+#   tout    toutes les formes : liquides, pâtes, grains
+#   poudre  les épices (`food.category = 'epice'`). La farine et le sucre ont
+#           leur ligne propre dans `food-unit-weight.csv` ; les autres poudres
+#           prennent `tout`, et c'est la limite du repli (dette n° 18).
 #
-# `Pièce` et `Litre` n'ont pas de valeur générique défendable :
+# ── Sources ─────────────────────────────────────────────────────────────────
+#   volumes    21 CFR 101.9(b)(5)(viii), FDA : « a teaspoon means 5 milliliters
+#              (mL), a tablespoon means 15 mL, a cup means 240 mL »
+#   mesures    USDA FoodData Central, SR Legacy (avril 2018), food_portion.csv
+#   densités   FAO/INFOODS Density Database v2.0 (FAO, 2012), « Density in g/ml »
 #
-#   Pièce  une pièce de poulet et une pièce de radis n'ont rien en commun.
-#          Cette conversion appartient à l'aliment : `food.unit_weights`,
-#          renseigné au cas par cas (« {"piece": 1200} » pour un poulet entier).
-#   Litre  passer d'un volume à une masse demande une densité. 35 ml d'huile ne
-#          pèsent pas 35 g. Même raison au §4 du contrat Jow.
-#
-# Leur donner une valeur générique ici produirait des grammes plausibles et
-# faux sur tous les aliments à la fois (I1).
+# ── Ce qui reste volontairement vide ────────────────────────────────────────
+#   Pièce               une pièce de poulet et une pièce de radis n'ont rien en
+#                       commun : cette conversion appartient à l'aliment.
+#   Poignée, Gousse,    aucune publication ne les mesure (recherche du
+#   Bouquet, Tranche    14/09/2026). Une pesée maison, par aliment, dans
+#                       `food-unit-weight.csv`, les convertit.
 #
 # ── Colonnes ────────────────────────────────────────────────────────────────
 #   unit    libellé tel que Jow le publie (la comparaison ignore casse/accents)
-#   grams   le poids mesuré, en grammes
-#   source  d'où vient la valeur. « Pesée maison, 09/2026 » convient.
+#   forme   tout ou poudre ; vide = tout
+#   grams   le poids d'une unité, en grammes
+#   source  d'où vient la valeur, calcul compris
 #
-unit,grams,source
-# Les cinq lignes ci-dessous attendent leur pesée. Tant que `grams` et `source`
-# sont vides, le chargeur les ignore et le signale — il ne charge pas un
-# fichier à moitié rempli en silence.
-Poignée,,
-Gousse,,
-Bouquet,,
-Tranche,,
-Cuillère à soupe,,
+unit,forme,grams,source
+Cuillère à soupe,tout,15,"Médiane de 14 portions USDA SR Legacy 2018-04, 1 tbsp (13,5 à 21 g) : huile d'olive 13,5 ; huile d'arachide 13,5 ; huile de tournesol 13,6 ; huile de sésame 13,6 ; mayonnaise 13,8 ; beurre 14,2 ; vinaigre de cidre 14,9 ; crème liquide entière 15 ; sauce soja shoyu 16 ; vinaigre balsamique 16 ; ketchup 17 ; sauce soja tamari 18 ; sel 18 ; miel 21 → 14,95"
+Cuillère à soupe,poudre,6.5,"Médiane de 4 portions USDA SR Legacy 2018-04, 1 tbsp (épices) : cumin en graines 6 ; curry 6,3 ; paprika 6,8 ; poivre noir moulu 6,9 → 6,55"
+Cuillère à café,tout,5,"Médiane de 11 portions USDA SR Legacy 2018-04, 1 tsp (4,2 à 6 g) : sucre 4,2 ; huiles d'olive, d'arachide, de tournesol, de sésame 4,5 ; moutarde 5 ; vinaigre de cidre 5 ; sauce soja shoyu 5,3 ; vinaigre balsamique 5,3 ; sauce soja tamari 6 ; sel 6 → 5"
+Cuillère à café,poudre,2.2,"Médiane de 4 portions USDA SR Legacy 2018-04, 1 tsp (épices) : curry 2 ; cumin en graines 2,1 ; paprika 2,3 ; poivre noir moulu 2,3 → 2,2"
+Litre,tout,1000,"Densité de l'eau, 1 g/mL. Liquides courants mesurés (FAO/INFOODS Density DB v2.0) : vin blanc 0,9925 ; lait entier 1,030 à 1,031 ; lait demi-écrémé 1,034 g/mL, soit à 3 % près. Une huile, plus légère, est surestimée."
+# Les unités ci-dessous n'ont pas de repli : l'app demande la quantité.
+Poignée,,,
+Gousse,,,
+Bouquet,,,
+Tranche,,,

@@ -256,6 +256,12 @@ export interface RecipeIngredient {
   quantity: number | null;
   unit: string | null;
   quantityG: number | null;
+  /**
+   * Quand les grammes sont estimés depuis une cuillère, une pièce, un litre :
+   * `moyenne` pour une conversion propre à l'aliment, `basse` pour un repli par
+   * défaut. `null` quand ils sont mesurés.
+   */
+  estimate: 'moyenne' | 'basse' | null;
   optional: boolean;
   position: number;
 }

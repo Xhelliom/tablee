@@ -1,0 +1,92 @@
+# food.unit_weights — conversions propres à un aliment (§6 de la spec)
+#
+# RÈGLE ABSOLUE : aucune ligne sans `source`, et une source qu'on a lue soi-même.
+# Une valeur trouvée par un moteur de recherche ou par un modèle se vérifie dans
+# le document d'origine avant d'entrer ici (I1).
+#
+# ── Pourquoi par aliment, et pas dans unit-default.csv ──────────────────────
+#
+# Aucune équivalence générique publiée ne tient (recherche du 14/09/2026) : une
+# cuillère à soupe pèse 5 g de parmesan râpé et 16 g de beurre de cacahuète, une
+# gousse d'ail 3 g pour l'USDA et 5 à 8 g pour Aprifel. Une valeur par unité,
+# pour tous les aliments à la fois, serait fausse presque partout.
+#
+# ── Ce que l'app en fait ────────────────────────────────────────────────────
+#
+# `npm run seed:refs` remplace `food.unit_weights` en entier à partir de ce
+# fichier : retirer une ligne retire la conversion. Une conversion sort en
+# « Estimation » (confidence='moyenne') — une pièce ou une cuillère n'est pas une
+# pesée. La source n'est pas recopiée en base (dette n° 14) : ce fichier est la
+# trace.
+#
+# ── Colonnes ────────────────────────────────────────────────────────────────
+#   ciqual_code  le code de l'aliment dans Ciqual (`food.external_id`). Jamais
+#                de rattachement par ressemblance de nom.
+#   aliment      son nom Ciqual, pour la relecture — le chargeur l'ignore
+#   unit         l'unité telle que Jow l'écrit (casse et accents ignorés)
+#   grams        le poids d'une unité, en grammes
+#   source       d'où vient la valeur. « Pesée maison, <date> » convient.
+#
+# Sources citées :
+#   densités   FAO/INFOODS Density Database v2.0 (FAO, 2012), feuille
+#              « Density DB », colonne « Density in g/ml »
+#   portions   USDA FoodData Central, SR Legacy (avril 2018), food_portion.csv
+#   volumes    21 CFR 101.9(b)(5)(viii), FDA : « a teaspoon means 5 milliliters
+#              (mL), a tablespoon means 15 mL, a cup means 240 mL » — sert aux
+#              lignes « Calculé », qui passent d'une cuillère à l'autre
+# La cuillère à soupe de l'USDA vaut 14,8 mL, la française 15 mL : 1 % d'écart,
+# sous la précision de la mesure.
+#
+ciqual_code,aliment,unit,grams,source
+19041,"Lait demi-écrémé, UHT",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
+19042,"Lait demi-écrémé, pasteurisé",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
+19023,"Lait entier, UHT",Litre,1030,"FAO/INFOODS Density DB v2.0, « Milk, liquid, whole » : 1,030 g/ml (TB) et 1,031 g/ml (DK)"
+19024,"Lait entier, pasteurisé",Litre,1030,"FAO/INFOODS Density DB v2.0, « Milk, liquid, whole » : 1,030 g/ml (TB) et 1,031 g/ml (DK)"
+5215,"Vin blanc (sec)",Litre,992.5,"FAO/INFOODS Density DB v2.0, « Wine, table, white » : 0,9925 g/ml (USDA)"
+12120,Parmesan,Cuillère à soupe,5,"USDA SR Legacy 2018-04, FDC 171247 « Cheese, parmesan, grated » : 1 tbsp = 5 g"
+15202,"Beurre de cacahuète ou Pâte d'arachide",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 172470 « Peanut butter, smooth style, without salt » : 2 tbsp = 32 g"
+17270,"Huile d'olive vierge extra",Cuillère à soupe,13.5,"USDA SR Legacy 2018-04, FDC 171413 « Oil, olive, salad or cooking » : 1 tablespoon = 13.5 g"
+17270,"Huile d'olive vierge extra",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171413 « Oil, olive, salad or cooking » : 1 tsp = 4.5 g"
+17440,"Huile de tournesol",Cuillère à soupe,13.6,"USDA SR Legacy 2018-04, FDC 171025 « Oil, sunflower, linoleic, (approx. 65%) » : 1 tbsp = 13.6 g"
+17440,"Huile de tournesol",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171025 « Oil, sunflower, linoleic, (approx. 65%) » : 1 tsp = 4.5 g"
+17400,"Huile de sésame",Cuillère à soupe,13.6,"USDA SR Legacy 2018-04, FDC 171016 « Oil, sesame, salad or cooking » : 1 tablespoon = 13.6 g"
+17400,"Huile de sésame",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171016 « Oil, sesame, salad or cooking » : 1 tsp = 4.5 g"
+17040,"Huile d'arachide",Cuillère à soupe,13.5,"USDA SR Legacy 2018-04, FDC 171410 « Oil, peanut, salad or cooking » : 1 tbsp = 13.5 g"
+17040,"Huile d'arachide",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171410 « Oil, peanut, salad or cooking » : 1 tsp = 4.5 g"
+11104,"Sauce soja, préemballée",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 174277 « Soy sauce made from soy and wheat (shoyu) » : 1 tbsp = 16 g"
+11104,"Sauce soja, préemballée",Cuillère à café,5.3,"USDA SR Legacy 2018-04, FDC 174277 « Soy sauce made from soy and wheat (shoyu) » : 1 tsp = 5.3 g"
+31008,Miel,Cuillère à soupe,21,"USDA SR Legacy 2018-04, FDC 169640 « Honey » : 1 tbsp = 21 g"
+16400,"Beurre à 82% MG, doux",Cuillère à soupe,14.2,"USDA SR Legacy 2018-04, FDC 173430 « Butter, without salt » : 1 tbsp = 14.2 g"
+11090,"Vinaigre de cidre",Cuillère à soupe,14.9,"USDA SR Legacy 2018-04, FDC 173469 « Vinegar, cider » : 1 tbsp = 14.9 g"
+11090,"Vinaigre de cidre",Cuillère à café,5,"USDA SR Legacy 2018-04, FDC 173469 « Vinegar, cider » : 1 tsp = 5 g"
+11091,"Vinaigre balsamique",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 172241 « Vinegar, balsamic » : 1 tbsp = 16 g"
+11091,"Vinaigre balsamique",Cuillère à café,5.3,"USDA SR Legacy 2018-04, FDC 172241 « Vinegar, balsamic » : 1 tsp = 5.3 g"
+11008,"Ketchup, préemballé",Cuillère à soupe,17,"USDA SR Legacy 2018-04, FDC 168556 « Catsup » : 1 tbsp = 17 g"
+11054,"Mayonnaise (70% MG min.), préemballée",Cuillère à soupe,13.8,"USDA SR Legacy 2018-04, FDC 171009 « Salad dressing, mayonnaise, regular » : 1 tbsp = 13.8 g"
+11017,"Sel blanc alimentaire, non iodé, non fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11017,"Sel blanc alimentaire, non iodé, non fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11058,"Sel blanc alimentaire, iodé, non fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11058,"Sel blanc alimentaire, iodé, non fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11096,"Sel blanc alimentaire, iodé, fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11096,"Sel blanc alimentaire, iodé, fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11015,"Poivre noir, poudre",Cuillère à soupe,6.9,"USDA SR Legacy 2018-04, FDC 170931 « Spices, pepper, black » : 1 tbsp, ground = 6.9 g"
+11015,"Poivre noir, poudre",Cuillère à café,2.3,"USDA SR Legacy 2018-04, FDC 170931 « Spices, pepper, black » : 1 tsp, ground = 2.3 g"
+11049,Paprika,Cuillère à soupe,6.8,"USDA SR Legacy 2018-04, FDC 171329 « Spices, paprika » : 1 tbsp = 6.8 g"
+11049,Paprika,Cuillère à café,2.3,"USDA SR Legacy 2018-04, FDC 171329 « Spices, paprika » : 1 tsp = 2.3 g"
+11005,"Curry, poudre",Cuillère à soupe,6.3,"USDA SR Legacy 2018-04, FDC 170924 « Spices, curry powder » : 1 tbsp = 6.3 g"
+11005,"Curry, poudre",Cuillère à café,2,"USDA SR Legacy 2018-04, FDC 170924 « Spices, curry powder » : 1 tsp = 2 g"
+11042,"Cumin, graine",Cuillère à soupe,6,"USDA SR Legacy 2018-04, FDC 170923 « Spices, cumin seed » : 1 tbsp, whole = 6 g"
+11042,"Cumin, graine",Cuillère à café,2.1,"USDA SR Legacy 2018-04, FDC 170923 « Spices, cumin seed » : 1 tsp, whole = 2.1 g"
+11013,Moutarde,Cuillère à café,5,"USDA SR Legacy 2018-04, FDC 172234 « Mustard, prepared, yellow » : 1 tsp or 1 packet = 5 g"
+11013,Moutarde,Cuillère à soupe,15,"Calculé : 1 tsp = 5 g (USDA SR Legacy 2018-04, FDC 172234 « Mustard, prepared, yellow ») × 3, une cuillère à soupe valant trois cuillères à café (21 CFR 101.9(b)(5)(viii) : 15 mL et 5 mL)"
+31016,"Sucre blanc",Cuillère à café,4.2,"USDA SR Legacy 2018-04, FDC 169655 « Sugars, granulated » : 1 tsp = 4.2 g"
+31016,"Sucre blanc",Cuillère à soupe,12.6,"Calculé : 1 tsp = 4.2 g (USDA SR Legacy 2018-04, FDC 169655 « Sugars, granulated ») × 3 (21 CFR 101.9(b)(5)(viii) : 15 mL et 5 mL)"
+9440,"Farine de blé tendre ou froment T45 (pour pâtisserie)",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16, une tasse valant seize cuillères à soupe (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9436,"Farine de blé tendre ou froment T55 (pour pains)",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9435,"Farine de blé tendre ou froment T65",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9445,"Farine de blé tendre ou froment T80",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+# Sans source fiable à ce jour — à peser, source « Pesée maison, <date> ».
+# L'œuf : l'USDA donne 38 à 63 g selon le calibre, et Jow ne dit pas lequel.
+# L'ail : 3 g pour l'USDA, 5 à 8 g pour Aprifel, sans méthode ni l'un ni l'autre.
+22000,"Oeuf, cru",Pièce,,
+11000,"Ail, cru",Gousse,,

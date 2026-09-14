@@ -65,10 +65,12 @@ spec:
           command: ['/bin/sh', '-c']
           args:
             - |
-              node --import tsx scripts/seed-refs.ts \
-                || echo '⚠️  repères ANSES non chargés : les anneaux diront « indisponible ».'
+              # Ciqual d'abord : les conversions par aliment et la saisonnalité
+              # se rattachent à ses codes, qu'une base neuve n'a pas encore.
               node --import tsx scripts/seed-food.ts --dir=/ciqual \
                 || echo '⚠️  référentiel Ciqual non chargé : la recherche d’aliments sera vide.'
+              node --import tsx scripts/seed-refs.ts \
+                || echo '⚠️  repères ANSES non chargés : les anneaux diront « indisponible ».'
               exit 0
           env:
             - name: DATABASE_URL

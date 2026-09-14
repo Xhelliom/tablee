@@ -154,17 +154,23 @@ besoins d'un nourrisson ne sont pas ceux d'un enfant de 4 ans en plus petit, et
 c'est l'âge où une valeur plausible et fausse fait le plus de dégâts. Les
 barres affichent « repère indisponible ».
 
-### Ce qu'il y a à peser pour `unit_default`
+### Ce qu'il y a à peser
 
-Un bol sur la balance, tare, et on pèse : une poignée de salade, une gousse
-d'ail épluchée, un bouquet de persil, une tranche de pain, une cuillère à
-soupe rase d'huile. Trois fois chacune, on garde la moyenne. « Pesée maison,
-09/2026 » est une source valable — c'est même la meilleure, parce que c'est
-votre poignée.
+Les cuillères et le litre ont un repli dans `unit_default` (« À vérifier »), et
+une quarantaine d'aliments courants leur conversion propre, sourcée, dans
+`db/seeds/food-unit-weight.csv`. Ce qui reste sans aucune valeur, c'est ce
+qu'aucune publication ne mesure : une poignée de salade, une gousse d'ail
+épluchée, un bouquet de persil, une tranche de pain, un œuf. Un bol sur la
+balance, tare, et on pèse, trois fois ; on garde la moyenne et on l'écrit par
+aliment dans `food-unit-weight.csv`. « Pesée maison, 09/2026 » est une source
+valable — c'est même la meilleure, parce que c'est votre poignée.
 
 `Pièce` et `Litre` n'ont volontairement pas de valeur générique : une pièce de
 poulet et une pièce de radis n'ont rien en commun, et 35 ml d'huile ne pèsent
-pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas.
+pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas : une
+ligne par aliment dans `db/seeds/food-unit-weight.csv` (code Ciqual, unité,
+grammes, source), puis `npm run seed:refs`. Un œuf pesé chez vous y va aussi,
+avec « Pesée maison, <date> » pour source.
 
 ## Où se trouve quoi
 

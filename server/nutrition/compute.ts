@@ -27,7 +27,7 @@
  */
 import type { Confidence } from '../jow/types.ts';
 import type { MealSource } from '../repo/meals.ts';
-import { resolveUnit, type UnitDefaults, type UnitSource } from './units.ts';
+import { resolveUnit, type UnitConfidence, type UnitDefaults, type UnitSource } from './units.ts';
 
 export type { Confidence };
 
@@ -99,6 +99,12 @@ export interface ResolvedItem extends NutritionItem {
   quantityG: number | null;
   /** Message à afficher quand la résolution a échoué. */
   unresolved: string | null;
+  /**
+   * Confiance de la conversion d'unité quand les grammes sont une estimation
+   * (pièce, cuillère, litre). `null` quand ils sont mesurés : donnés en
+   * grammes, ou convertis depuis une masse.
+   */
+  conversion: UnitConfidence | null;
 }
 
 export interface MealNutrition extends Macros {
@@ -152,6 +158,10 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
   }
 
   const items = meal.items.map((item) => resolve(item, defaults, warnings));
+  // Les ingrédients Jow passent par la même résolution : sans elle, une cuillère
+  // de sauce ne comptait jamais dans la part végétale. Leurs manques se disent
+  // déjà sur l'écran de la recette (`recipeGaps`) — pas une seconde fois ici.
+  const recipeItems = (meal.recipeIngredients ?? []).map((item) => resolve(item, defaults, []));
 
   let macros: Macros;
   let maxima: Macros;
@@ -188,20 +198,22 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
 
   confidence = worst(confidence, PLAFOND[meal.source]);
 
-  const plant = plantRatio(meal, items, servings, warnings);
+  const plant = plantRatio(recipeItems, items, servings, warnings);
 
   return { ...macros, max: maxima, ...plant, confidence, warnings, items };
 }
 
 function resolve(item: NutritionItem, defaults: UnitDefaults, warnings: string[]): ResolvedItem {
-  if (item.quantityG !== null) return { ...item, unresolved: null };
+  if (item.quantityG !== null) return { ...item, unresolved: null, conversion: null };
 
   const resolution = resolveUnit(item.quantity, item.unit, item.food, defaults);
   if (resolution.resolved) {
-    return { ...item, quantityG: resolution.grams, unresolved: null };
+    // Une masse est une mesure ; le reste est une estimation, qui doit se voir (R6).
+    const conversion = resolution.via === 'masse' ? null : resolution.confidence;
+    return { ...item, quantityG: resolution.grams, unresolved: null, conversion };
   }
   warnings.push(`« ${item.label} » : ${resolution.reason}`);
-  return { ...item, quantityG: null, unresolved: resolution.reason };
+  return { ...item, quantityG: null, unresolved: resolution.reason, conversion: null };
 }
 
 /**
@@ -257,6 +269,7 @@ function sum(
       continue;
     }
 
+    if (item.conversion !== null) confidence = worst(confidence, item.conversion);
     counted += 1;
     const ratio = item.quantityG / 100;
     for (const nutrient of NUTRIENTS) {
@@ -317,14 +330,14 @@ function sum(
  *   « 0 % végétal » sur un gratin de courgettes serait faux.
  */
 function plantRatio(
-  meal: MealInput,
+  recipeItems: ResolvedItem[],
   items: ResolvedItem[],
   servings: number,
   warnings: string[],
 ): Pick<MealNutrition, 'plantRatio' | 'gramsTotal' | 'gramsPlant' | 'gramsClassified'> {
   // Les ingrédients Jow sont donnés **par convive** : c'est le seul endroit où
   // `servings` les met à l'échelle (§3 du contrat Jow).
-  const fromRecipe = (meal.recipeIngredients ?? []).map((ingredient) => ({
+  const fromRecipe = recipeItems.map((ingredient) => ({
     ...ingredient,
     quantityG: ingredient.quantityG === null ? null : ingredient.quantityG * servings,
   }));
@@ -358,6 +371,9 @@ function plantRatio(
       gramsPlant: 0,
       gramsClassified: 0,
     };
+  }
+  if (all.some((item) => item.quantityG !== null && item.conversion === 'basse')) {
+    warnings.push('part végétale calculée en partie sur des quantités à vérifier (cuillères, litres)');
   }
   if (classified < total) {
     const share = Math.round((classified / total) * 100);

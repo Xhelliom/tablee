@@ -16,7 +16,7 @@ export interface FoodSummary {
 }
 
 interface ValuesRow {
-  id: string; name: string; plant_based: boolean | null;
+  id: string; name: string; plant_based: boolean | null; category: string | null;
   kcal_100g: number | null; protein_100g: number | null; carb_100g: number | null;
   fat_100g: number | null; fiber_100g: number | null;
   kcal_100g_max: number | null; protein_100g_max: number | null;
@@ -28,6 +28,7 @@ const toValues = (row: ValuesRow): FoodValues => ({
   name: row.name,
   plantBased: row.plant_based,
   unitWeights: row.unit_weights,
+  category: row.category,
   per100g: {
     kcal: row.kcal_100g,
     proteinG: row.protein_100g,
@@ -49,7 +50,7 @@ const toValues = (row: ValuesRow): FoodValues => ({
 export async function loadFoodValues(db: UnscopedDb, ids: string[]): Promise<Map<string, FoodValues>> {
   if (ids.length === 0) return new Map();
   const { rows } = await db.query<ValuesRow>(
-    `select id, name, plant_based,
+    `select id, name, plant_based, category,
             kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g,
             kcal_100g_max, protein_100g_max, carb_100g_max, fat_100g_max, fiber_100g_max,
             unit_weights

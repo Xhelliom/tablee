@@ -150,6 +150,15 @@ Sur ces points, demander plutôt que choisir :
    0-3 ans, et les tranches prolongées au-delà de 69/59 ans.
 2. **Contenu de `unit_default`** — chaque ligne exige une `source`. Toujours
    vide. Gabarit commenté dans `db/seeds/unit-default.csv`.
+   Précisé le 14/09/2026 : aucune source publiée ne donne d'équivalence
+   **générique** défendable (une cuillère à soupe va de 5 à 16 g selon
+   l'aliment). Les conversions sourcées sont propres à un aliment et vont dans
+   `db/seeds/food-unit-weight.csv` ; elles sortent en « Estimation ». Même règle :
+   pas de ligne sans source, et une valeur trouvée par un modèle se vérifie dans
+   la source elle-même avant d'entrer.
+   `unit_default` n'est plus vide : c'est un **repli par forme** (013), médiane
+   de ces mesures, affiché « À vérifier ». Ne pas lui rendre `moyenne` ni en
+   faire la règle — une ligne par aliment passe toujours avant (dette n° 18).
 3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
    vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
 4. ~~**Stocker le poids**~~ — tranché le 14/09/2026 : oui, pour les **majeurs

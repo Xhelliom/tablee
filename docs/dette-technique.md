@@ -356,6 +356,13 @@ trois caractères dans l'`insert`. À faire quand la table se remplira — elle
 est vide aujourd'hui, et sa saisie manuelle est justement l'un des points du
 « ne pas décider seul ».
 
+**Même compromis, depuis le 14/09/2026, pour les conversions par aliment**
+(`db/seeds/food-unit-weight.csv`, `loadFoodUnitWeights`). La source est exigée
+sur chaque ligne, puis ne suit pas : `food.unit_weights` est un jsonb de
+grammes. L'app dit « Estimation », pas « 1 tbsp = 5 g selon l'USDA ». Le
+lever demanderait de passer le jsonb à `{"grams", "source"}` — ou une table à
+part — et de relire les deux formes dans `loadFoodValues`.
+
 
 ---
 
@@ -458,6 +465,30 @@ de la réponse — un second appel, ou une liste de motifs refusés — et ni l'
 ni l'autre n'est complet. C'est pour ça que l'écran dit « vérifiez ce qu'il
 propose » et que rien n'est gardé : une réponse fausse ne survit pas à la
 conversation.
+
+---
+
+## 18. Le repli d'une cuillère est une médiane, pas une mesure
+
+**Où** — `db/seeds/unit-default.csv`, `resolveUnit` et `formOf`
+(`server/nutrition/units.ts`), migration 013.
+
+Quand un aliment n'a pas sa conversion propre, une cuillère à soupe vaut 15 g
+(médiane de 14 mesures USDA de liquides, pâtes et grains, de 13,5 à 21 g),
+6,5 g pour une épice, et un litre 1 kg. L'app l'affiche « À vérifier ».
+
+**Ce que ça coûte.** La forme ne se lit que sur la catégorie `epice`. Une
+poudre rangée ailleurs prend le repli commun : levure chimique, fécule, cacao
+soluble, sucre glace sortent à 15 g la cuillère pour 6 à 8 g réels, le double.
+Le miel, à 21 g, est sous-estimé d'un quart. Un litre d'huile est surestimé de
+quelques pour cent. Rien de cela ne touche les valeurs nutritionnelles d'un
+repas Jow, qui viennent de sa fiche : seulement la part végétale, et un repas
+saisi en cuillères.
+
+**Ce qui le lèverait.** Une ligne par aliment dans `food-unit-weight.csv` pour
+les poudres qu'on emploie vraiment — c'est ce qui a été fait pour la farine et
+le sucre —, ou une forme déclarée par sous-groupe Ciqual plutôt que par
+catégorie.
 
 ---
 
