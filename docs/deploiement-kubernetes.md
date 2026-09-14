@@ -97,7 +97,13 @@ Job de seed.
 
 **L'export Ciqual** — 57 Mo de XML publiés par l'ANSES, inchangés depuis 2020.
 Les embarquer alourdirait chaque image de chaque déploiement pour une donnée
-qui ne bouge pas. Le seed est un geste d'opérateur : voir plus bas.
+qui ne bouge pas.
+
+Ce qui est dans l'image, en revanche, c'est son **empreinte** :
+`db/seeds/ciqual-source.json`. Le seed va chercher l'archive au premier
+démarrage qui en a besoin et refuse de l'importer si elle ne correspond pas.
+C'est donc l'image qui décide quelle table Ciqual tourne, et un déploiement
+suffit à en changer — voir « Le référentiel alimentaire » plus bas.
 
 **Aucun secret.** `TABLEE_SECRET` et `DATABASE_URL` viennent de
 l'environnement. Rien dans l'image, rien dans le dépôt.
@@ -196,6 +202,99 @@ seed les prend tels quels, sans rien télécharger.
 doivent se voir** : une teneur absente, à l'état de traces ou sous le seuil de
 quantification est écrite `NULL`, jamais `0` (I1).
 
+### 3bis. Ce que le cluster doit permettre
+
+Le seed tourne dans le pod, à chaque déploiement. Quatre points à vérifier une
+fois, dans l'ordre de ce qui fait échouer pour de bon.
+
+**Une sortie HTTPS vers `ciqual.anses.fr`.** Elle s'ajoute à celle vers
+`jow.fr`, que l'app utilise déjà pour lire une recette partagée : un cluster
+qui laisse passer la seconde laisse passer la première. La différence est la
+fréquence — le seed ne sort que lorsque `referential_import` ne correspond pas
+à l'empreinte de l'image, donc une fois par version de la table Ciqual, là où
+`jow.fr` est appelé à chaque recette inconnue.
+
+Sur un cluster en `default-deny` en egress, les deux s'autorisent de la même
+façon — avec le DNS, qu'on oublie une fois sur deux :
+
+```yaml
+# NetworkPolicy ne connaît pas les noms de domaine (sauf CNI qui le gère —
+# Cilium a `toFQDNs`). À défaut : le 443 sortant, plages privées exclues.
+egress:
+  # Le DNS d'abord : sans lui, jow.fr et anses.fr ne se résolvent pas, et
+  # l'erreur ressemble à une panne réseau du site d'en face.
+  - to: [{ namespaceSelector: {}, podSelector: { matchLabels: { k8s-app: kube-dns } } }]
+    ports: [{ protocol: UDP, port: 53 }]
+  # ⚠️ Postgres est dans une plage privée, que la règle suivante exclut : sans
+  # cette ligne-ci, l'app ne démarre pas du tout — et le message parlera de la
+  # base, pas de la politique réseau.
+  - to: [{ podSelector: { matchLabels: { app: tablee-postgres } } }]
+    ports: [{ protocol: TCP, port: 5432 }]
+  - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+          except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+    ports: [{ protocol: TCP, port: 443 }]
+```
+
+Si cette sortie n'est pas possible, **rien ne casse** : le pod démarre, le
+journal dit pourquoi, et l'app sert sans référentiel. Monter alors un volume
+contenant `alim_*.xml` et `compo_*.xml` à la place de l'`emptyDir` `ciqual` :
+le seed les prend tels quels.
+
+**De la place pour le quota, s'il y en a un.** Les `initContainers` ne
+s'additionnent pas aux conteneurs, mais le pod retient le **maximum** : la
+limite mémoire effective du pod passe donc à 1 Gi, contre 512 Mi avant.
+Un `ResourceQuota` serré refusera le pod entier, et le message ne parlera pas
+du seed. L'`emptyDir` demande 256 Mi de stockage éphémère sur le nœud.
+
+**Le `PodSecurity` du namespace.** Les deux `initContainers` — `migrate` comme
+`seed` — ne posent pas `runAsNonRoot` ni `seccompProfile` : sous un namespace
+étiqueté `restricted`, le pod est refusé. Ce n'est pas nouveau (`migrate` est
+là depuis la 007) et `seed` n'ajoute aucune contrainte, mais si le namespace
+est durci un jour, les deux sont à durcir ensemble. Le pod porte en revanche
+`fsGroup: 1000` : le seed écrit l'export dans l'`emptyDir` et l'image tourne
+en `node`.
+
+**Plusieurs répliques, c'est sûr.** Deux pods qui démarrent ensemble prennent
+un verrou consultatif Postgres : le second attend, constate que le premier a
+fini, et repart sans rien réimporter.
+
+### 3ter. Avec FluxCD
+
+Rien de particulier à déclarer : le seed est une ligne du **manifeste**, pas
+une commande. Une `Kustomization` qui pointe `deploy/k8s/` le fait arriver
+comme le reste, et il n'y a aucun `Job` à déclencher après coup.
+
+Quatre points valent quand même d'être dits.
+
+**Le manifeste compte autant que l'image.** Une automatisation d'image qui ne
+ferait que bouger le tag ne créerait jamais l'`initContainer` : il vient du
+`Deployment`. Si l'image est pilotée par `image-automation` et les manifestes
+par une autre `Kustomization`, s'assurer que celle-ci suit bien `deploy/k8s/`.
+
+**Ne pas ajouter `job-seed.yaml` aux ressources.** Il porte un `generateName`,
+que le server-side apply de Flux ne sait pas réconcilier — il lui faut un nom
+pour tenir son inventaire. Il est hors de `kustomization.yaml` depuis le
+début, et il y reste : c'est l'outil d'une réimportation forcée à la main, pas
+une étape de déploiement. Même remarque pour `10-secret.example.yaml`, qui est
+un gabarit — le vrai secret ne passe pas par le dépôt.
+
+**La santé du `Deployment` reste un signal utile.** Le seed ne peut pas faire
+échouer le pod : une panne d'ANSES ne fera donc jamais échouer une
+réconciliation ni déclencher un `rollback`. Ce qui ne va pas se lit dans les
+logs du conteneur `seed`, pas dans l'état de la `Kustomization`.
+
+**Changer de table Ciqual est un commit.** `db/seeds/ciqual-source.json`
+change → l'image change → le pod suivant réimporte. C'est la boucle GitOps
+normale, et c'est ce qui fait qu'une donnée nutritionnelle ne peut pas changer
+sans relecture.
+
+```sh
+kubectl -n tablee logs deploy/tablee -c seed          # ce que le seed a fait
+flux -n tablee reconcile kustomization <la-vôtre>     # forcer un passage
+```
+
 ### 4. Le premier compte
 
 Ouvrir `https://votre-domaine` : l'app demande de créer un compte, puis le
@@ -258,13 +357,18 @@ normal.
 ```sh
 kubectl -n tablee set image deploy/tablee \
   tablee=ghcr.io/xhelliom/tablee:sha-<commit> \
-  migrate=ghcr.io/xhelliom/tablee:sha-<commit>
+  migrate=ghcr.io/xhelliom/tablee:sha-<commit> \
+  seed=ghcr.io/xhelliom/tablee:sha-<commit>
 ```
 
-Les deux conteneurs doivent porter **la même version** : l'`initContainer`
-applique les migrations que le serveur attend. Épingler un SHA plutôt que
-`latest` — `latest` ne dit pas ce qui tourne, et un redémarrage de pod peut
-changer la version sans que rien ne le montre.
+Les **trois** conteneurs doivent porter la même version : `migrate` applique
+les migrations que le serveur attend, et `seed` porte l'empreinte Ciqual que
+le schéma migré sait enregistrer. En oublier un donne un pod qui mélange deux
+versions, ce qui est précisément le genre de panne qu'on ne diagnostique pas
+en regardant les logs du serveur.
+
+Épingler un SHA plutôt que `latest` — `latest` ne dit pas ce qui tourne, et un
+redémarrage de pod peut changer la version sans que rien ne le montre.
 
 ### Sauvegarder
 
