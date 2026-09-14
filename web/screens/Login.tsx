@@ -8,6 +8,11 @@
  * compte ? » n'a pas à coûter une navigation. Le formulaire change, pas la
  * page. Le mot de passe oublié en est un troisième, pour la même raison.
  *
+ * Google, quand l'instance l'a branché (`GOOGLE_CLIENT_ID`) : un bouton qui
+ * vaut connexion et inscription à la fois, puisque c'est Google qui sait si le
+ * compte existe. Il quitte la page, et y revient avec `?error=…` quand la
+ * connexion n'a pas abouti.
+ *
  * `ResetPasswordScreen` — la page qu'ouvre le lien de réinitialisation reçu
  * par mail. Elle n'existe que sur une instance qui en envoie (`TABLEE_MAIL`) ;
  * ailleurs, le serveur refuse la demande et l'écran dit à qui s'adresser.
@@ -24,12 +29,13 @@ const MIN_MOT_DE_PASSE = 12;
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
 export function LoginScreen(): React.ReactElement {
-  const { signIn, signUp } = useSession();
+  const { signIn, signUp, google } = useSession();
+  const { query } = useRoute();
   const [mode, setMode] = useState<Mode>('connexion');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => erreurGoogle(query.get('error')));
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -73,6 +79,24 @@ export function LoginScreen(): React.ReactElement {
             : 'connexion impossible',
       );
       setBusy(false);
+    }
+  };
+
+  // Pas de `busy` ici : la page s'en va, et un retour arrière depuis Google la
+  // ressortirait du cache avec un bouton resté grisé.
+  const avecGoogle = async (): Promise<void> => {
+    setError(null);
+    setInfo(null);
+    try {
+      // Le chemin seul, comme pour la confirmation d'adresse : une invitation
+      // survit à l'aller-retour, un partage Jow non (dette n° 17).
+      const retour = window.location.pathname;
+      const { url } = await api.post<{ url: string }>('/api/auth/sign-in/social', {
+        provider: 'google', callbackURL: retour, errorCallbackURL: retour,
+      });
+      window.location.assign(url);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'connexion impossible');
     }
   };
 
@@ -144,6 +168,15 @@ export function LoginScreen(): React.ReactElement {
           </button>
         </form>
 
+        {google && !oubli ? (
+          <button
+            type="button" className="btn btn--ghost" style={{ marginTop: 14 }}
+            disabled={busy} onClick={() => { void avecGoogle(); }}
+          >
+            Continuer avec Google
+          </button>
+        ) : null}
+
         {mode === 'connexion' ? (
           <button
             type="button" className="btn btn--quiet" style={{ marginTop: 14 }}
@@ -186,6 +219,18 @@ function messageLisible(error: ApiError, mode: Mode): string {
       : error.message;
   }
   return error.message;
+}
+
+/**
+ * Ce que Google laisse dans `?error=…` en ramenant sur la page.
+ * `access_denied`, c'est la personne qui a renoncé chez Google : rien à dire.
+ */
+function erreurGoogle(code: string | null): string | null {
+  if (code === null || code === 'access_denied') return null;
+  if (code === 'account_not_linked') {
+    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe.';
+  }
+  return 'La connexion avec Google n’a pas abouti. Réessayez, ou entrez avec votre adresse.';
 }
 
 // ── Le lien reçu par mail ───────────────────────────────────────────────────

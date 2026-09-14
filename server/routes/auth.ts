@@ -74,7 +74,11 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
    */
   app.get('/api/me', async (request) => {
     const state = request.auth;
-    if (state.kind === 'anonyme') return { state: 'anonyme' };
+    // `google` sert l'écran de connexion : sur une instance qui ne l'a pas
+    // branché, un bouton qui échouerait à chaque tap ne s'affiche pas.
+    if (state.kind === 'anonyme') {
+      return { state: 'anonyme', google: ctx.auth.options.socialProviders?.google !== undefined };
+    }
 
     const userId = state.kind === 'actif' ? state.identity.userId : state.userId;
     const households = await listHouseholdsForUser(ctx.pool, userId);

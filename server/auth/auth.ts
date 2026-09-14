@@ -178,6 +178,11 @@ export interface AuthOptions {
    * peut partir (dette n° 7).
    */
   mail: SendMail | null;
+  /**
+   * Le client OAuth Google, ou `null` quand l'hébergeur ne l'a pas branché
+   * (`GOOGLE_CLIENT_ID`, voir `server/index.ts`).
+   */
+  google: { clientId: string; clientSecret: string } | null;
 }
 
 export type Auth = ReturnType<typeof buildAuth>;
@@ -190,6 +195,33 @@ export function buildAuth(options: AuthOptions) {
     secret: options.secret,
     baseURL: options.baseURL,
     basePath: '/api/auth',
+
+    /**
+     * La connexion Google : un tap, là où une adresse et douze caractères
+     * mettent de la friction sur le chemin critique.
+     *
+     * Une adresse déjà inscrite par mot de passe n'y est reliée que si elle
+     * est **confirmée** — `requireLocalEmailVerified`, le défaut de
+     * better-auth, laissé tel quel exprès. Sans lui, inscrire l'adresse de
+     * quelqu'un avant lui suffirait à garder un mot de passe sur le compte
+     * qu'il ouvrira ensuite par Google. Sans `TABLEE_MAIL`, aucune adresse
+     * n'est confirmée : la personne entre avec son mot de passe, et l'écran
+     * le lui dit.
+     */
+    ...(options.google === null ? {} : {
+      socialProviders: {
+        google: {
+          ...options.google,
+          // `user.name` est un prénom partout ailleurs : l'inscription le
+          // demande ainsi, l'invitation le cite. Google rend le nom complet.
+          mapProfileToUser: (profile) => ({ name: profile.given_name ?? profile.name }),
+        },
+      },
+    }),
+
+    // Tablée n'appelle aucune API Google, mais better-auth garde les jetons
+    // dans `account` : chiffrés, un dump de la base ne les rend pas utilisables.
+    account: { encryptOAuthTokens: true },
 
     emailAndPassword: {
       enabled: true,

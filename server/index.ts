@@ -66,6 +66,21 @@ try {
   throw error;
 }
 
+/**
+ * La connexion Google, facultative : `GOOGLE_CLIENT_ID` et
+ * `GOOGLE_CLIENT_SECRET`, les deux ou aucun. Le client OAuth se crée dans la
+ * console Google Cloud, avec pour URI de redirection autorisée
+ * `<TABLEE_BASE_URL>/api/auth/callback/google`. À moitié rempli, refus de
+ * démarrer : un bouton Google qui échoue à chaque tap est pire que pas de bouton.
+ */
+const googleClientId = process.env['GOOGLE_CLIENT_ID'] ?? '';
+const googleClientSecret = process.env['GOOGLE_CLIENT_SECRET'] ?? '';
+if ((googleClientId === '') !== (googleClientSecret === '')) {
+  console.error('GOOGLE_CLIENT_ID et GOOGLE_CLIENT_SECRET vont ensemble : les deux, ou aucun.');
+  process.exit(1);
+}
+const google = googleClientId === '' ? null : { clientId: googleClientId, clientSecret: googleClientSecret };
+
 const pool = getPool();
 
 // Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
@@ -81,13 +96,13 @@ try {
   throw error;
 }
 
-const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail });
+const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail, google });
 
 const app = buildApp({ pool, auth, baseURL });
 await app.listen({ port, host });
 console.log(
   `Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL}, `
-    + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']})`,
+    + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']}, google : ${google === null ? 'non' : 'oui'})`,
 );
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
