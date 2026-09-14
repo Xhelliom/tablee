@@ -131,6 +131,15 @@ export const IconStar = (p: IconProps) => (
   </Base>
 );
 
+export const IconLink = (p: IconProps) => (
+  <Base {...p}>
+    <g>
+      <path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5" />
+      <path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.5-1.5" />
+    </g>
+  </Base>
+);
+
 export const IconTrash = (p: IconProps) => (
   <Base {...p}><g><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13" /></g></Base>
 );

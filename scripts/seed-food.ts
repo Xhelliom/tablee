@@ -1,18 +1,30 @@
 /**
  * ETL Ciqual (§5 de la spec) : l'export XML de l'ANSES → table `food`.
  *
- *   npm run seed:food                    # lit data/ciqual/
- *   npm run seed:food -- --dir=/ailleurs
+ *   npm run seed:food                    # télécharge si besoin, puis importe
+ *   npm run seed:food -- --dir=/ailleurs # un export déjà décompressé
+ *   npm run seed:food -- --no-download   # échoue plutôt que de sortir
+ *   npm run seed:food -- --force         # réimporte même si c'est déjà fait
  *   npm run seed:food -- --dry-run       # parse et rapporte, n'écrit rien
  *
- * L'export ne se télécharge pas depuis ce script : c'est un geste d'opérateur,
- * fait une fois, sur une source qui change une fois tous les quelques années.
- * Le script dit quoi télécharger et où le poser quand il ne trouve rien.
+ * ⚠️ Renversé le 14/09/2026 — le script se télécharge tout seul.
  *
- * Idempotent : `on conflict (source, external_id) do update`. Rejouer le seed
- * sur une base déjà peuplée met à jour les valeurs, ne duplique rien, et ne
- * touche pas aux `food` saisis à la main (`source='manuel'`) ni à ceux issus
- * de Jow.
+ * Il disait jusqu'ici : « l'export ne se télécharge pas depuis ce script :
+ * c'est un geste d'opérateur, fait une fois ». Le geste se faisait mal. Une
+ * instance fraîchement déployée servait une recherche d'aliments vide, sans
+ * que rien n'indique qu'il manquait une étape faite à la main dans un
+ * conteneur. Le seed tourne donc maintenant à chaque déploiement
+ * (`deploy/k8s/30-deployment.yaml`), et va chercher l'archive lui-même.
+ *
+ * Ce que l'objection d'origine avait de juste est conservé : ce qui est
+ * versionné, c'est l'empreinte (`db/seeds/ciqual-source.json`). Une archive
+ * qui ne lui correspond pas n'est pas importée — `food` ne peut donc pas
+ * changer de contenu sans qu'un diff le dise. Voir `server/food/ciqual-source.ts`.
+ *
+ * Idempotent, et à deux étages : l'import lui-même est un `on conflict do
+ * update`, et il ne part même pas quand `referential_import` dit que la
+ * version épinglée est déjà en base. Rejouer ne duplique rien et ne touche pas
+ * aux `food` saisis à la main (`source='manuel'`) ni à ceux issus de Jow.
  *
  * **Ce script n'écrit aucune valeur qu'il n'a pas lue.** Une teneur absente,
  * à l'état de traces ou sous le seuil de quantification est écrite `NULL`,
@@ -20,9 +32,9 @@
  * ils doivent se voir.
  */
 import { createReadStream } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import pg from 'pg';
 import {
   CIQUAL_NUTRIENTS,
   decodeCiqual,
@@ -32,17 +44,41 @@ import {
   type NutrientColumn,
   type TeneurKind,
 } from '../server/food/ciqual.ts';
+import {
+  downloadCiqual, fingerprintExports, locateExports, readCiqualSource,
+} from '../server/food/ciqual-source.ts';
+import {
+  VERSION_LOCALE, isUpToDate, readImportState, recordImport, type ImportState,
+} from '../server/food/import-state.ts';
 import { classify, isKnownSubgroup } from '../server/food/groups.ts';
-import { closePool, getPool } from '../server/db.ts';
-
-const SOURCE_URL =
-  'https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip';
+import { closePool, databaseUrl, getPool } from '../server/db.ts';
 
 const DEFAULT_DIR = fileURLToPath(new URL('../data/ciqual/', import.meta.url));
 const CHUNK = 200;
 
+/**
+ * Clé de verrou consultatif. Deux pods qui démarrent ensemble lanceraient deux
+ * imports concurrents : le second attend, voit que le premier a fini, et
+ * repart sans rien faire. Clé distincte de celle des migrations.
+ *
+ * Sur une **connexion dédiée**, comme dans `migrate.ts` : un verrou consultatif
+ * appartient à la session qui l'a pris, et une requête envoyée au pool ne
+ * revient pas forcément sur la même connexion. Il tombe à la fermeture, ce qui
+ * est exactement le comportement voulu si le script meurt en route.
+ */
+const SEED_LOCK = 828_534;
+
+async function lockSeed(): Promise<pg.Client> {
+  const client = new pg.Client({ connectionString: databaseUrl() });
+  await client.connect();
+  await client.query('select pg_advisory_lock($1)', [SEED_LOCK]);
+  return client;
+}
+
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+const force = args.includes('--force');
+const download = !args.includes('--no-download');
 const dir = args.find((a) => a.startsWith('--dir='))?.slice('--dir='.length) ?? DEFAULT_DIR;
 
 interface FoodRow {
@@ -56,33 +92,15 @@ interface FoodRow {
   maxima: Partial<Record<NutrientColumn, number | null>>;
 }
 
-/**
- * Trouve `alim_<date>.xml` / `compo_<date>.xml` sans dépendre de la date de
- * l'export. Le préfixe est suivi d'un chiffre : sans cela, `alim_` attraperait
- * aussi `alim_grp_<date>.xml`, qui décrit les groupes et non les aliments.
- */
-async function locate(prefix: string): Promise<string> {
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    throw new Error(
-      `dossier introuvable : ${dir}\n` +
-        `  Télécharger ${SOURCE_URL}\n` +
-        `  puis le décompresser dans ce dossier (il est couvert par .gitignore).`,
-    );
-  }
-  const pattern = new RegExp(`^${prefix}\\d[\\w ]*\\.xml$`);
-  const found = entries.filter((f) => pattern.test(f)).sort();
-  const file = found.at(-1);
-  if (file === undefined) {
-    throw new Error(
-      `aucun fichier ${prefix}*.xml dans ${dir}\n` +
-        `  Télécharger ${SOURCE_URL} et le décompresser ici.\n` +
-        `  Attendu : alim_<date>.xml et compo_<date>.xml.`,
-    );
-  }
-  return path.join(dir, file);
+/** Sortie du cas nominal : rien à importer, on rend le verrou et on se tait. */
+async function déjàFait(verrou: pg.Client | null, state: ImportState | null): Promise<void> {
+  console.log(
+    `Table Ciqual ${state?.version} déjà importée `
+    + `(${state?.rowCount} aliments, le ${state?.importedAt.toISOString().slice(0, 10)}).\n`
+    + 'Rien à faire. `--force` pour réimporter.',
+  );
+  await verrou?.end();
+  await closePool();
 }
 
 /**
@@ -108,8 +126,38 @@ async function readCompo(
 }
 
 async function main(): Promise<void> {
-  const alimFile = await locate('alim_');
-  const compoFile = await locate('compo_');
+  const source = await readCiqualSource();
+  const épinglé = { version: source.version, sha256: source.sha256, etl: source.etl };
+
+  // ── Est-ce déjà fait ? ────────────────────────────────────────────────────
+  //
+  // La question se pose **avant** le réseau et avant le XML : ce script tourne
+  // au démarrage de chaque pod, et la réponse est « oui » presque à chaque
+  // fois. Ce cas-là doit coûter une requête, pas trente secondes.
+  const verrou = dryRun ? null : await lockSeed();
+  const pool = dryRun ? null : getPool();
+  let state = null;
+  if (pool !== null) {
+    state = await readImportState(pool, 'ciqual');
+    if (!force && isUpToDate(state, épinglé)) return déjàFait(verrou, state);
+  }
+
+  // Des fichiers déjà sur place l'emportent sur le téléchargement : `--dir`
+  // sert précisément à apporter un export autrement, réseau coupé. Leur
+  // empreinte n'est calculée que si l'archive épinglée n'a pas déjà répondu —
+  // sans quoi on relirait 57 Mo pour découvrir qu'il n'y a rien à faire.
+  const local = await locateExports(dir);
+  const identité = local === null
+    ? épinglé
+    : { version: VERSION_LOCALE, sha256: await fingerprintExports(local), etl: source.etl };
+  if (pool !== null && !force && isUpToDate(state, identité)) return déjàFait(verrou, state);
+
+  const { alim: alimFile, compo: compoFile } = local ?? await downloadCiqual(dir, { download });
+  console.log(
+    local === null
+      ? `Archive Ciqual ${source.version} téléchargée et vérifiée (${source.sha256.slice(0, 12)}…).`
+      : `Export lu depuis ${dir} — posé à la main, donc non vérifié à la source.`,
+  );
 
   const foods: CiqualFood[] = parseFoods(decodeCiqual(await readFile(alimFile)));
   if (foods.length === 0) {
@@ -144,20 +192,25 @@ async function main(): Promise<void> {
 
   report(rows, holes, unknownSubgroups);
 
-  if (dryRun) {
+  if (pool === null) {
     console.log('\n--dry-run : rien n’a été écrit.');
     return;
   }
 
-  const pool = getPool();
   try {
     const list = [...rows.values()];
     let written = 0;
     for (let i = 0; i < list.length; i += CHUNK) {
       written += await upsert(pool, list.slice(i, i + CHUNK));
     }
+    // L'état d'import s'écrit **après** les aliments : un import interrompu au
+    // milieu doit se rejouer au démarrage suivant, pas se croire terminé.
+    await recordImport(pool, { source: 'ciqual', ...identité, rowCount: written });
     console.log(`\n${written} aliment(s) écrit(s) dans food (source='ciqual').`);
+    console.log(source.source);
   } finally {
+    // Le verrou tombe avec sa connexion — y compris si l'import a échoué.
+    await verrou?.end();
     await closePool();
   }
 }

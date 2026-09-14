@@ -242,12 +242,16 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       <section className="spread" style={row}>
         <div>
           <p style={{ fontSize: 14 }}>Pour combien&nbsp;?</p>
-          <p className="meta">Parts préparées</p>
+          {/* « Préparées » disait le contraire du calcul : ce nombre multiplie
+              les valeurs par portion, puis se répartit entre les présents. Ce
+              qui reste dans le plat n'appartient à personne — c'est un second
+              repas (§6bis), pas une fraction de celui-ci. */}
+          <p className="meta">Parts mangées à ce repas</p>
         </div>
         <Stepper
           value={meal.servings}
           onChange={(servings) => { void patch({ servings }); }}
-          min={0.5} max={20} step={0.5} label="Parts préparées"
+          min={0.5} max={20} step={0.5} label="Parts mangées à ce repas"
         />
       </section>
 

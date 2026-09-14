@@ -22,7 +22,10 @@
 import type pg from 'pg';
 
 /** Les tables dont la 008 dit qu'elles doivent être sous policy. */
-const TABLES_SCOPÉES = ['eater', 'meal', 'meal_template', 'family_note', 'weekly_insight', 'recipe'];
+const TABLES_SCOPÉES = [
+  'eater', 'meal', 'meal_template', 'family_note', 'weekly_insight', 'recipe',
+  'household_recipe',
+];
 
 export class IsolationError extends Error {}
 

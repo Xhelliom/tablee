@@ -20,11 +20,12 @@ createdb tablee
 export DATABASE_URL=postgres://tablee:…@localhost:5432/tablee
 npm run migrate
 
-# 2. Le référentiel d'aliments (§5)
-#    Télécharger l'export XML de la table Ciqual 2020 de l'ANSES et le
-#    décompresser dans data/ciqual/ (dossier ignoré par git) :
-#    https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip
-npm run seed:food
+# 2. Le référentiel d'aliments (§5) et les repères ANSES (§9)
+#    Le seed télécharge l'export Ciqual lui-même, dans data/ciqual/, et refuse
+#    de l'importer s'il ne correspond pas à l'empreinte de
+#    db/seeds/ciqual-source.json. Rejouable : il ne refait rien s'il n'y a
+#    rien à faire.
+npm run seed          # = seed:food puis seed:refs
 
 # 3. Le front, puis le serveur
 npm run build:web
@@ -60,8 +61,8 @@ TEST_DATABASE_URL=postgres://…/tablee_test npm test   # + tests d'intégration
 ```
 
 Sans `TEST_DATABASE_URL`, les suites qui touchent à Postgres sont **sautées
-avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 186
-sur 265, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
+avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 205
+sur 292, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
 l'étanchéité entre eux et au contrat d'API — c'est-à-dire ce qui casse mal.
 
 Le rôle Postgres de cette base **ne doit pas être superutilisateur** — il

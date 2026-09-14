@@ -9,6 +9,17 @@
  * I6 : le texte partagé porte `key` et `userId`, qui sont des jetons de compte.
  * Il n'est jamais affiché tel quel, jamais mis dans l'URL après coup, et le
  * serveur ne persiste que sa version expurgée.
+ *
+ * L'écran de confirmation est séparé du lecteur d'URL (`SharedRecipe`) parce
+ * qu'il a trois entrées : le partage Android, « Coller un lien Jow »
+ * (`JowLink.tsx`) et la liste des recettes déjà connues (`Recipes.tsx`). Le
+ * pas de confirmation est le même dans les trois cas — ce qui change est
+ * seulement d'où vient la recette, d'où la prop `source`.
+ *
+ * Le texte partagé y arrive par une prop et **jamais par la query string** :
+ * le passer par l'URL remettrait le jeton de compte dans l'historique du
+ * navigateur, ce que le partage Android nous impose déjà sans qu'on ait à le
+ * reproduire nous-mêmes.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type Meal, type ResolveResponse, type Slot } from '../api.ts';
@@ -24,7 +35,6 @@ import { formatGrams } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
   const { query } = useRoute();
-  const { eaters } = useSession();
 
   // Jow met le titre **et** l'URL dans `text` : c'est `text` qu'il faut parser,
   // pas seulement `url` (§4).
@@ -34,6 +44,42 @@ export function ShareScreen(): React.ReactElement {
       .join('\n'),
     [query],
   );
+
+  return (
+    <SharedRecipe
+      source={{ kind: 'partage', text: shared }}
+      heading="Reçu depuis Jow"
+      onClose={() => navigate('/')}
+    />
+  );
+}
+
+/**
+ * D'où vient la recette à confirmer. `partage` porte un texte à lire — il peut
+ * contenir un jeton de compte, et ne ressort donc jamais d'ici sans passer par
+ * le serveur ; `recette` désigne une recette déjà en base, qu'il suffit de
+ * relire.
+ */
+export type RecipeSource =
+  | { kind: 'partage'; text: string }
+  | { kind: 'recette'; recipeId: string };
+
+interface SharedRecipeProps {
+  source: RecipeSource;
+  heading: string;
+  onClose: () => void;
+  /** Repli quand la recette n'a pas pu être lue. Par défaut, l'ajout rapide. */
+  onManual?: () => void;
+}
+
+/**
+ * Le pas de confirmation : ce que Jow publie, qui était à table, et on
+ * enregistre. Identique quelle que soit la porte d'entrée.
+ */
+export function SharedRecipe(
+  { source, heading, onClose, onManual }: SharedRecipeProps,
+): React.ReactElement {
+  const { eaters } = useSession();
 
   const [state, setState] = useState<ResolveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,19 +93,30 @@ export function ShareScreen(): React.ReactElement {
     setPresent(new Set(eaters.map((m) => m.id)));
   }, [eaters]);
 
+  // L'effet dépend de deux chaînes, **pas de l'objet `source`** : une prop
+  // objet est recréée à chaque rendu du parent, et la lecture repartirait en
+  // boucle. Ces deux valeurs déterminent entièrement la requête.
+  const { kind } = source;
+  const clé = source.kind === 'partage' ? source.text : source.recipeId;
+
   useEffect(() => {
-    if (shared.length === 0) {
+    if (kind === 'partage' && clé.length === 0) {
       setError('Aucun contenu partagé.');
       return;
     }
-    void api
-      .post<ResolveResponse>('/api/recipes/resolve', { text: shared })
+    // Une recette déjà en base se relit ; un texte partagé se résout, ce qui
+    // peut demander un aller-retour chez Jow.
+    const lecture = kind === 'recette'
+      ? api.get<ResolveResponse>(`/api/recipes/${clé}`)
+      : api.post<ResolveResponse>('/api/recipes/resolve', { text: clé });
+
+    void lecture
       .then((response) => {
         setState(response);
         if (response.recipe !== null) setServings(response.recipe.baseServings);
       })
       .catch(() => setError('La recette n’a pas pu être lue. Le repas peut être saisi à la main.'));
-  }, [shared]);
+  }, [kind, clé]);
 
   const toggle = useCallback((eaterId: string) => {
     setPresent((current) => {
@@ -82,7 +139,9 @@ export function ShareScreen(): React.ReactElement {
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         // Expurgé côté serveur avant insertion, et de nouveau ici par principe.
-        rawInput: shared,
+        // Une recette relue depuis la liste n'a aucun texte d'origine : il n'y
+        // a rien à stocker, et surtout rien à réinventer.
+        ...(source.kind === 'partage' ? { rawInput: source.text } : {}),
       });
       navigate(`/repas/${meal.id}`, { replace: true });
     } catch {
@@ -97,7 +156,7 @@ export function ShareScreen(): React.ReactElement {
 
   return (
     <div className="app">
-      <ModalHeader title="Reçu depuis Jow" onClose={() => navigate('/')} />
+      <ModalHeader title={heading} onClose={onClose} />
 
       {state === null && error === null ? (
         <p className="empty">Lecture de la recette…</p>
@@ -107,7 +166,7 @@ export function ShareScreen(): React.ReactElement {
         <div className="sec" style={{ paddingTop: 16 }}>
           <p style={{ fontSize: 14, lineHeight: 1.6 }}>{error}</p>
           <button type="button" className="btn btn--ghost" style={{ marginTop: 14 }}
-                  onClick={() => navigate('/ajouter')}>
+                  onClick={onManual ?? (() => navigate('/ajouter'))}>
             Saisir le repas à la main
           </button>
         </div>
@@ -184,16 +243,32 @@ export function ShareScreen(): React.ReactElement {
             </div>
           </section>
 
+          {/*
+            Ce nombre est ce qui a été **mangé à ce repas**, pas ce qui est
+            sorti de la casserole : la nutrition du plat vaut `parts × valeurs
+            par portion`, et elle est répartie entre les convives présents.
+            Cuisiner pour 4 et en laisser la moitié, c'est donc 2 ici — sinon
+            le foyer se voit attribuer deux portions que personne n'a mangées.
+            §6bis : le reste est un second repas, le lendemain.
+          */}
           <section className="spread" style={row}>
             <div>
               <p style={{ fontSize: 14 }}>Pour combien&nbsp;?</p>
-              {recipe !== null ? (
-                <p className="meta">Recette prévue pour {recipe.baseServings}</p>
-              ) : null}
+              <p className="meta">
+                Parts mangées à ce repas
+                {recipe !== null ? ` · recette prévue pour ${recipe.baseServings}` : ''}
+              </p>
             </div>
             <Stepper value={servings} onChange={setServings} min={0.5} max={20} step={0.5}
-                     label="Parts préparées" />
+                     label="Parts mangées à ce repas" />
           </section>
+
+          {recipe !== null && servings < recipe.baseServings ? (
+            <p className="meta" style={{ ...row, paddingTop: 0, lineHeight: 1.5, borderTop: 0 }}>
+              Il en reste&nbsp;: demain, « Restes de… » le réenregistre en un
+              tap, pour qui sera là ce jour-là.
+            </p>
+          ) : null}
 
           <section style={{ ...row, paddingBottom: 14 }}>
             <WhoWasThere

@@ -17,7 +17,8 @@ import { resolveShare } from '../jow/index.ts';
 import { ApiError } from '../http/errors.ts';
 import { body, str, uuid } from '../http/validate.ts';
 import {
-  findRecipeByJowId, loadRecipe, recipeGaps, saveJowRecipe, seasonalCount,
+  findRecipeByJowId, listRecipes, loadRecipe, markRecipeKnown, recipeGaps,
+  saveJowRecipe, seasonalCount,
 } from '../repo/recipes.ts';
 import { currentMonth } from '../repo/dashboard.ts';
 import type { AppContext } from '../app.ts';
@@ -32,6 +33,10 @@ export function recipeRoutes(app: FastifyInstance, _ctx: AppContext): void {
     if (share.jowRecipeId !== null) {
       const known = await findRecipeByJowId(request.db, share.jowRecipeId);
       if (known !== null) {
+        // Connue de l'instance ne veut pas dire connue de ce foyer : une
+        // recette Jow est globale (007), et c'est ce partage-ci qui la fait
+        // entrer chez nous.
+        await markRecipeKnown(request.db, request.householdId(), known.id);
         const { month } = await currentMonth(request.db, request.householdId());
         return {
           recipe: known,
@@ -52,6 +57,7 @@ export function recipeRoutes(app: FastifyInstance, _ctx: AppContext): void {
     }
 
     const recipe = await saveJowRecipe(request.db, parsed);
+    await markRecipeKnown(request.db, request.householdId(), recipe.id);
     const { month } = await currentMonth(request.db, request.householdId());
     return {
       recipe,
@@ -59,6 +65,18 @@ export function recipeRoutes(app: FastifyInstance, _ctx: AppContext): void {
       fetched: true,
       warnings: parsed.warnings,
     };
+  });
+
+  /**
+   * Les recettes déjà connues du foyer — le « qu'est-ce qu'on a, déjà ? ».
+   *
+   * Rien de nouveau n'est écrit ici : ces recettes sont en base depuis leur
+   * lecture, y compris celles dont on n'a jamais enregistré le repas. C'est
+   * une fenêtre sur un stock existant, pas une fonction de plus.
+   */
+  app.get<{ Querystring: { limit?: string } }>('/api/recipes', async (request) => {
+    const limit = Math.min(Number(request.query.limit ?? 100) || 100, 200);
+    return { recipes: await listRecipes(request.db, limit) };
   });
 
   /**

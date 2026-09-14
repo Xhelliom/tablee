@@ -23,6 +23,31 @@ spec:
       # redémarrage — ne se marchent pas dessus : `scripts/migrate.ts` prend un
       # verrou consultatif Postgres, et le second attend que le premier ait
       # fini. Monter les répliques au-delà de 1 est donc sûr de ce côté-là.
+      #
+      # ── Le référentiel après le schéma ───────────────────────────────────
+      #
+      # ⚠️ Renversé le 14/09/2026. Le seed était un geste d'opérateur, joué une
+      # fois à la main après le premier déploiement (`job-seed.yaml`). Le geste
+      # se faisait mal : une instance fraîche servait une recherche d'aliments
+      # vide, et rien ne disait qu'il manquait une étape. Il tourne donc ici, à
+      # chaque déploiement, et met à jour ce qui doit l'être.
+      #
+      # Ça ne coûte rien quand il n'y a rien à faire : `seed-food` lit
+      # `referential_import`, voit que l'archive épinglée est déjà en base et
+      # s'arrête en une requête. Il ne télécharge et ne relit les 57 Mo de XML
+      # que quand `db/seeds/ciqual-source.json` a changé dans l'image.
+      #
+      # **Il ne peut pas empêcher le pod de démarrer**, et c'est délibéré : le
+      # `|| echo` couvre l'ANSES injoignable, un cluster sans sortie réseau, un
+      # miroir qui rendrait autre chose que l'archive épinglée. L'app sert très
+      # bien sans référentiel — elle affiche « indisponible » là où elle ne
+      # sait pas, elle n'invente pas (I1). Coupler son démarrage à la
+      # disponibilité d'un site tiers serait le vrai défaut.
+      securityContext:
+        # Le seed écrit l'export dans le volume ci-dessous, et l'image tourne
+        # en `node` (uid 1000).
+        fsGroup: 1000
+
       initContainers:
         - name: migrate
           image: ghcr.io/xhelliom/tablee:latest
@@ -34,6 +59,28 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits:   { memory: 512Mi }
+
+        - name: seed
+          image: ghcr.io/xhelliom/tablee:latest
+          command: ['/bin/sh', '-c']
+          args:
+            - |
+              node --import tsx scripts/seed-refs.ts \
+                || echo '⚠️  repères ANSES non chargés : les anneaux diront « indisponible ».'
+              node --import tsx scripts/seed-food.ts --dir=/ciqual \
+                || echo '⚠️  référentiel Ciqual non chargé : la recherche d’aliments sera vide.'
+              exit 0
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: tablee, key: DATABASE_URL }
+          volumeMounts:
+            - { name: ciqual, mountPath: /ciqual }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            # Le XML est lu en flux, mais l'ETL garde les 3 185 aliments en
+            # mémoire le temps des écritures par lots.
+            limits:   { memory: 1Gi }
 
       containers:
         - name: tablee
@@ -106,3 +153,8 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        # L'export Ciqual décompressé, le temps du seed. Jeté avec le pod :
+        # ce qui compte est en base, et le prochain démarrage n'en aura besoin
+        # que si la source épinglée a changé.
+        - name: ciqual
+          emptyDir: { sizeLimit: 256Mi }

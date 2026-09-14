@@ -540,6 +540,99 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   // ── rattachement des ingrédients Jow ──────────────────────────────────────
 
+  describe('mes recettes', () => {
+    /**
+     * Une recette Jow en base, **globale** : `household_id` est NULL pour une
+     * recette Jow (007), et c'est `household_recipe` qui dit qui la connaît.
+     */
+    const recette = async (jowId: string, titre: string, foyer = householdId): Promise<string> => {
+      // Upsert, comme `saveJowRecipe` : deux foyers qui lisent la même recette
+      // Jow tombent sur **la même ligne**, c'est tout l'intérêt qu'elle soit
+      // globale (007).
+      const rows = await sql<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings,
+                             kcal_serving, protein_serving, carb_serving,
+                             fat_serving, fiber_serving)
+         values ('jow', $1, $2, 4, 320, 18, 16, 20, 12)
+         on conflict (source, jow_recipe_id) do update set title = excluded.title
+         returning id`,
+        [jowId, titre], foyer,
+      );
+      const id = rows[0]!.id;
+      await sql(
+        `insert into household_recipe (household_id, recipe_id)
+         values ($1, $2) on conflict do nothing`,
+        [foyer, id], foyer,
+      );
+      return id;
+    };
+
+    it('liste ce que le foyer connaît, jamais mangé en tête', async () => {
+      const mangée = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+      await recette('650b16ade7cc8d0013ce4a6f', 'Chili sin carne');
+
+      await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'jow',
+        recipeId: mangée, servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+      });
+
+      const { status, body } = await call('GET', '/api/recipes');
+      assert.equal(status, 200);
+      assert.deepEqual(body.recipes.map((r: any) => r.title), ['Chili sin carne', 'Galette végé']);
+
+      const [chili, galette] = body.recipes;
+      assert.equal(chili.lastEatenAt, null, 'jamais enregistrée comme repas');
+      assert.equal(chili.timesEaten, 0);
+      assert.equal(galette.timesEaten, 1);
+      assert.ok(typeof galette.lastEatenAt === 'string');
+    });
+
+    /**
+     * Le piège que cette suite existe pour attraper (§16).
+     *
+     * Une recette Jow est **globale** : la lire directement dans `recipe`
+     * rendrait aussi celles que le foyer d'à côté a importées. Le titre d'une
+     * recette est public ; le fait qu'une famille l'ait cherchée ne l'est pas.
+     */
+    it('ne montre pas les recettes lues par le foyer d’à côté', async () => {
+      const voisins = await signUpWithHousehold(auth, pool, 'voisin@exemple.test');
+      await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé', voisins.householdId);
+
+      const { body } = await call('GET', '/api/recipes');
+      assert.deepEqual(body.recipes, [], 'rien de ce que les voisins ont lu');
+
+      // Et la même recette, lue chez nous, devient nôtre sans être dupliquée.
+      const partagée = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+      const { body: après } = await call('GET', '/api/recipes');
+      assert.deepEqual(après.recipes.map((r: any) => r.id), [partagée]);
+    });
+
+    it('enregistre un repas depuis une recette déjà connue, sans texte d’origine', async () => {
+      const id = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+
+      // Ce que fait l'écran « Mes recettes » : relire, puis enregistrer.
+      const { status, body: lue } = await call('GET', `/api/recipes/${id}`);
+      assert.equal(status, 200);
+      assert.equal(lue.recipe.title, 'Galette végé');
+
+      const { status: créé, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'dejeuner', source: 'jow',
+        recipeId: id, servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+      });
+      assert.equal(créé, 201);
+      assert.equal(body.meal.recipe.id, id);
+      // §6bis : 2 parts mangées sur 4 prévues. Rien n'oblige à finir le plat.
+      assert.equal(body.meal.servings, 2);
+
+      const rows = await sql<{ raw_input: string | null }>(
+        'select raw_input from meal where id = $1', [body.meal.id],
+      );
+      assert.equal(rows[0]!.raw_input, null, 'aucun texte de partage à inventer');
+    });
+  });
+
   describe('jow_food_link', () => {
     /** Deux recettes Jow partageant le même ingrédient, comme dans la vraie vie. */
     const deuxRecettes = async (): Promise<{ a: string; b: string; ingredientA: string }> => {

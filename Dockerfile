@@ -9,8 +9,13 @@
 # Dehors, volontairement : **l'export Ciqual**. C'est 57 Mo de XML publiés par
 # l'ANSES, versionnés hors dépôt (`.gitignore`), et qui changent une fois tous
 # les quelques années. Les embarquer alourdirait chaque image de chaque
-# déploiement pour une donnée qui ne bouge pas. Le seed est un geste
-# d'opérateur, fait une fois — voir `deploy/k8s/job-seed.yaml`.
+# déploiement pour une donnée qui ne bouge pas.
+#
+# Ce qui est dedans, en revanche, c'est son **empreinte** :
+# `db/seeds/ciqual-source.json`. Le seed va chercher l'archive au premier
+# démarrage qui en a besoin et refuse de l'importer si elle ne correspond pas
+# (⚠️ changé le 14/09/2026 — c'était un geste d'opérateur joué une fois à la
+# main, et il se faisait mal). Voir `deploy/k8s/30-deployment.yaml`.
 #
 # Dehors aussi, et ça ne se négocie pas : aucun secret. `TABLEE_SECRET` et
 # `DATABASE_URL` viennent de l'environnement, jamais d'un `ENV` de ce fichier.

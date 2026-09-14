@@ -374,6 +374,36 @@ visite en `http://` reste interceptable.
 
 ---
 
+## 16. Réimporter Ciqual après un changement de mapping se demande à la main
+
+**Où** — `db/seeds/ciqual-source.json`, champ `etl` ; `server/food/groups.ts`.
+
+Depuis le 14/09/2026, le seed Ciqual tourne à chaque déploiement et sait ne
+rien faire quand il n'y a rien à faire : il compare ce qui est en base
+(`referential_import`) à l'archive épinglée. Une nouvelle table de l'ANSES est
+donc importée toute seule.
+
+**Ce qui ne l'est pas** : un changement de **notre** lecture de cette archive.
+Corriger le classement d'un sous-groupe dans `server/food/groups.ts` laisse en
+base 3 185 lignes calculées par l'ancien code, et rien ne s'en aperçoit — même
+archive, même empreinte. Le champ `etl` du manifeste existe exactement pour
+ça : l'incrémenter dans le même commit force la réimportation au déploiement
+suivant. C'est un geste humain, et donc oubliable.
+
+**Ce que ça coûte** — un classement corrigé qui ne prend pas effet, sans
+signal. La part végétale d'un aliment reste fausse jusqu'au prochain import
+forcé. Aucune valeur nutritionnelle n'est touchée : `plant_based` et `category`
+sont les seules colonnes dérivées de notre code, les teneurs viennent
+directement de la source.
+
+**Ce qui le lèverait** — dériver `etl` du contenu de `groups.ts` (une empreinte
+du fichier, plutôt qu'un entier saisi). Ça a été écarté pour l'instant : un
+reformatage ou un commentaire déclencherait alors une réimportation complète,
+et une version qu'on choisit dit quelque chose qu'une empreinte automatique ne
+dit pas — « cette modification-là change les lignes déjà en base ».
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

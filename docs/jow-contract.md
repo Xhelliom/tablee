@@ -49,6 +49,11 @@ Conséquences :
   deux titres sert ailleurs, mais elle n'est plus sur le chemin critique.
 - `recipe.jow_slug` reste utile comme cache d'affichage (lien sortant), plus
   comme clé de résolution.
+- **L'inverse est vrai aussi** (constaté le 14/09/2026) : l'URL canonique à
+  suffixe se lit directement, sans ObjectId. Ça n'a rien d'anecdotique — c'est
+  ce que donne un lien **copié depuis le site**, par opposition au texte de la
+  feuille de partage. `resolveShare` a donc deux entrées, et « coller un lien
+  Jow » (`web/screens/JowLink.tsx`) en dépend.
 - La piste du deep link Branch (`app.jow.com/EC0U`) n'a pas eu à être testée.
 
 ⚠️ Ce comportement est une **redirection serveur non documentée**. Elle peut

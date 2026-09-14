@@ -276,6 +276,19 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
+/** Une recette du foyer, telle que la liste « Mes recettes » la montre. */
+export interface RecipeSummary {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  baseServings: number;
+  nutriScore: string | null;
+  confidence: Confidence;
+  /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
+  lastEatenAt: string | null;
+  timesEaten: number;
+}
+
 export interface ResolveResponse {
   recipe: Recipe | null;
   /** Présent seulement si la recette n'a pas pu être persistée. */
@@ -283,6 +296,28 @@ export interface ResolveResponse {
   seasonal: number;
   fetched: boolean;
   warnings: string[];
+}
+
+/**
+ * Ce que le serveur reconnaît dans un texte partagé **sans accès réseau**.
+ * L'URL en ressort déjà expurgée de `key` et `userId` (I6).
+ */
+export interface ShareInput {
+  jowRecipeId: string | null;
+  title: string | null;
+  url: string | null;
+}
+
+export interface PeekResponse {
+  share: ShareInput;
+  /** Le texte d'entrée expurgé : la seule forme qui peut circuler ensuite. */
+  redacted: string;
+}
+
+export interface FoodSearchResponse {
+  foods: FoodSummary[];
+  /** Faux quand la table Ciqual n'a jamais été importée — voir `npm run seed:food`. */
+  referentialLoaded: boolean;
 }
 
 export interface FoodSummary {

@@ -68,6 +68,19 @@ export async function loadFoodValues(db: UnscopedDb, ids: string[]): Promise<Map
  * quoi il faut taper le mot entier avant d'avoir le moindre résultat, et
  * personne ne le fait deux fois.
  */
+/**
+ * Le référentiel contient-il quelque chose ?
+ *
+ * Une recherche vide a deux causes très différentes — « ce mot ne donne rien »
+ * et « la table Ciqual n'a jamais été importée » — et l'écran ne peut pas les
+ * distinguer seul. Sans cette question, le second cas ressemble à un bug de
+ * recherche, ce qu'il n'est pas.
+ */
+export async function hasFoodReferential(db: UnscopedDb): Promise<boolean> {
+  const { rows } = await db.query('select 1 from food limit 1');
+  return rows.length > 0;
+}
+
 export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Promise<FoodSummary[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
