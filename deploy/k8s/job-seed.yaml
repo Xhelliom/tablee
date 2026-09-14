@@ -1,22 +1,18 @@
-# Le référentiel alimentaire — à jouer **une fois**, après le premier
-# déploiement. Idempotent : le rejouer met à jour, ne duplique rien.
+# Réimporter le référentiel **à la demande**. Rien à jouer après un premier
+# déploiement : depuis le 14/09/2026, le seed tourne dans un `initContainer` à
+# chaque déploiement (`30-deployment.yaml`) et se télécharge lui-même.
 #
 #   kubectl -n tablee create -f deploy/k8s/job-seed.yaml
-#   kubectl -n tablee logs -f job/tablee-seed
+#   kubectl -n tablee logs -f job/<le nom généré>
 #
-# ── Deux seeds, deux natures ────────────────────────────────────────────────
+# Ce job ne sert donc plus qu'aux cas où l'on veut forcer la main :
 #
-# `seed:refs` charge les repères ANSES depuis `db/seeds/*.csv`, qui sont dans
-# l'image : quelques dizaines de lignes, chacune avec sa `source`.
-#
-# `seed:food` charge la table Ciqual — ~3 000 aliments, 57 Mo de XML publiés
-# par l'ANSES. Ces fichiers ne sont **ni dans le dépôt ni dans l'image** :
-# volumineux, et inchangés depuis 2020. L'`initContainer` ci-dessous les
-# télécharge dans un `emptyDir` le temps du job.
-#
-# ⚠️ Cela suppose que le cluster peut sortir vers `ciqual.anses.fr`. S'il ne
-# le peut pas, retirer l'`initContainer`, monter un volume contenant
-# `alim_*.xml` et `compo_*.xml`, et pointer `--dir` dessus.
+#   - le `initContainer` a échoué (ANSES injoignable ce jour-là) et on ne veut
+#     pas attendre le prochain déploiement ;
+#   - on veut réécrire les lignes sans avoir changé la source épinglée — après
+#     avoir corrigé `server/food/groups.ts` à la main sur une instance, par
+#     exemple. C'est ce que fait `--force`, et c'est la seule chose que
+#     l'`initContainer` ne fait jamais tout seul.
 #
 # ── Ce que ce job ne remplit pas, et c'est voulu ────────────────────────────
 #
@@ -36,22 +32,8 @@ spec:
   template:
     spec:
       restartPolicy: Never
-
-      initContainers:
-        - name: telecharger-ciqual
-          image: alpine:3.20
-          command: ['/bin/sh', '-ceu']
-          args:
-            - |
-              apk add --no-cache curl unzip
-              cd /ciqual
-              curl -fsSL -o ciqual.zip \
-                'https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip'
-              unzip -o -j ciqual.zip
-              rm ciqual.zip
-              ls -la
-          volumeMounts:
-            - { name: ciqual, mountPath: /ciqual }
+      securityContext:
+        fsGroup: 1000
 
       containers:
         - name: seed
@@ -60,7 +42,7 @@ spec:
           args:
             - |
               node --import tsx scripts/seed-refs.ts
-              node --import tsx scripts/seed-food.ts --dir=/ciqual
+              node --import tsx scripts/seed-food.ts --dir=/ciqual --force
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -73,6 +55,11 @@ spec:
             # les aliments en mémoire le temps des écritures par lots.
             limits: { memory: 1Gi }
 
+      # ⚠️ Le seed sort vers `ciqual.anses.fr` pour récupérer l'archive, et
+      # refuse de l'importer si elle ne correspond pas à l'empreinte épinglée
+      # dans `db/seeds/ciqual-source.json`. Un cluster sans sortie réseau monte
+      # ici un volume contenant `alim_*.xml` et `compo_*.xml` à la place de
+      # l'`emptyDir` : le seed les prend tels quels et ne télécharge rien.
       volumes:
         - name: ciqual
-          emptyDir: { sizeLimit: 512Mi }
+          emptyDir: { sizeLimit: 256Mi }

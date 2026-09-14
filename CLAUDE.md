@@ -52,7 +52,7 @@ server/
   repo/           tout le SQL du domaine, scopé au foyer. Une route n'écrit
                   jamais de SQL elle-même.
   nutrition/      les trois algorithmes du §11, en applicatif
-  food/           lecture de l'export Ciqual, mapping des groupes
+  food/           export Ciqual : source épinglée, lecture, mapping des groupes
   jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
   test-support/   fabriques de comptes/foyers, base de test, migrations
   *.test.ts       les suites d'intégration vivent à la racine de server/
@@ -161,6 +161,16 @@ Les valeurs se chargent depuis `db/seeds/*.csv`, versionnés, avec une colonne
 `source` **obligatoire sur chaque ligne** — le chargeur refuse un fichier qui
 en manque une. Rien n'est téléchargé au démarrage : un fichier versionné se
 relit en diff, un fetch au boot ne se relit pas.
+
+> **Précisé le 14/09/2026 — la table Ciqual, et elle seule.** Les ~3 000
+> aliments de `food` ne sont pas une valeur qu'on saisit : c'est une archive de
+> 3,5 Mo publiée par l'ANSES, qu'aucun humain ne relit en diff de toute façon.
+> Le seed va donc la chercher tout seul. Ce que l'objection ci-dessus a de
+> juste est conservé : c'est l'**empreinte** qui est versionnée
+> (`db/seeds/ciqual-source.json`), et une archive qui ne lui correspond pas
+> n'est pas importée. `food` ne peut donc pas changer de contenu sans qu'un
+> commit le dise. Les quatre CSV, eux, ne bougent pas d'un pouce : ils restent
+> saisis à la main, source par source.
 
 Le reste est tranché dans la spec. Les décisions y sont motivées pour pouvoir
 être contestées en connaissance de cause, pas pour être réouvertes par défaut.
@@ -282,7 +292,7 @@ npm run build:web && npm start          # dans cet ordre, voir ci-dessous
 
 - **Sans `TEST_DATABASE_URL`, les suites Postgres sont sautées.** Avec un
   message, jamais silencieusement vertes — mais un « tout passe » qui ne prouve
-  rien reste un « tout passe ». Un `npm test` nu en passe 192 sur 271, et
+  rien reste un « tout passe ». Un `npm test` nu en passe 205 sur 289, et
   laisse de côté tout ce qui touche aux comptes, aux foyers, à l'étanchéité et
   au contrat d'API : exactement ce qui casse mal.
 - **Le rôle Postgres ne doit pas être superutilisateur.** Il contournerait la
@@ -348,8 +358,11 @@ Conventions de code :
   style du dépôt est homogène et un reformatage noierait les vraies
   corrections. Il tourne en CI avant le typecheck.
 - L'image ne contient **ni secret, ni export Ciqual** : les premiers viennent
-  de l'environnement, le second d'un seed joué une fois. Et `tsx` est une
-  dépendance de service, pas de développement — le serveur exécute du
+  de l'environnement, le second d'un seed qui tourne dans un `initContainer` à
+  chaque déploiement et se télécharge lui-même, contre l'empreinte épinglée
+  dans `db/seeds/ciqual-source.json`. Quand il n'y a rien à faire il coûte une
+  requête : `referential_import` (010) dit ce qui est déjà en base. Et `tsx`
+  est une dépendance de service, pas de développement — le serveur exécute du
   TypeScript directement.
 
 Conventions d'écriture — elles se voient dans tous les fichiers, autant les

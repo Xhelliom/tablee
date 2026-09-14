@@ -12,7 +12,7 @@
  * d'une poignée est exactement ce qu'interdit I1.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type FoodSummary, type Meal, type Slot } from '../api.ts';
+import { api, type FoodSearchResponse, type FoodSummary, type Meal, type Slot } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
@@ -31,6 +31,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const { eaters } = useSession();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodSummary[]>([]);
+  /** `null` tant qu'aucune recherche n'a abouti : on ne dit rien avant de savoir. */
+  const [referentialLoaded, setReferentialLoaded] = useState<boolean | null>(null);
   const [items, setItems] = useState<Draft[]>([]);
   const [slot, setSlot] = useState<Slot>(() => currentSlot());
   const [present, setPresent] = useState<Set<string>>(new Set());
@@ -51,8 +53,11 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     // sentir l'attente.
     timer.current = window.setTimeout(() => {
       void api
-        .get<{ foods: FoodSummary[] }>(`/api/foods/search?q=${encodeURIComponent(query)}`)
-        .then((response) => setResults(response.foods))
+        .get<FoodSearchResponse>(`/api/foods/search?q=${encodeURIComponent(query)}`)
+        .then((response) => {
+          setResults(response.foods);
+          setReferentialLoaded(response.referentialLoaded);
+        })
         .catch(() => setResults([]));
     }, 200);
     return () => window.clearTimeout(timer.current);
@@ -143,6 +148,23 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {/* Une recherche vide a deux causes, et elles n'appellent pas le même
+            geste : « ce mot ne donne rien » se corrige en tapant autre chose,
+            « le référentiel n'est pas chargé » ne se corrige pas à l'écran.
+            Sans ce message, le second cas passe pour un bug de recherche. */}
+        {referentialLoaded === false ? (
+          <p style={{
+            fontSize: 12, lineHeight: 1.5, marginTop: 10, padding: '10px 12px',
+            borderRadius: 'var(--radius)',
+            background: 'var(--bg-warning)', color: 'var(--text-warning)',
+          }}>
+            Le référentiel d’aliments n’est pas chargé : aucune recherche ne
+            donnera de résultat. Lancer <code>npm run seed:food</code> sur le
+            serveur. En attendant, un aliment saisi ici est enregistré sans
+            valeurs nutritionnelles.
+          </p>
         ) : null}
 
         {results.length === 0 && query.trim().length >= 2 ? (

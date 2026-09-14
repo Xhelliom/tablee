@@ -146,17 +146,51 @@ dans un `initContainer`. Deux pods qui migreraient en même temps ne se marchent
 pas dessus — `scripts/migrate.ts` prend un verrou consultatif Postgres, et le
 second attend.
 
-### 3. Le référentiel alimentaire
+### 3. Le référentiel alimentaire — rien à faire
+
+**⚠️ Changé le 14/09/2026.** Il fallait ici jouer `job-seed.yaml` à la main
+après le premier déploiement. Ce n'est plus le cas : le seed est un second
+`initContainer`, après les migrations, et il tourne à **chaque** déploiement.
+Un cluster neuf a donc ses 3 185 aliments et ses repères ANSES sans qu'on
+touche à quoi que ce soit, et une image qui épingle une nouvelle table Ciqual
+la réimporte d'elle-même.
+
+Le geste d'avant se faisait mal : rien, dans l'app, ne distinguait « ce mot ne
+donne rien » de « le seed n'a jamais été joué ». Les deux ressemblaient à une
+recherche d'aliments cassée.
+
+Ce que ça coûte, et ce que ça ne coûte pas :
+
+- Quand il n'y a rien à faire — le cas de presque tous les redémarrages — le
+  seed lit une ligne de `referential_import` et s'arrête. **Moins d'une
+  seconde, aucun accès réseau.**
+- Il ne télécharge les 3,5 Mo et ne relit les 57 Mo de XML que si
+  `db/seeds/ciqual-source.json` a changé dans l'image.
+- Il **ne peut pas empêcher le pod de démarrer**. ANSES injoignable, cluster
+  sans sortie réseau, archive qui ne correspond pas à l'empreinte épinglée :
+  le message part dans le journal et l'app sert quand même. Elle affichera
+  « indisponible » là où elle ne sait pas — elle n'invente pas (I1).
 
 ```sh
+kubectl -n tablee logs deploy/tablee -c seed     # ce que le seed a fait
+```
+
+L'archive est vérifiée contre la SHA-256 de `db/seeds/ciqual-source.json`
+avant d'être lue : un miroir qui rendrait autre chose n'écrit rien. Mettre à
+jour la table de l'ANSES est donc un commit qui se relit, pas un
+téléchargement qui change la base en silence.
+
+Deux cas gardent un geste :
+
+```sh
+# forcer une réimportation (mapping corrigé, seed en échec la veille)
 kubectl -n tablee create -f deploy/k8s/job-seed.yaml
 kubectl -n tablee logs -f job/<le nom généré>
 ```
 
-Le job télécharge l'export Ciqual, charge les ~3 000 aliments et les repères
-ANSES. Idempotent : le rejouer met à jour, ne duplique rien. Il suppose que le
-cluster peut sortir vers `ciqual.anses.fr` ; sinon, monter un volume contenant
-`alim_*.xml` et `compo_*.xml` et pointer `--dir` dessus.
+Un cluster sans sortie réseau monte, dans le job comme dans le déploiement, un
+volume contenant `alim_*.xml` et `compo_*.xml` à la place de l'`emptyDir` : le
+seed les prend tels quels, sans rien télécharger.
 
 **Le rapport final compte les valeurs manquantes, colonne par colonne. Elles
 doivent se voir** : une teneur absente, à l'état de traces ou sous le seuil de

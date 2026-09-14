@@ -301,6 +301,12 @@ export interface PeekResponse {
   redacted: string;
 }
 
+export interface FoodSearchResponse {
+  foods: FoodSummary[];
+  /** Faux quand la table Ciqual n'a jamais été importée — voir `npm run seed:food`. */
+  referentialLoaded: boolean;
+}
+
 export interface FoodSummary {
   id: string;
   name: string;

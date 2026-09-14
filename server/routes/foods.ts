@@ -4,7 +4,7 @@
 import type { FastifyInstance } from 'fastify';
 import { transaction } from '../db.ts';
 import { body, optionalUuid, str, uuid } from '../http/validate.ts';
-import { createManualFood, searchFoods } from '../repo/foods.ts';
+import { createManualFood, hasFoodReferential, searchFoods } from '../repo/foods.ts';
 import { linkIngredientToFood, listLinks } from '../repo/recipes.ts';
 import { recomputeMealsUsingIngredient } from '../repo/meals.ts';
 import type { AppContext } from '../app.ts';
@@ -15,7 +15,11 @@ export function foodRoutes(app: FastifyInstance, _ctx: AppContext): void {
     async (request) => {
       const query = request.query.q ?? '';
       const limit = Math.min(Number(request.query.limit ?? 20) || 20, 50);
-      return { foods: await searchFoods(request.db, query, limit) };
+      const foods = await searchFoods(request.db, query, limit);
+      // Rien trouvé et référentiel vide ne sont pas la même chose : l'écran
+      // doit pouvoir dire « il manque le seed Ciqual » plutôt que de laisser
+      // croire que la recherche ne marche pas.
+      return { foods, referentialLoaded: foods.length > 0 || await hasFoodReferential(request.db) };
     },
   );
 
