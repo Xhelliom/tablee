@@ -148,6 +148,7 @@ jobs:
           # la page du paquet GHCR, un scanner.
           labels: |
             org.opencontainers.image.description=Tablée — suivi alimentaire familial : un repas partagé, un bilan par convive
+            org.opencontainers.image.licenses=AGPL-3.0-only
 
       - uses: docker/build-push-action@v6
         with:
