@@ -10,7 +10,8 @@
  *   3. **Coller un lien Jow** — la même chaîne que `/share`, pour quand la
  *      feuille de partage d'Android n'est pas là : ordinateur, navigateur sans
  *      PWA installée, ou recette reçue par message.
- *   4. Recherche texte, puis saisie manuelle.
+ *   4. Décrire son plat (ou, sans IA, chercher un aliment), puis saisie
+ *      manuelle.
  *
  * « Si tu dois arbitrer entre un calcul plus fin et un tap de moins, prends le
  * tap de moins. »
@@ -31,7 +32,7 @@ import { JowLink } from './JowLink.tsx';
 import { Recipes } from './Recipes.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
-  const { eaters } = useSession();
+  const { eaters, ia } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
@@ -213,8 +214,8 @@ export function QuickAddScreen(): React.ReactElement {
 
       <Section title="Autre">
         <button type="button" onClick={() => setMode('manuel')} style={entry}>
-          <IconSearch size={17} />
-          <span style={{ fontSize: 14 }}>Chercher un aliment</span>
+          {ia ? <IconPencil size={17} /> : <IconSearch size={17} />}
+          <span style={{ fontSize: 14 }}>{ia ? 'Décrire son plat' : 'Chercher un aliment'}</span>
         </button>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="card"

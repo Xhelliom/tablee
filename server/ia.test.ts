@@ -39,6 +39,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   let foyer: TestHousehold;
   /** Ce que les faux modèles ont reçu : exactement ce qui serait parti chez Anthropic. */
   let découpés: string[] = [];
+  let choisis: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
   let recettes: string[] = [];
 
@@ -72,6 +73,10 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
           { label: 'une truffe', search: 'truffe', grams: null },
         ]);
       },
+      chooseFoods: (lines: string): Promise<unknown> => {
+        choisis.push(lines);
+        return Promise.resolve({ choix: [{ ligne: 1, numero: 2 }, { ligne: 2, numero: 1 }] });
+      },
       advise: (facts: string, conversation: Turn[]): Promise<string> => {
         conseillé = { facts, conversation };
         return Promise.resolve('Une soupe de légumes ?');
@@ -103,6 +108,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     await resetDatabase(pool);
     foyer = await signUpWithHousehold(auth, pool, 'papa@exemple.test');
     découpés = [];
+    choisis = [];
     conseillé = null;
     recettes = [];
     await pool.query(
@@ -139,6 +145,20 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(body.items[0].foods[0].name, 'Oeuf, cru');
       assert.deepEqual(body.items[1].foods, []);
       assert.equal(body.items[1].grams, null);
+      assert.equal(body.items[0].foodId, body.items[0].foods[0].id, 'un numéro hors liste laisse le premier de la recherche');
+      assert.equal(body.items[1].foodId, null);
+    });
+
+    it('range en tête l’aliment que le modèle désigne par son numéro', async () => {
+      await pool.query(
+        `insert into food (source, external_id, name, plant_based) values ('manuel', 'oeuf-dur', 'Oeuf, dur, écalé', false)`,
+      );
+      const { body } = await call(avecIA, 'POST', '/api/meals/decoupage', { text: '2 œufs et une truffe' });
+      assert.deepEqual(body.items[0].foods.map((food: any) => food.name), ['Oeuf, dur, écalé', 'Oeuf, cru']);
+      assert.equal(body.items[0].foodId, body.items[0].foods[0].id, 'le choix est aussi la présélection');
+      assert.deepEqual(body.items[1].foods, [], 'un numéro sans candidat ne fabrique rien');
+      assert.equal(choisis.length, 1);
+      assert.match(choisis[0]!, /Ligne 1 : 2 œufs\n1\. Oeuf, cru\n2\. Oeuf, dur, écalé/);
     });
 
     it('enregistre le repas comme une estimation, même entièrement rattaché (R6)', async () => {
