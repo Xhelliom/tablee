@@ -1,4 +1,6 @@
-import { fetchRecipeById, type FetchOptions } from './fetch.ts';
+import {
+  fetchRecipeById, fetchRecipeByUrl, type FetchedPage, type FetchOptions,
+} from './fetch.ts';
 import { fallback, parseRecipeHtml } from './parse.ts';
 import { parseShareText, redactShareText } from './share.ts';
 import type { ParsedRecipe } from './types.ts';
@@ -29,12 +31,27 @@ export async function resolveShare(
     url: share.url,
   };
 
-  if (share.jowRecipeId === null) {
-    return fallback(ctx, ['aucun identifiant de recette Jow dans le texte partagé']);
+  // Deux entrées, et la seconde n'est pas un confort : la feuille de partage
+  // d'Android donne un ObjectId, mais le lien **copié depuis le site** est
+  // l'URL canonique à suffixe (`/recipes/<slug>-<suffixe>`), qui n'en porte
+  // aucun. Sans ce second chemin, coller une adresse de recette parfaitement
+  // valide retomberait en saisie manuelle. La page reste publique (I7), et
+  // c'est `assertJow` de `fetch.ts` qui garde le domaine.
+  const recipeId = share.jowRecipeId;
+  const url = share.url;
+  const fetchPage: (() => Promise<FetchedPage>) | null =
+    recipeId !== null
+      ? () => fetchRecipeById(recipeId, options)
+      : url !== null && isRecipePage(url)
+        ? () => fetchRecipeByUrl(url, options)
+        : null;
+
+  if (fetchPage === null) {
+    return fallback(ctx, ['aucune recette Jow reconnue dans le texte partagé']);
   }
 
   try {
-    const page = await fetchRecipeById(share.jowRecipeId, options);
+    const page = await fetchPage();
     return parseRecipeHtml(page.html, { ...ctx, url: page.url });
   } catch (error) {
     // Le message d'erreur peut contenir l'URL appelée : elle est déjà expurgée
@@ -42,5 +59,21 @@ export async function resolveShare(
     // ne doit pouvoir remonter jusqu'à un log via un message d'exception.
     const reason = redactShareText(error instanceof Error ? error.message : String(error));
     return fallback(ctx, [`recette Jow non résolue : ${reason}`]);
+  }
+}
+
+/**
+ * L'URL vise-t-elle une **page recette** de Jow ? L'accueil ou une page
+ * marketing ne contiennent pas de `__NEXT_DATA__` exploitable : aller les
+ * chercher ne produirait qu'un aller-retour réseau pour un repli. Le contrôle
+ * de domaine est refait ici parce que cette fonction décide d'un départ ;
+ * `assertJow` décide, elle, d'une arrivée, et les deux doivent tenir seules.
+ */
+function isRecipePage(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return /(^|\.)jow\.(fr|com)$/i.test(parsed.hostname) && /\/recipes\//i.test(parsed.pathname);
+  } catch {
+    return false;
   }
 }

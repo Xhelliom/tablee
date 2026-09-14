@@ -285,6 +285,22 @@ export interface ResolveResponse {
   warnings: string[];
 }
 
+/**
+ * Ce que le serveur reconnaît dans un texte partagé **sans accès réseau**.
+ * L'URL en ressort déjà expurgée de `key` et `userId` (I6).
+ */
+export interface ShareInput {
+  jowRecipeId: string | null;
+  title: string | null;
+  url: string | null;
+}
+
+export interface PeekResponse {
+  share: ShareInput;
+  /** Le texte d'entrée expurgé : la seule forme qui peut circuler ensuite. */
+  redacted: string;
+}
+
 export interface FoodSummary {
   id: string;
   name: string;

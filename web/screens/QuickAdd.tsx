@@ -7,7 +7,10 @@
  *   2. **Restes de…** — les repas des 3 derniers jours ayant une recette.
  *      Sans cette affordance, les restes ne sont jamais saisis et les déjeuners
  *      restent vides.
- *   3. Recherche texte, puis saisie manuelle.
+ *   3. **Coller un lien Jow** — la même chaîne que `/share`, pour quand la
+ *      feuille de partage d'Android n'est pas là : ordinateur, navigateur sans
+ *      PWA installée, ou recette reçue par message.
+ *   4. Recherche texte, puis saisie manuelle.
  *
  * « Si tu dois arbitrer entre un calcul plus fin et un tap de moins, prends le
  * tap de moins. »
@@ -19,16 +22,19 @@ import {
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
-import { IconCamera, IconChevron, IconFridge, IconPencil, IconSearch, IconStar } from '../icons.tsx';
+import {
+  IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
+} from '../icons.tsx';
 import { SLOT_LABELS, currentSlot, relativeDay } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
+import { JowLink } from './JowLink.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
   const { eaters } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
-  const [manual, setManual] = useState(false);
+  const [mode, setMode] = useState<'menu' | 'manuel' | 'lien'>('menu');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,9 +98,8 @@ export function QuickAddScreen(): React.ReactElement {
     await load();
   };
 
-  if (manual) {
-    return <FreeTextEntry onClose={() => setManual(false)} />;
-  }
+  if (mode === 'manuel') return <FreeTextEntry onClose={() => setMode('menu')} />;
+  if (mode === 'lien') return <JowLink onClose={() => setMode('menu')} />;
 
   return (
     <div className="app">
@@ -187,17 +192,19 @@ export function QuickAddScreen(): React.ReactElement {
         )}
       </Section>
 
+      <Section title="Depuis Jow">
+        <button type="button" onClick={() => setMode('lien')} style={entry}>
+          <IconLink size={17} />
+          <span style={{ fontSize: 14 }}>Coller un lien Jow</span>
+        </button>
+        <p className="meta" style={{ lineHeight: 1.5 }}>
+          Depuis l’app Jow, « Partager » puis Tablée fait la même chose sans
+          copier-coller.
+        </p>
+      </Section>
+
       <Section title="Autre">
-        <button
-          type="button"
-          onClick={() => setManual(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-            padding: '11px 12px', borderRadius: 'var(--radius)',
-            border: '.5px solid var(--border-strong)', background: 'var(--surface-2)',
-            marginBottom: 8, cursor: 'pointer', color: 'var(--text-muted)',
-          }}
-        >
+        <button type="button" onClick={() => setMode('manuel')} style={entry}>
           <IconSearch size={17} />
           <span style={{ fontSize: 14 }}>Chercher un aliment</span>
         </button>
@@ -209,7 +216,7 @@ export function QuickAddScreen(): React.ReactElement {
             <IconCamera size={17} />
             Photo
           </button>
-          <button type="button" className="card" style={secondary} onClick={() => setManual(true)}>
+          <button type="button" className="card" style={secondary} onClick={() => setMode('manuel')}>
             <IconPencil size={17} />
             Manuel
           </button>
@@ -219,6 +226,14 @@ export function QuickAddScreen(): React.ReactElement {
     </div>
   );
 }
+
+/** Une porte d'entrée pleine largeur : le lien Jow, la recherche d'aliment. */
+const entry: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+  padding: '11px 12px', borderRadius: 'var(--radius)',
+  border: '.5px solid var(--border-strong)', background: 'var(--surface-2)',
+  marginBottom: 8, cursor: 'pointer', color: 'var(--text-muted)',
+};
 
 const secondary: React.CSSProperties = {
   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,

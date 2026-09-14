@@ -9,6 +9,13 @@
  * I6 : le texte partagé porte `key` et `userId`, qui sont des jetons de compte.
  * Il n'est jamais affiché tel quel, jamais mis dans l'URL après coup, et le
  * serveur ne persiste que sa version expurgée.
+ *
+ * L'écran de confirmation est séparé du lecteur d'URL (`SharedRecipe`) parce
+ * qu'il a une seconde entrée : « Coller un lien Jow » (`JowLink.tsx`), pour les
+ * cas où la feuille de partage n'est pas là. Le texte y arrive par une prop et
+ * **jamais par la query string** — le passer par l'URL remettrait le jeton de
+ * compte dans l'historique du navigateur, ce que le partage Android nous
+ * impose déjà sans qu'on ait à le reproduire nous-mêmes.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type Meal, type ResolveResponse, type Slot } from '../api.ts';
@@ -24,7 +31,6 @@ import { formatGrams } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
   const { query } = useRoute();
-  const { eaters } = useSession();
 
   // Jow met le titre **et** l'URL dans `text` : c'est `text` qu'il faut parser,
   // pas seulement `url` (§4).
@@ -34,6 +40,27 @@ export function ShareScreen(): React.ReactElement {
       .join('\n'),
     [query],
   );
+
+  return <SharedRecipe shared={shared} heading="Reçu depuis Jow" onClose={() => navigate('/')} />;
+}
+
+interface SharedRecipeProps {
+  /** Texte de partage, ou lien collé. Déjà expurgé quand il vient d'un collage. */
+  shared: string;
+  heading: string;
+  onClose: () => void;
+  /** Repli quand la recette n'a pas pu être lue. Par défaut, l'ajout rapide. */
+  onManual?: () => void;
+}
+
+/**
+ * Le pas de confirmation : ce que Jow publie, qui était à table, et on
+ * enregistre. Identique quelle que soit la porte d'entrée.
+ */
+export function SharedRecipe(
+  { shared, heading, onClose, onManual }: SharedRecipeProps,
+): React.ReactElement {
+  const { eaters } = useSession();
 
   const [state, setState] = useState<ResolveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +124,7 @@ export function ShareScreen(): React.ReactElement {
 
   return (
     <div className="app">
-      <ModalHeader title="Reçu depuis Jow" onClose={() => navigate('/')} />
+      <ModalHeader title={heading} onClose={onClose} />
 
       {state === null && error === null ? (
         <p className="empty">Lecture de la recette…</p>
@@ -107,7 +134,7 @@ export function ShareScreen(): React.ReactElement {
         <div className="sec" style={{ paddingTop: 16 }}>
           <p style={{ fontSize: 14, lineHeight: 1.6 }}>{error}</p>
           <button type="button" className="btn btn--ghost" style={{ marginTop: 14 }}
-                  onClick={() => navigate('/ajouter')}>
+                  onClick={onManual ?? (() => navigate('/ajouter'))}>
             Saisir le repas à la main
           </button>
         </div>
