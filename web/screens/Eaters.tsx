@@ -262,7 +262,12 @@ function Mesures({ eater }: { eater: Eater }): ReactElement | null {
   );
 }
 
-function ÉditionFiche({
+/**
+ * Corriger une fiche, retrait compris. Partagée avec l'accueil
+ * (`Onboarding.tsx`) : c'est en ajoutant les gens pour la première fois qu'on se
+ * trompe le plus.
+ */
+export function ÉditionFiche({
   eater, onCancel, onSaved, onError,
 }: {
   eater: Eater;
