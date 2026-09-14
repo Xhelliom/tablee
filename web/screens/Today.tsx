@@ -18,6 +18,7 @@ import {
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
+import { Avatar } from '../components/Avatar.tsx';
 import { BilanCard, TONE_COLOR, TONE_ICON } from '../components/Bilan.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { MealCard } from '../components/MealCard.tsx';
@@ -82,6 +83,7 @@ export function TodayScreen(): React.ReactElement {
             <PersonTabs dashboard={data.dashboard} shownId={shown.eater.id} onChoose={setChosen} />
           ) : null}
           <BilanCard
+            eaterId={shown.eater.id}
             firstName={shown.eater.firstName}
             balance={shown.balance}
             referencesLoaded={data.referencesLoaded}
@@ -248,10 +250,14 @@ function PersonTabs({
             <span style={{ display: 'flex', opacity: active ? 1 : .55 }}>
               <NutrientRing balance={balance} firstName={eater.firstName} size={40} />
             </span>
+            {/* Le dessin à côté du prénom, pas au centre de l'anneau : ses
+                plantes vertes s'y liraient comme une donnée (§8ter). */}
             <span style={{
+              display: 'flex', alignItems: 'center', gap: 4,
               fontSize: 12, fontWeight: active ? 500 : 400,
               color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
             }}>
+              <Avatar seed={eater.id} size={16} />
               {eater.firstName}
             </span>
           </button>

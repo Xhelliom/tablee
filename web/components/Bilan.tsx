@@ -26,6 +26,7 @@
  */
 import { useState } from 'react';
 import type { BarState, DailyBalance, Nutrient, NutrientBar, PlantBar } from '../api.ts';
+import { Avatar } from './Avatar.tsx';
 import { IconCheckCircle, IconInfo, IconPlusCircle, IconUpCircle } from '../icons.tsx';
 import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
 import { formatGrams, formatPercentRange } from '../design/quantities.ts';
@@ -58,10 +59,12 @@ export const TONE_ICON: Record<Tone, typeof IconInfo> = {
 };
 
 export function BilanCard({
+  eaterId,
   firstName,
   balance,
   referencesLoaded,
 }: {
+  eaterId: string;
   firstName: string;
   balance: DailyBalance;
   /** Sans repères chargés, « indisponible pour cet âge » serait faux. */
@@ -72,8 +75,11 @@ export function BilanCard({
 
   return (
     <div className="card" style={{ padding: '16px 15px' }}>
-      <div className="spread" style={{ alignItems: 'baseline' }}>
-        <p style={{ fontSize: 17 }}>{firstName}</p>
+      <div className="spread" style={{ alignItems: 'center' }}>
+        <p style={{ fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Avatar seed={eaterId} size={26} />
+          {firstName}
+        </p>
         <p className="meta">
           {balance.mealCount === 0
             ? 'Aucun repas enregistré aujourd’hui'

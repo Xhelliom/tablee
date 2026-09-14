@@ -30,6 +30,7 @@ import { api, ApiError, type Eater } from '../api.ts';
 import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { IconBowl, IconPlus } from '../icons.tsx';
+import { Avatar } from '../components/Avatar.tsx';
 import { AddEaterForm, LienÀTransmettre, type AddedEater } from '../components/AddEater.tsx';
 import {
   draftToBody, emptyDraft, ProfileFields, type ProfileDraft,
@@ -247,15 +248,18 @@ function FicheBrève({ eater, onChanged }: { eater: Eater; onChanged: () => Prom
   return (
     <article className="card" style={{ padding: '12px 15px' }}>
       <div className="spread">
-        <div>
-          <p style={{ fontSize: 15 }}>
-            {eater.firstName}
-            {eater.isMe ? <span className="meta"> · vous</span> : null}
-          </p>
-          <p className="meta" style={{ marginTop: 2 }}>
-            {eater.age} ans
-            {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+          <Avatar seed={eater.id} size={34} />
+          <div>
+            <p style={{ fontSize: 15 }}>
+              {eater.firstName}
+              {eater.isMe ? <span className="meta"> · vous</span> : null}
+            </p>
+            <p className="meta" style={{ marginTop: 2 }}>
+              {eater.age} ans
+              {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
+            </p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {eater.claimEmail !== null ? <span className="chip">Invitée</span> : null}
