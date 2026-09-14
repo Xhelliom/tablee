@@ -19,6 +19,7 @@ import { WeekScreen } from './screens/Week.tsx';
 import { HistoryScreen } from './screens/History.tsx';
 import { EatersScreen } from './screens/Eaters.tsx';
 import { HouseholdScreen } from './screens/Household.tsx';
+import { OnboardingScreen } from './screens/Onboarding.tsx';
 import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 import { HouseholdSettingsScreen } from './screens/HouseholdSettings.tsx';
 
@@ -32,7 +33,7 @@ export function App(): ReactElement {
 
 function Routes(): ReactElement {
   const segments = useSegments();
-  const { loading, state } = useSession();
+  const { loading, state, eaters } = useSession();
 
   if (loading) {
     return (
@@ -54,7 +55,21 @@ function Routes(): ReactElement {
   if (invitation !== undefined) return <AcceptInvitationScreen invitationId={invitation} />;
   if (state === 'sans_foyer') return <HouseholdScreen />;
 
+  /**
+   * Un foyer sans convive n'a rien à afficher, et surtout rien à enregistrer :
+   * un repas sans assiette n'a personne à qui être attribué. On accueille donc
+   * plutôt que de montrer une page vide.
+   *
+   * ⚠️ **`/share` en est exclu.** Android l'ouvre avec la recette dans l'URL ;
+   * détourner cette navigation vers l'accueil perdrait ce que l'utilisateur
+   * était en train de faire — la même règle que pour l'invitation, et le
+   * chemin critique du produit.
+   */
+  if (eaters.length === 0 && segments[0] !== 'share') return <OnboardingScreen />;
+
   switch (segments[0]) {
+    case 'bienvenue':
+      return <OnboardingScreen />;
     case undefined:
       return <Chrome tab="accueil"><TodayScreen /></Chrome>;
     case 'share':

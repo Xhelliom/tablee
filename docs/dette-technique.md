@@ -243,6 +243,110 @@ plus.
 
 
 
+## 10. Le poids est stocké et lu par personne
+
+**Où** — `eater.weight_kg`, `.height_cm` (migration 009), saisis dans
+`web/components/EaterForm.tsx`.
+
+Ces colonnes existent parce que la RNP des protéines de l'ANSES s'exprime **par
+kilogramme de poids corporel** — 0,83 g/kg/j chez l'adulte —, ce qui est
+exactement le terme qui manque pour dériver une cible en grammes plutôt qu'un
+intervalle en % de l'AET (§9). Sauf que ce calcul n'est pas fait : il demande
+une ligne `nutrient_reference` de plus, avec sa chaîne de sources complète, et
+le contenu de cette table ne se décide pas seul.
+
+**Ce que ça coûte.** Une donnée de santé demandée à l'utilisateur, qui ne lui
+rend rien pour l'instant. C'est le mauvais côté du marché, et ça ne doit pas
+durer : soit la ligne dérivée s'écrit, soit les colonnes se retirent.
+
+**Ce qui le lèverait.** Une ligne `protein_g` / `RNP` / `absolu` dérivée de
+`0,83 g/kg × poids`, avec `derived = true` et sa source, et la barre protéines
+qui la préfère à l'intervalle quand le poids est connu. À décider avec le
+propriétaire du dépôt, comme le reste de `nutrient_reference`.
+
+---
+
+## 11. « Poids réservé aux majeurs » n'est pas dans la base
+
+**Où** — `server/routes/eaters.ts`, fonctions `corps()` et `present()`.
+
+L'âge se dérive de `birth_date` et de la date du jour. Un `check` Postgres qui
+l'utiliserait serait non-immutable — donc refusé — et de toute façon faux le
+lendemain de l'anniversaire. La règle vit donc en applicatif, à trois endroits :
+l'écriture refuse (422), la lecture masque, et une date de naissance corrigée
+qui rend le profil mineur **efface** le poids.
+
+**Ce que ça coûte.** Un script qui écrirait directement en base — un seed, une
+reprise de données, un `psql` un soir — poserait un poids sur un profil mineur
+sans que rien ne bronche. L'interface ne le montrerait pas ; la colonne, elle,
+le porterait.
+
+**Ce qui le lèverait.** Rien de propre côté Postgres tant que l'âge est dérivé.
+Le contournement serait une colonne `is_minor` maintenue par déclencheur, qui
+échangerait un problème contre un pire. Consigné pour être su, pas pour être
+corrigé.
+
+---
+
+## 12. Le thème sombre exige un navigateur de 2024
+
+**Où** — `web/design/tokens.css`, tous les tokens en `light-dark()`.
+
+Les deux valeurs de chaque couleur sont déclarées sur la même ligne. C'est ce
+qui rend impossible d'en mettre à jour une et d'oublier l'autre — le défaut
+classique d'un second bloc `@media (prefers-color-scheme: dark)`, qui se
+désynchronise sans que rien ne le signale.
+
+**Ce que ça coûte.** `light-dark()` date de Chrome 123 / Safari 17.5 /
+Firefox 120, début 2024. En deçà, ce n'est pas « pas de mode sombre » : les
+propriétés personnalisées se parsent (elles acceptent presque n'importe quels
+jetons) mais ne résolvent pas, donc `background: var(--surface-2)` devient
+invalide et l'interface perd ses couleurs. Sur Android à jour — la cible, et la
+seule qui permette le share target — c'est acquis depuis deux ans. Sur la
+vieille tablette d'un grand-parent, non. Et le grand-parent est un utilisateur
+prévu par la spec (rôle `adulte`).
+
+⚠️ Le repli par déclaration adjacente (`--x: #FFF; --x: light-dark(…);`) **ne
+marche pas ici** : les deux déclarations se parsent dans un navigateur sans
+support, la seconde gagne, et le résultat est le même. Seul `@supports` ferait
+l'affaire.
+
+**Ce qui le lèverait.** Un bloc `@supports (color: light-dark(#000, #fff))`
+portant les tokens sombres, le `:root` de base ne gardant que les valeurs
+claires. Ça rétablit la duplication, et il faudrait alors un test qui compare
+les deux jeux plutôt qu'une bonne intention.
+
+---
+
+## 13. L'orange des glucides est faiblement contrasté en mode clair
+
+**Où** — `--n-gluc: #EF9F27` sur une carte blanche.
+
+Mesuré en vérifiant le mode sombre, pas en le cherchant. Les cinq couleurs de
+nutriments sur fond de carte :
+
+| | sur la carte sombre | sur la carte blanche |
+|---|---|---|
+| protéines | 4,41 | 3,76 |
+| glucides | 7,62 | **2,17** |
+| lipides | 4,61 | 3,59 |
+| fibres | 4,89 | 3,39 |
+| végétal | 4,82 | 3,44 |
+
+Le seuil WCAG pour un élément graphique porteur de sens est 3 pour 1. L'orange
+des glucides passe à 2,17 en clair — c'est la seule des dix mesures en dessous,
+et le mode sombre le corrige par accident.
+
+**Ce que ça coûte.** Une barre de glucides peu lisible en plein soleil, sur
+l'écran où l'app sert le plus. Pas faux, juste pâle.
+
+**Ce qui le lèverait.** Assombrir `--n-gluc` d'un ou deux crans en mode clair
+uniquement. **Ce n'est pas une décision à prendre seul** : les cinq valeurs sont
+celles du §8ter et des maquettes, et les changer désaccorde l'app de sa
+référence visuelle. Rien n'a donc été touché.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
@@ -268,6 +372,12 @@ forme qu'il a. Le détail est dans l'historique git.
   cet état avant qu'on s'en aperçoive —, et `assertIsolation()` empêche
   désormais de démarrer plutôt que d'écrire un avertissement que personne ne
   lit.
+- **Rien ne reliait une fiche de convive à un compte.** Créer son compte menait
+  à une app vide, un conjoint saisi à la main restait orphelin de son compte, et
+  `/api/eaters` n'appliquait **aucun** contrôle de rôle alors que `ROLES.adulte`
+  n'en porte aucun sur les convives. La migration 009 pose le lien facultatif
+  (`eater.user_id`, `eater.claim_email`), et les rôles s'appliquent enfin :
+  un `parent` compose le foyer, un `adulte` ne modifie que sa propre fiche.
 - **Les polices venaient de Google Fonts.** Fraunces et Inter sont embarquées
   dans `web/public/fonts/`, en sous-ensemble `latin` seul : vérification faite
   sur les 3 185 noms de Ciqual et sur tous les textes de l'interface, aucun

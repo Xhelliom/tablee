@@ -374,6 +374,44 @@ est la principale façon de faire échouer la V1.
 >   serveur résout ce foyer implicitement ; exiger un « choisissez » ajouterait
 >   un tap au chemin du partage, pour rien.
 
+> **Complété le 14/09/2026** (migration 009), après la première mise en service
+> sur un vrai téléphone. La scission compte / assiette était juste, mais elle
+> ne disait rien du cas le plus courant du foyer : **les deux à la fois**.
+>
+> Ce qui manquait se voyait à trois endroits :
+>
+> - créer son compte menait à une app vide. Il fallait ensuite penser à se
+>   créer une assiette, ce que personne ne fait ;
+> - un conjoint saisi à la main, qui s'inscrit trois semaines plus tard, se
+>   retrouvait avec une fiche d'un côté et un compte de l'autre, sans que rien
+>   ne les rejoigne. La seule issue était de ressaisir ;
+> - un `adulte` ne pouvait pas modifier « sa » fiche, faute de savoir laquelle.
+>
+> D'où **un lien facultatif, et rien de plus** : `eater.user_id` (le compte de
+> ce convive, quand il en a un) et `eater.claim_email` (l'adresse à qui la
+> fiche est réservée, en attendant). Cardinalité 0..1 des deux côtés, dans les
+> deux sens. Les enfants restent des convives sans compte, une nounou un compte
+> sans convive, et `meal.created_by` continue de désigner un `"user"` : **ce
+> n'est pas la refusion que la 007 répare**, c'est une information de plus.
+>
+> Le rattachement se fait tout seul à l'entrée dans le foyer — crochets
+> `afterAcceptInvitation` et `afterAddMember` — et immédiatement si l'adresse
+> est déjà membre. Il échoue en silence plutôt que de faire échouer une
+> acceptation d'invitation : une fiche non rattachée se rattache d'un tap, une
+> personne qui ne peut pas entrer est bloquée.
+>
+> **Trois gardes ajoutées au passage**, parce que la question « laquelle est la
+> vôtre ? » n'avait pas de réponse avant :
+>
+> - les rôles s'appliquent enfin aux convives. `ROLES.adulte` ne portait aucune
+>   permission `eater`, et pourtant `/api/eaters` n'en vérifiait aucune :
+>   n'importe quel membre modifiait n'importe quelle fiche. Un `parent` compose
+>   le foyer, un `adulte` ne modifie que la sienne ;
+> - décider à qui appartient une fiche est réservé au `parent`. Sans ça, un
+>   compte `adulte` pourrait s'attribuer la fiche d'un enfant et gagner le
+>   droit de la modifier ;
+> - un `adulte` ne voit pas le poids des autres (voir l'encart du §9).
+
 
 **Un compte par foyer. Pas de compte individuel.**
 
@@ -475,6 +513,24 @@ Ce sont cinq catégories distinctes, pas une échelle : elles ne doivent pas cod
 un état (bon/mauvais). Un anneau où le segment vert manque se lit d'un coup —
 c'est tout l'intérêt.
 
+> **Mode sombre — ajouté le 14/09/2026.** Le §8ter ne décrivait qu'un fond
+> crème. L'app se consulte à table, le soir, sur un téléphone : le sombre suit
+> désormais le réglage du système, avec un choix manuel *par appareil* —
+> localStorage, pas la base. Deux personnes partagent un foyer et pas leurs yeux.
+>
+> Ce qui ne change pas, et qui est le point : **le terracotta et les cinq
+> couleurs de nutriments sont identiques dans les deux modes**. Elles portent
+> l'identité, elles ne se « corrigent » pas pour un fond — et la mesure leur
+> donne raison, entre 4,4 et 7,6 pour 1 sur le fond sombre contre 2,2 à 3,8 sur
+> le crème. Ce qui bascule, ce sont les surfaces, les textes, les bordures et
+> les rampes, qui s'inversent.
+>
+> Le fond sombre suit la même règle que le crème : **pas de noir pur**, un brun
+> très sombre, et le même ordre de hauteur — la carte reste au-dessus du fond.
+>
+> Détail technique dans l'en-tête de `web/design/tokens.css` ; la contrainte de
+> navigateur qu'il impose est en dette n° 12.
+
 ### Fond
 
 Pas de blanc pur. Un crème très légèrement teinté de la couleur de marque
@@ -536,6 +592,32 @@ vocabulaire système est la moitié de l'effet tableau de bord.
 > cible_g = intervalle (% AET) × besoin énergétique (kcal) / facteur (kcal/g)
 > ```
 >
+> **Le poids, 14/09/2026 — décision revue, portée réduite.** Cette section et
+> le §10 refusaient de stocker le poids ; la 005 le redit. La demande est venue
+> de la mise en service, et elle est légitime : la RNP des protéines de l'ANSES
+> s'exprime **par kilogramme de poids corporel** (0,83 g/kg/j chez l'adulte), et
+> c'est exactement le terme qui manquait pour en dériver une cible en grammes
+> au lieu d'un intervalle en % de l'AET.
+>
+> `eater.weight_kg`, `eater.weight_recorded_at` et `eater.height_cm` existent
+> donc depuis la 009, à trois conditions qui ne sont pas négociables :
+>
+> 1. **Majeurs seulement.** I5 interdit tout objectif chiffré de poids sur la
+>    fiche d'un enfant, et une valeur qu'on stocke finit par s'afficher. Le
+>    champ n'est pas grisé sur un profil mineur : il est **absent**, l'API le
+>    refuse, et la lecture le masque si une date corrigée rend le profil mineur.
+> 2. **Une mesure, jamais une cible.** Aucune barre, aucune série, aucune
+>    courbe, aucun écart à un poids « idéal ». `weight_recorded_at` est posé par
+>    le serveur et l'interface affiche « pesé le … » : un poids sans date dérive
+>    en silence.
+> 3. **Visible de soi et des parents.** Une nounou a besoin des allergènes, pas
+>    du poids des parents.
+>
+> ⚠️ **Aucun calcul ne le lit encore, et c'est volontaire.** Dériver la RNP des
+> protéines demanderait une ligne `nutrient_reference` de plus, avec sa chaîne
+> de sources — et le contenu de cette table ne se décide pas seul (CLAUDE.md).
+> La donnée est là ; la ligne dérivée reste à écrire.
+>
 > Les trois termes sont sourcés — avis ANSES, besoins énergétiques EFSA 2017
 > repris par l'ANSES, facteurs du Règlement (UE) n° 1169/2011 Annexe XIV, qui
 > est la convention sous laquelle Ciqual publie son énergie. Le produit, lui,
@@ -586,6 +668,9 @@ La table `nutrient_reference` est **livrée vide**.
 > | `004` | `jow_food_link`. L'ObjectId d'un ingrédient Jow est stable : on le rattache une fois, pas une fois par recette. |
 > | `005` | `nutrient_reference.kind` et `.basis` — voir l'encart du §9. |
 > | `006` | `nutrient_reference.derived` et la table `energy_reference` — voir l'encart du §9. |
+> | `007` | Comptes individuels, foyers multiples, `member` → `eater` — voir l'encart du §7. |
+> | `008` | Row-Level Security : l'étanchéité entre foyers descend dans la base (§16). |
+> | `009` | `eater.user_id` / `.claim_email` (le lien facultatif avec un compte), et `eater.weight_kg` / `.weight_recorded_at` / `.height_cm`, **majeurs seulement** — voir les encarts des §7 et §9. |
 
 ```sql
 create extension if not exists "pgcrypto";
@@ -1006,6 +1091,20 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > à commencer par les trois refus qui empêchent le dernier parent de se
 > verrouiller dehors de son propre foyer.
 
+> **Ajoutées le 14/09/2026 avec le lien convive ↔ compte** (migration 009) :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `PUT` | `/api/eaters/:id/compte` | `{ self: true }` ou `{ email }`. Rattache la fiche à un compte, ou la lui **réserve** s'il n'est pas encore dans le foyer. Réservé au `parent`. La réponse porte `lié`, parce que « réservée » n'est pas « rattachée » et que l'interface doit dire lequel des deux. |
+> | `DELETE` | `/api/eaters/:id/compte` | La fiche n'est plus à personne, et n'attend plus personne. La fiche elle-même reste. |
+>
+> `POST /api/eaters` accepte en outre `self: true` (« cette fiche est la
+> mienne » — le seul geste qu'un non-parent puisse faire ici) et `claimEmail`
+> (« réservée à cette adresse »), et `PATCH` accepte `weightKg` / `heightCm`
+> pour un profil majeur. Deux conflits ont leur code : `compte_deja_convive`
+> (409) et `adresse_deja_reservee` (409) — ce sont des situations d'interface,
+> pas des erreurs internes.
+
 **`POST /api/meals` — corps :**
 
 ```json
@@ -1037,7 +1136,8 @@ depuis les `portion_coef` courants (R2).
 | **Ajout rapide** | Templates en premier (gros boutons), puis **« Restes de… »** (repas des 3 derniers jours avec recette), puis recherche texte, puis photo. |
 | **Détail repas** | Composition, nutrition, participants, badge de confiance. Éditable. |
 | **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. |
-| **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. |
+| **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
+| **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **Synthèse** (V3) | Texte hebdomadaire + notes famille. |
 
 **Contraintes UI :**

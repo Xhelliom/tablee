@@ -34,7 +34,9 @@ import { betterAuth } from 'better-auth';
 import { createAccessControl } from 'better-auth/plugins/access';
 import { organization } from 'better-auth/plugins/organization';
 import type pg from 'pg';
-import { createHouseholdForOrganization } from '../repo/households.ts';
+import { withHousehold } from '../db.ts';
+import { claimEatersForUser } from '../repo/eaters.ts';
+import { createHouseholdForOrganization, findHouseholdByOrganization } from '../repo/households.ts';
 
 /**
  * Ce qu'un rôle peut faire.
@@ -101,6 +103,44 @@ export const isRole = (value: string): value is Role => value === 'parent' || va
 
 /** Le rôle de celui qui crée le foyer. C'est le sien, il en est parent. */
 const CREATOR_ROLE = 'parent';
+
+
+/**
+ * Rattache à son compte l'assiette que le foyer lui réservait.
+ *
+ * C'est la moitié serveur de « je saisis ma femme aujourd'hui, elle s'inscrit
+ * dans trois semaines » : le parent a posé `claim_email` en créant la fiche, et
+ * l'arrivée du compte dans le foyer — par invitation acceptée ou par ajout
+ * direct — passe ici.
+ *
+ * ── Deux détails qui ne se devinent pas ─────────────────────────────────────
+ *
+ * `eater` est sous RLS depuis la 008 : une écriture depuis le pool nu ne
+ * toucherait **aucune ligne**, en silence. D'où `withHousehold`, qui pose
+ * `app.household_id` sur sa connexion — le crochet tourne hors du cycle de
+ * requête de Fastify, il n'a donc pas de `request.db` sous la main.
+ *
+ * Et l'échec ne remonte pas. Un rattachement raté laisse une fiche non
+ * rattachée, que le parent corrige d'un tap (« C'est elle ») ; une exception
+ * levée ici ferait **échouer l'acceptation de l'invitation**, et la personne ne
+ * pourrait pas entrer du tout. Le second coûte bien plus cher que le premier.
+ */
+async function rattacherAssiette(
+  pool: pg.Pool,
+  organizationId: string,
+  user: { id: string; email: string },
+): Promise<void> {
+  try {
+    const foyer = await findHouseholdByOrganization(pool, organizationId);
+    if (foyer === null) return;
+    await withHousehold(pool, foyer.id, (client) =>
+      claimEatersForUser(client, foyer.id, user.id, user.email.toLowerCase()),
+    );
+  } catch {
+    // Volontairement muet : voir l'en-tête. La fiche reste rattachable à la
+    // main, et l'invitation, elle, aboutit.
+  }
+}
 
 export interface AuthOptions {
   pool: pg.Pool;
@@ -172,6 +212,17 @@ export function buildAuth(options: AuthOptions) {
         organizationHooks: {
           afterCreateOrganization: async ({ organization: org }) => {
             await createHouseholdForOrganization(options.pool, org.id, org.name);
+          },
+
+          // Quelqu'un entre dans un foyer : si une assiette l'attendait, elle
+          // devient la sienne. Les deux chemins d'entrée sont couverts —
+          // l'invitation acceptée, qui est le cas courant, et l'ajout direct
+          // d'un membre, qui ne passe pas par une invitation.
+          afterAcceptInvitation: async ({ organization: org, user }) => {
+            await rattacherAssiette(options.pool, org.id, user);
+          },
+          afterAddMember: async ({ organization: org, user }) => {
+            await rattacherAssiette(options.pool, org.id, user);
           },
         },
 

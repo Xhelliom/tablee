@@ -25,6 +25,7 @@ Inutile de le refaire sur le téléphone — c'est vert au 13/09/2026 :
 | `scope: "/"` couvre `action: "/share"` | Une action hors scope est refusée en silence | ✅ |
 | Session absente sur `/share` → l'écran de connexion s'affiche **sans changer l'URL** | La session dure 30 jours : un jour elle expirera pile au moment d'un partage. Les paramètres survivent, et l'écran de partage reprend après connexion | ✅ (lu dans le code, à confirmer en vrai) |
 | Le parcours complet compte → foyer → invitation → acceptation | Vérifié contre un serveur réel, en HTTP | ✅ |
+| Le parcours compte → foyer → « Bienvenue » → fiche réservée → inscription → rattachement | Piloté de bout en bout dans un Chromium, contre un serveur et une base réels | ✅ |
 
 Ce qui **ne peut pas** être vérifié sans téléphone, et qui est donc tout
 l'objet de la soirée :
@@ -144,10 +145,27 @@ retire l'attribut `Secure` du cookie de session.
 Ouvrir `https://tablee.example.net` dans **Chrome** (pas Firefox : le share
 target n'y est pas implémenté).
 
-L'app demande de créer un compte, puis le foyer. Vous en êtes **parent** : vous
-pourrez inviter votre conjoint depuis « La famille », en bas de l'écran — le
-lien se copie et se transmet comme vous voulez, il n'y a pas d'envoi
-automatique.
+L'app demande de créer un compte, puis le foyer. Vous en êtes **parent**.
+
+Elle enchaîne ensuite sur **« Bienvenue »**, en deux temps (14/09/2026) : votre
+propre assiette — prénom, date de naissance, sexe, portion, régimes, et
+facultativement poids et taille puisque vous êtes majeur —, puis les autres
+convives. Pour un adulte, cocher « cette personne aura son propre compte » et
+saisir son adresse fait trois choses d'un coup : la fiche est créée, elle lui
+est **réservée**, et l'invitation est prête. Le lien se copie et se transmet
+comme vous voulez : il n'y a pas d'envoi automatique.
+
+Le jour où cette personne s'inscrit avec cette adresse et rejoint le foyer, sa
+fiche devient la sienne, avec ce que vous aurez saisi entre-temps. Rien à
+ressaisir, rien à refaire — **c'est le point à vérifier en vrai** : créer la
+fiche de votre conjointe, lui envoyer le lien, et regarder si sa fiche porte
+bien « · vous » de son côté.
+
+- **Sur un enfant, aucun champ de poids n'apparaît**, et c'est voulu (I5). Si
+  vous en voyez un, c'est un bug, pas un réglage.
+- **Sa fiche reste « réservée à … »** après qu'elle a accepté → elle s'est
+  inscrite avec une autre adresse. « La famille » → sa fiche → « Rattacher à un
+  compte… », avec la bonne adresse cette fois.
 
 - **Échec possible** : erreur de certificat → Caddy n'a pas obtenu le
   certificat. Regarder ses logs, pas ceux de l'app.

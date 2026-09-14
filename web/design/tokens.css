@@ -58,19 +58,72 @@
  *
  * Les couleurs d'état (succès, alerte) existent séparément, précisément pour
  * qu'on n'aille pas emprunter le vert des fibres pour dire « c'est bon ».
+ *
+ * ── Clair et sombre, déclarés ensemble ────────────────────────────────────
+ *
+ * Chaque token porte ses deux valeurs sur la même ligne, dans `light-dark()`.
+ * C'est le point : un second bloc `@media (prefers-color-scheme: dark)` se
+ * désynchronise du premier au troisième token ajouté, et personne ne s'en
+ * aperçoit avant de voir du texte noir sur fond noir. Ici, oublier une valeur
+ * ne compile pas.
+ *
+ * **Deux familles ne basculent pas, et c'est voulu :**
+ *
+ *   `--coral` et les cinq couleurs de nutriments. Ce sont les valeurs du
+ *   §8ter, elles ne se « corrigent » pas pour un fond. Vérifié plutôt que
+ *   supposé : sur le fond sombre, les cinq contrastent entre 4,4 et 7,6 pour 1
+ *   — mieux que sur le crème, où l'orange des glucides est le point faible.
+ *
+ *   `--on-coral` / `--on-coral-dim`, ce qui se pose **sur** l'aplat terracotta.
+ *   La barre de titre est identique dans les deux modes ; ce qu'elle contient
+ *   doit donc l'être aussi. Y employer un token qui bascule le fait disparaître
+ *   la nuit — c'est exactement le piège que `--coral-50` tendait, en servant à
+ *   la fois de pastille pâle sur le terracotta et de fond pâle dans la page.
+ *
+ * Le reste bascule : surfaces, textes, bordures, états, et les rampes, qui
+ * s'inversent. `--coral-600` est « le terracotta de premier plan » — sombre sur
+ * fond clair, clair sur fond sombre. Le nom dit le rôle, pas la luminosité.
+ *
+ * ⚠️ **`light-dark()` est une exigence, pas une amélioration progressive.**
+ * Chrome 123, Safari 17.5, Firefox 120 — début 2024. En deçà, les propriétés
+ * personnalisées se parsent quand même (elles acceptent presque n'importe quels
+ * jetons) mais ne *résolvent* pas : l'interface perd ses couleurs au lieu de
+ * retomber sur le clair. Le repli propre passerait par un second jeu de tokens
+ * sous `@supports`, soit exactement la duplication que ce fichier évite. Arbitré
+ * en faveur d'un seul jeu, et consigné — dette n° 12.
  */
 
 :root {
+  /* `light-dark()` lit ce réglage. Sans lui, tout resterait clair. */
+  color-scheme: light dark;
+
   /* ── Marque ───────────────────────────────────────────────────────────── */
+  /* Le terracotta ne bascule pas : c'est la couleur du produit. */
   --coral: #D85A30;
-  --coral-50: #FAECE7;
-  --coral-100: #F5C4B3;
-  --coral-200: #F0997B;
-  --coral-600: #993C1D;
-  --coral-800: #712B13;
-  --coral-900: #4A1B0C;
+  /* Ce qui se pose sur l'aplat terracotta. Ne bascule pas non plus — la barre
+     de titre est la même de jour comme de nuit. */
+  --on-coral: #FAECE7;
+  --on-coral-dim: #F5C4B3;
+  /* Le terracotta employé comme texte ou icône dans la page. Éclairci la nuit :
+     #D85A30 sur fond sombre tombe à 4,3 pour 1, sous le seuil du texte. */
+  --coral-fg: light-dark(#D85A30, #F0997B);
+
+  /* La rampe. Elle s'inverse : le nom dit le rôle, pas la luminosité. */
+  --coral-50:  light-dark(#FAECE7, #38201A);   /* fond terracotta discret */
+  --coral-100: light-dark(#F5C4B3, #8A4128);
+  --coral-200: light-dark(#F0997B, #B85F3F);
+  --coral-600: light-dark(#993C1D, #F0997B);   /* premier plan sur ce fond */
+  --coral-800: light-dark(#712B13, #F5C4B3);
+  --coral-900: light-dark(#4A1B0C, #FAECE7);
+
+  /* Terracotta translucide : liseré d'invite, sélection, piste d'anneau. */
+  --coral-line:  light-dark(rgba(216, 90, 48, .30), rgba(240, 153, 123, .34));
+  --coral-wash:  light-dark(rgba(216, 90, 48, .08), rgba(216, 90, 48, .22));
+  --coral-track: light-dark(rgba(216, 90, 48, .18), rgba(240, 153, 123, .20));
 
   /* ── Nutriments — données nutritionnelles UNIQUEMENT ──────────────────── */
+  /* Identiques dans les deux modes. Ce sont cinq catégories, pas une échelle,
+     et les redéfinir pour la nuit ferait de la même donnée deux couleurs. */
   --n-prot: #7F77DD;
   --n-gluc: #EF9F27;
   --n-lip: #378ADD;
@@ -80,31 +133,37 @@
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
   /* Pas de blanc pur en fond : un crème très légèrement teinté de la couleur
      de marque change la perception avant qu'on ait lu quoi que ce soit. Le
-     blanc est réservé aux cartes, qui ressortent alors du fond. */
-  --surface-2: #FFFFFF;
-  --surface-1: #F4F2ED;
-  --surface-0: #EDEAE3;
-  --warm: rgba(216, 90, 48, .06);
+     blanc est réservé aux cartes, qui ressortent alors du fond.
+     La nuit, même principe à l'envers : pas de noir pur, un brun très sombre.
+     Et le même ordre de hauteur — la carte reste au-dessus du fond. */
+  --surface-2: light-dark(#FFFFFF, #221E19);
+  --surface-1: light-dark(#F4F2ED, #1C1915);
+  --surface-0: light-dark(#EDEAE3, #151310);
+  --warm: light-dark(rgba(216, 90, 48, .06), rgba(216, 90, 48, .07));
 
-  --border: rgba(0, 0, 0, .13);
-  --border-strong: rgba(0, 0, 0, .26);
+  --border:        light-dark(rgba(0, 0, 0, .13), rgba(255, 255, 255, .11));
+  --border-strong: light-dark(rgba(0, 0, 0, .26), rgba(255, 255, 255, .28));
+  /* Le voile d'une feuille modale. Plus dense la nuit : un noir à 45 % sur un
+     fond déjà sombre ne sépare plus rien. */
+  --scrim: light-dark(rgba(27, 27, 25, .45), rgba(0, 0, 0, .62));
 
-  --text-primary: #1B1B19;
-  --text-secondary: #5F5E5A;
-  --text-muted: #8D8C85;
+  --text-primary:   light-dark(#1B1B19, #EDE9E1);
+  --text-secondary: light-dark(#5F5E5A, #ADA79C);
+  --text-muted:     light-dark(#8D8C85, #918A7E);
 
   /* ── États — distincts des couleurs de nutriments, exprès ─────────────── */
-  --bg-accent: #E6F1FB;
-  --text-accent: #185FA5;
-  --bg-warning: #FAEEDA;
-  --text-warning: #854F0B;
-  --bg-success: #E1F5EE;
-  --text-success: #0F6E56;
-  --green-100: #C0DD97;
-  --green-600: #3B6D11;
-  --green-900: #173404;
-  --amber-100: #FAC775;
-  --amber-900: #412402;
+  --bg-accent:    light-dark(#E6F1FB, #142A3C);
+  --text-accent:  light-dark(#185FA5, #8FC4EF);
+  --bg-warning:   light-dark(#FAEEDA, #3A2C10);
+  --text-warning: light-dark(#854F0B, #F0C273);
+  --bg-success:   light-dark(#E1F5EE, #0F2B23);
+  --text-success: light-dark(#0F6E56, #7DD3B6);
+  /* Le vert des aplats de plat et de saisonnalité — pas celui des fibres. */
+  --green-100: light-dark(#C0DD97, #24361A);
+  --green-600: light-dark(#3B6D11, #4F8F18);
+  --green-900: light-dark(#173404, #C0DD97);
+  --amber-100: light-dark(#FAC775, #4A3208);
+  --amber-900: light-dark(#412402, #FAC775);
 
   --radius: 8px;
   --radius-card: 12px;
@@ -118,6 +177,17 @@
   --font-voice: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
+
+/*
+ * Le choix manuel, pour qui ne veut pas suivre son téléphone.
+ *
+ * `color-scheme: only …` suffit : `light-dark()` s'y plie, et les contrôles
+ * natifs suivent avec — le sélecteur de date, les barres de défilement, la
+ * couleur du curseur. Un bloc de tokens de plus n'aurait fait ni l'un ni
+ * l'autre. Le réglage est posé par `web/design/theme.ts`, avant le rendu.
+ */
+:root[data-theme='clair']  { color-scheme: only light; }
+:root[data-theme='sombre'] { color-scheme: only dark; }
 
 * { box-sizing: border-box; }
 
@@ -154,7 +224,7 @@ a { color: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--coral-50);
+  color: var(--on-coral);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -165,13 +235,13 @@ a { color: inherit; }
 
 .appbar__logo {
   width: 23px; height: 23px; border-radius: 7px;
-  background: var(--coral-50); color: var(--coral);
+  background: var(--on-coral); color: var(--coral);
   display: flex; align-items: center; justify-content: center;
 }
 
 .appbar__action {
   background: none; border: 0; padding: 4px; cursor: pointer;
-  color: var(--coral-100); display: flex;
+  color: var(--on-coral-dim); display: flex;
 }
 
 .sec { padding: 0 18px; }
@@ -214,8 +284,10 @@ a { color: inherit; }
 }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn--ghost {
-  background: transparent; color: var(--coral);
-  border: .5px solid var(--coral);
+  /* Le liseré suit le texte, pas l'aplat : un contour #D85A30 sous un libellé
+     éclairci se lit comme deux terracottas différents. */
+  background: transparent; color: var(--coral-fg);
+  border: .5px solid var(--coral-fg);
 }
 .btn--quiet {
   background: var(--surface-2); color: var(--text-primary);
@@ -273,7 +345,7 @@ input[type='number']::-webkit-inner-spin-button {
   display: flex; align-items: center; justify-content: center;
 }
 .nav button[aria-current='page'] {
-  color: var(--coral);
+  color: var(--coral-fg);
   box-shadow: inset 0 2px 0 var(--coral);
 }
 
