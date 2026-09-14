@@ -10,8 +10,8 @@
 # Ce qui est sourcé est propre à un aliment, et vit dans `food-unit-weight.csv`.
 #
 # Ce fichier porte donc le **dernier recours** : une valeur par unité et par
-# forme, médiane de ces mesures publiées. L'app l'affiche « À vérifier »
-# (confidence='basse'). Une cuillère n'est pas un instrument : à quelques
+# forme, médiane de ces mesures publiées. L'app l'affiche « approximatif »
+# (confidence='basse') ; c'est la même valeur pour tous les foyers. Une cuillère n'est pas un instrument : à quelques
 # grammes près, c'est ce qu'on sait dire. Il ne sert que quand l'aliment n'a pas
 # sa propre conversion.
 #

@@ -373,7 +373,7 @@ function plantRatio(
     };
   }
   if (all.some((item) => item.quantityG !== null && item.conversion === 'basse')) {
-    warnings.push('part végétale calculée en partie sur des quantités à vérifier (cuillères, litres)');
+    warnings.push('part végétale calculée en partie sur des quantités approximatives (cuillères, litres)');
   }
   if (classified < total) {
     const share = Math.round((classified / total) * 100);

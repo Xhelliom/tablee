@@ -224,7 +224,7 @@ describe('calculerNutrition — somme des items', () => {
     );
     assert.equal(result.gramsTotal, 30, 'une cuillère par convive, deux convives');
     assert.equal(result.plantRatio, 100);
-    assert.ok(result.warnings.some((w) => /à vérifier/.test(w)), result.warnings.join(' | '));
+    assert.ok(result.warnings.some((w) => /approximatives/.test(w)), result.warnings.join(' | '));
   });
 
   it('n’a pas de valeurs plutôt que zéro quand aucun item n’est exploitable', () => {

@@ -148,7 +148,8 @@ export function resolveUnit(
   // Le repli dégradé : par forme d'abord — une cuillère d'épice n'est pas une
   // cuillère d'huile —, puis pour toutes les formes.
   //
-  // ⚠️ Précisé le 14/09/2026 : `basse`, « À vérifier », et non plus `moyenne`.
+  // ⚠️ Précisé le 14/09/2026 : `basse`, et non plus `moyenne` — dit
+  // « approximatif » sur une recette, où personne ne peut le corriger.
   // C'est une médiane de mesures publiées sur d'autres aliments, pas une mesure
   // de celui-ci (R6). Une cuillère n'est pas un instrument : à quelques grammes
   // près, c'est ce qu'on sait dire.

@@ -455,8 +455,10 @@ function IngredientRow({
             ? `${ingredient.quantity ?? ''} ${(ingredient.unit ?? '').toLowerCase()} — non converti`
             : ingredient.estimate === null
               ? `${formatGrams(ingredient.quantityG)} par convive`
-              // R6 : dire que c'est une estimation, et de quoi elle part.
-              : `≈ ${formatGrams(ingredient.quantityG)} par convive (${ingredient.quantity ?? ''} ${(ingredient.unit ?? '').toLowerCase()}) — ${ingredient.estimate === 'basse' ? 'à vérifier' : 'estimé'}`}
+              // R6 : dire que c'est une estimation, et de quoi elle part. Pas « à
+              // vérifier » : la conversion est commune à tous les foyers, et rien
+              // sur cet écran ne permet de la corriger.
+              : `≈ ${formatGrams(ingredient.quantityG)} par convive (${ingredient.quantity ?? ''} ${(ingredient.unit ?? '').toLowerCase()}) — ${ingredient.estimate === 'basse' ? 'approximatif' : 'estimé'}`}
         </span>
       </div>
       {done !== null ? (

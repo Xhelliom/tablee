@@ -85,8 +85,17 @@ ciqual_code,aliment,unit,grams,source
 9436,"Farine de blé tendre ou froment T55 (pour pains)",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
 9435,"Farine de blé tendre ou froment T65",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
 9445,"Farine de blé tendre ou froment T80",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
-# Sans source fiable à ce jour — à peser, source « Pesée maison, <date> ».
-# L'œuf : l'USDA donne 38 à 63 g selon le calibre, et Jow ne dit pas lequel.
-# L'ail : 3 g pour l'USDA, 5 à 8 g pour Aprifel, sans méthode ni l'un ni l'autre.
-22000,"Oeuf, cru",Pièce,,
-11000,"Ail, cru",Gousse,,
+# Deux valeurs **retenues d'office** le 14/09/2026, à la demande du propriétaire
+# du projet : aucune source officielle ne mesure un œuf « taille FR » ni une
+# gousse, et « non converti » coûtait plus qu'une approximation. Les sources sont
+# des pages web non officielles, citées telles quelles ; une pesée maison les
+# remplace volontiers.
+22000,"Oeuf, cru",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22010,"Oeuf, dur",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22011,"Oeuf, poché",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22014,"Oeuf, à la coque",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22505,"Oeuf, au plat, sans matière grasse",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22501,"Oeuf, au plat, frit, salé",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+11000,"Ail, cru",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
+11306,"Ail, rôti/cuit au four",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
+11307,"Ail, sauté/poêlé, sans matière grasse",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"

@@ -475,7 +475,16 @@ conversation.
 
 Quand un aliment n'a pas sa conversion propre, une cuillère à soupe vaut 15 g
 (médiane de 14 mesures USDA de liquides, pâtes et grains, de 13,5 à 21 g),
-6,5 g pour une épice, et un litre 1 kg. L'app l'affiche « À vérifier ».
+6,5 g pour une épice, et un litre 1 kg. L'app l'affiche « approximatif ».
+
+**Commun à tous les foyers.** Ces conversions, comme celles de
+`food-unit-weight.csv` et la valeur retenue d'office pour l'œuf (50 g) et la
+gousse d'ail (5 g), sont du référentiel : l'hébergeur les change par le CSV et
+le seed, aucun utilisateur ne les corrige depuis l'écran. D'où « approximatif »
+et non « à vérifier » sur une ligne d'ingrédient. Une correction par foyer
+demanderait une table sous RLS et un geste « corriger le poids » — pas faite,
+et à ne jamais écrire dans `food.unit_weights`, où la cuillère d'une famille
+changerait celle des autres.
 
 **Ce que ça coûte.** La forme ne se lit que sur la catégorie `epice`. Une
 poudre rangée ailleurs prend le repli commun : levure chimique, fécule, cacao

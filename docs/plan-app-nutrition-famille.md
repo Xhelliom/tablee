@@ -261,7 +261,7 @@ Trois voies, par priorité d'usage :
 > de liquides, pâtes et grains), 6,5 g pour une épice ; une cuillère à café 5 g
 > ou 2,2 g ; un litre 1 kg. La forme vient de `food.category`, jamais du nom.
 > Le point 3 ci-dessous change donc : ce repli sort en `confidence='basse'` —
-> « À vérifier » — et non plus `moyenne`. Une cuillère n'est pas une mesure, et
+> « approximatif » sur une recette — et non plus `moyenne`. Une cuillère n'est pas une mesure, et
 > ce que ce repli approxime est consigné (dette n° 18). Pièce, poignée, gousse,
 > bouquet et tranche n'en ont pas : aucun volume sur quoi s'appuyer.
 >

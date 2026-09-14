@@ -157,7 +157,7 @@ Sur ces points, demander plutôt que choisir :
    pas de ligne sans source, et une valeur trouvée par un modèle se vérifie dans
    la source elle-même avant d'entrer.
    `unit_default` n'est plus vide : c'est un **repli par forme** (013), médiane
-   de ces mesures, affiché « À vérifier ». Ne pas lui rendre `moyenne` ni en
+   de ces mesures, affiché « approximatif ». Ne pas lui rendre `moyenne` ni en
    faire la règle — une ligne par aliment passe toujours avant (dette n° 18).
 3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
    vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
