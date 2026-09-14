@@ -23,6 +23,7 @@ besoins différents. Aucune app du marché ne modélise ça.
 |---|---|
 | `docs/plan-app-nutrition-famille.md` | **La spec.** Fait autorité sur le modèle de données, l'API, la roadmap, les règles. |
 | `docs/mockups-tablee.html` | Maquettes de référence. Fait autorité sur la mise en page et l'identité visuelle. À ouvrir dans un navigateur. |
+| `docs/proposition-accueil.html` | Accueil et semaine redessinés, validés et implémentés le 14/09/2026. Fait autorité sur leur mise en page et sur le sens des couleurs de statut du bilan. À ouvrir dans un navigateur. |
 | `docs/jow-contract.md` | Contrat de parsing des pages Jow (Tâche 0, faite). Fait autorité sur ce que Jow publie. |
 | `docs/dette-technique.md` | Ce qui est su, assumé, et à reprendre. À lire avant de « corriger » une approximation : elle y est peut-être déjà expliquée. |
 | `docs/mise-en-service.md` | **Séquence de vérification sur un vrai téléphone.** Le share target est le chemin critique du produit. |
@@ -55,6 +56,9 @@ server/
   nutrition/      les trois algorithmes du §11, en applicatif
   food/           export Ciqual : source épinglée, lecture, mapping des groupes
   jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
+  llm/            l'IA (V3) : la seule porte vers Anthropic (index.ts), le
+                  découpage d'un texte libre, l'assistant, les recettes de
+                  l'accueil
   test-support/   fabriques de comptes/foyers, base de test, migrations
   *.test.ts       les suites d'intégration vivent à la racine de server/
 web/
@@ -148,6 +152,15 @@ Sur ces points, demander plutôt que choisir :
    0-3 ans, et les tranches prolongées au-delà de 69/59 ans.
 2. **Contenu de `unit_default`** — chaque ligne exige une `source`. Toujours
    vide. Gabarit commenté dans `db/seeds/unit-default.csv`.
+   Précisé le 14/09/2026 : aucune source publiée ne donne d'équivalence
+   **générique** défendable (une cuillère à soupe va de 5 à 16 g selon
+   l'aliment). Les conversions sourcées sont propres à un aliment et vont dans
+   `db/seeds/food-unit-weight.csv` ; elles sortent en « Estimation ». Même règle :
+   pas de ligne sans source, et une valeur trouvée par un modèle se vérifie dans
+   la source elle-même avant d'entrer.
+   `unit_default` n'est plus vide : c'est un **repli par forme** (013), médiane
+   de ces mesures, affiché « approximatif ». Ne pas lui rendre `moyenne` ni en
+   faire la règle — une ligne par aliment passe toujours avant (dette n° 18).
 3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
    vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
 4. ~~**Stocker le poids**~~ — tranché le 14/09/2026 : oui, pour les **majeurs
@@ -275,6 +288,30 @@ l'IA : un assistant diététicien branché sur trois repas mal saisis ne produit
 que des banalités. La V3 demande une relecture humaine de 4 synthèses sur des
 données réelles, la V4 un an d'historique — les écrire avant, c'est produire de
 l'invérifiable.
+
+> **Précisé le 14/09/2026 — la V3 a commencé par le texte libre, et par lui
+> seul** : c'est la seule case qui ne demande aucun historique. « Découper avec
+> l'IA » (`server/llm/decoupage.ts`) rend des libellés et des grammes estimés,
+> jamais une teneur ; les prénoms du foyer sont retirés avant l'envoi (dette
+> n° 17), et le repas porte la source `ia`, plafonnée à « Estimation ». Ne pas
+> en conclure que la synthèse peut suivre : elle attend des semaines de repas
+> réels.
+>
+> **L'assistant a suivi le même jour, à la demande du propriétaire** (onglet
+> « Conseils », `server/llm/conseil.ts`). Trois choses à ne pas défaire : il ne
+> reçoit que des **moyennes du foyer**, jamais par personne — c'est ce qui
+> l'empêche de glisser vers un jugement sur un enfant ; il ne reçoit **pas
+> l'énergie** ; et **rien n'est stocké**. Brancher `family_note` ou un
+> historique de conversation, c'est la synthèse : relire le §14 d'abord.
+>
+> **Les recettes de l'accueil ont suivi, toujours à sa demande** (bouton
+> « Demander à l'assistant des recettes », `server/llm/recettes.ts`). Même
+> résumé du foyer que les Conseils, plus la liste des recettes Jow connues. Le
+> modèle y **choisit par numéro** — une recette hors liste est jetée — et
+> avance une ou deux idées **sans aucune valeur**, marquées « à vérifier ». Ne
+> pas lui laisser écrire une teneur, ni proposer une recette manuelle : leur
+> titre est écrit par le foyer. Le modèle de toute la couche se règle par
+> `TABLEE_LLM_MODEL` (Sonnet 5 par défaut). Ce qu'il approxime : dette n° 20.
 
 ---
 

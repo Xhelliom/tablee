@@ -37,7 +37,7 @@ import type pg from 'pg';
 import { withHousehold } from '../db.ts';
 import { claimEatersForUser } from '../repo/eaters.ts';
 import { createHouseholdForOrganization, findHouseholdByOrganization } from '../repo/households.ts';
-import type { Mail, SendMail } from './mail.ts';
+import { composeMail, type Mail, type SendMail } from './mail.ts';
 
 /**
  * Ce qu'un rôle peut faire.
@@ -178,6 +178,11 @@ export interface AuthOptions {
    * peut partir (dette n° 7).
    */
   mail: SendMail | null;
+  /**
+   * Le client OAuth Google, ou `null` quand l'hébergeur ne l'a pas branché
+   * (`GOOGLE_CLIENT_ID`, voir `server/index.ts`).
+   */
+  google: { clientId: string; clientSecret: string } | null;
 }
 
 export type Auth = ReturnType<typeof buildAuth>;
@@ -190,6 +195,41 @@ export function buildAuth(options: AuthOptions) {
     secret: options.secret,
     baseURL: options.baseURL,
     basePath: '/api/auth',
+
+    /**
+     * La connexion Google : un tap, là où une adresse et douze caractères
+     * mettent de la friction sur le chemin critique.
+     *
+     * Une adresse déjà inscrite par mot de passe n'y est reliée que si elle
+     * est **confirmée** — `requireLocalEmailVerified`, le défaut de
+     * better-auth, laissé tel quel exprès. Sans lui, inscrire l'adresse de
+     * quelqu'un avant lui suffirait à garder un mot de passe sur le compte
+     * qu'il ouvrira ensuite par Google. Sans `TABLEE_MAIL`, aucune adresse
+     * n'est confirmée : la personne entre avec son mot de passe, puis lie
+     * Google depuis les réglages du foyer — connectée, cette fois.
+     */
+    ...(options.google === null ? {} : {
+      socialProviders: {
+        google: {
+          ...options.google,
+          // `user.name` est un prénom partout ailleurs : l'inscription le
+          // demande ainsi, l'invitation le cite. Google rend le nom complet.
+          mapProfileToUser: (profile) => ({ name: profile.given_name ?? profile.name }),
+        },
+      },
+    }),
+
+    account: {
+      // Tablée n'appelle aucune API Google, mais better-auth garde les jetons
+      // dans `account` : chiffrés, un dump de la base ne les rend pas utilisables.
+      encryptOAuthTokens: true,
+      // Lier Google depuis les réglages exige d'être connecté : la session
+      // prouve le compte, Google prouve le sien. Les deux adresses n'ont pas à
+      // coïncider — on s'inscrit souvent avec une autre que sa Gmail, et c'est
+      // justement ce cas qu'il faut rendre rapide. La liaison **implicite**, à
+      // la connexion, reste limitée à la même adresse, confirmée.
+      accountLinking: { allowDifferentEmails: true },
+    },
 
     emailAndPassword: {
       enabled: true,
@@ -208,12 +248,14 @@ export function buildAuth(options: AuthOptions) {
       // les sessions ouvertes tombent avec l'ancien.
       revokeSessionsOnPasswordReset: true,
       ...(mail === null ? {} : {
-        sendResetPassword: ({ user, url }) => expédier(mail, {
+        sendResetPassword: ({ user, url }) => expédier(mail, composeMail({
           to: user.email,
           subject: 'Choisir un nouveau mot de passe Tablée',
-          text: `Pour choisir un nouveau mot de passe :\n\n${url}\n\n`
-            + 'Le lien vaut une heure. Si vous n’avez rien demandé, ignorez ce message : rien ne change.',
-        }),
+          title: 'Nouveau mot de passe',
+          paragraphs: ['Une demande de nouveau mot de passe a été faite pour ce compte Tablée.'],
+          action: { label: 'Choisir un nouveau mot de passe', url },
+          footer: 'Le lien vaut une heure. Si vous n’avez rien demandé, ignorez ce message : votre mot de passe ne change pas.',
+        })),
       }),
     },
 
@@ -225,12 +267,14 @@ export function buildAuth(options: AuthOptions) {
         // plutôt qu'un refus sans issue.
         sendOnSignIn: true,
         autoSignInAfterVerification: true,
-        sendVerificationEmail: ({ user, url }) => expédier(mail, {
+        sendVerificationEmail: ({ user, url }) => expédier(mail, composeMail({
           to: user.email,
           subject: 'Confirmer votre adresse sur Tablée',
-          text: `Pour confirmer que cette adresse est bien la vôtre :\n\n${url}\n\n`
-            + 'Si vous n’avez pas créé de compte sur Tablée, ignorez ce message.',
-        }),
+          title: 'Confirmer votre adresse',
+          paragraphs: ['Il reste une étape avant d’entrer dans Tablée : confirmer que cette adresse est bien la vôtre.'],
+          action: { label: 'Confirmer mon adresse', url },
+          footer: 'Si vous n’avez pas créé de compte sur Tablée, ignorez ce message.',
+        })),
       },
     }),
 
@@ -300,13 +344,17 @@ export function buildAuth(options: AuthOptions) {
         // là, le coût est payé. Le lien reste rendu à l'appelant dans tous les
         // cas : un mail peut finir en indésirables.
         ...(mail === null ? {} : {
-          sendInvitationEmail: ({ id, email, organization: org, inviter }) => expédier(mail, {
+          sendInvitationEmail: ({ id, email, organization: org, inviter }) => expédier(mail, composeMail({
             to: email,
             subject: `Invitation au foyer « ${org.name} » sur Tablée`,
-            text: `${inviter.user.name} vous invite à suivre les repas du foyer « ${org.name} » sur Tablée.\n\n`
-              + `Pour accepter :\n\n${invitationUrl(options.baseURL, id)}\n\n`
-              + 'Le lien vaut sept jours. Si vous n’attendiez pas cette invitation, ignorez ce message.',
-          }),
+            title: `Rejoindre le foyer « ${org.name} »`,
+            paragraphs: [
+              `${inviter.user.name} vous invite à suivre les repas du foyer « ${org.name} » sur Tablée.`,
+              'En acceptant, vous pourrez enregistrer les repas et voir les bilans de chacun.',
+            ],
+            action: { label: 'Rejoindre le foyer', url: invitationUrl(options.baseURL, id) },
+            footer: 'Le lien vaut sept jours. Si vous n’attendiez pas cette invitation, ignorez ce message.',
+          })),
         }),
         invitationExpiresIn: 60 * 60 * 24 * 7,
       }),

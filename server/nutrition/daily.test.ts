@@ -203,6 +203,19 @@ describe('age', () => {
     assert.equal(ageBracket(42), 'adulte');
   });
 
+  it('place chaque borne dans la bonne tranche — c’est ce que lisent les assistants', () => {
+    // Un glissement d'un an aux bornes ne se verrait nulle part à l'écran :
+    // il changerait seulement « 1 enfant de 16-17 ans » en « 1 adulte » dans
+    // le texte envoyé au modèle, et ce qu'il en conclut.
+    const bornes: [number, string][] = [
+      [0, 'moins de 1 an'], [1, '1-3 ans'], [3, '1-3 ans'], [4, '4-5 ans'],
+      [5, '4-5 ans'], [6, '6-9 ans'], [9, '6-9 ans'], [10, '10-12 ans'],
+      [12, '10-12 ans'], [13, '13-15 ans'], [15, '13-15 ans'], [16, '16-17 ans'],
+      [17, '16-17 ans'], [18, 'adulte'],
+    ];
+    for (const [age, tranche] of bornes) assert.equal(ageBracket(age), tranche, `${age} ans`);
+  });
+
   it('refuse une date de naissance illisible', () => {
     assert.throws(() => ageAt('pas une date'));
   });

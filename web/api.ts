@@ -79,7 +79,7 @@ export const api = {
 
 export type Confidence = 'haute' | 'moyenne' | 'basse';
 export type Slot = 'petit_dej' | 'dejeuner' | 'gouter' | 'diner' | 'collation';
-export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
+export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel' | 'ia';
 export type Nutrient = 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'fiberG';
 /**
  * `encadre` — la source ne donne qu'un intervalle (« < 0,5 g » chez Ciqual).
@@ -256,6 +256,12 @@ export interface RecipeIngredient {
   quantity: number | null;
   unit: string | null;
   quantityG: number | null;
+  /**
+   * Quand les grammes sont estimés depuis une cuillère, une pièce, un litre :
+   * `moyenne` pour une conversion propre à l'aliment, `basse` pour un repli par
+   * défaut. `null` quand ils sont mesurés.
+   */
+  estimate: 'moyenne' | 'basse' | null;
   optional: boolean;
   position: number;
 }
@@ -287,6 +293,28 @@ export interface RecipeSummary {
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
   timesEaten: number;
+  url: string | null;
+}
+
+/**
+ * Une recette choisie par l'assistant. Tout vient de la base, sauf `reason` :
+ * le modèle choisit et justifie, il ne donne aucune valeur (R1).
+ */
+export interface RecipeProposal {
+  recipe: RecipeSummary;
+  /** `null` quand le modèle n'a rien donné de lisible, ou a glissé un chiffre. */
+  reason: string | null;
+}
+
+export interface AssistantRecipesResponse {
+  proposals: RecipeProposal[];
+  /**
+   * Des plats hors de la liste, inventés par le modèle : un nom et une phrase,
+   * **aucune valeur**. L'écran les marque « à vérifier ».
+   */
+  ideas: { title: string; reason: string }[];
+  /** Le texte exact envoyé au modèle — ce qui est sorti du foyer. */
+  facts: string;
 }
 
 export interface ResolveResponse {

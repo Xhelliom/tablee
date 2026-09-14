@@ -159,8 +159,13 @@ export async function updateEater(
   db: HouseholdDb,
   householdId: string,
   id: string,
-  patch: MemberPatch,
+  input: MemberPatch,
 ): Promise<Eater | null> {
+  // Une fiche retirée n'est plus à personne. Gardant son compte ou sa
+  // réservation, elle occuperait les index uniques de la 009 : la personne ne
+  // pourrait plus recréer sa fiche (409), et une adresse réservée rattacherait
+  // à son arrivée une assiette que personne ne voit.
+  const patch: MemberPatch = input.active === false ? { ...input, userId: null, claimEmail: null } : input;
   const sets: string[] = [];
   const params: unknown[] = [householdId, id];
   const set = (column: string, value: unknown): void => {

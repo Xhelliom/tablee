@@ -15,6 +15,10 @@ export default defineConfig({
   build: { outDir: 'dist', emptyOutDir: true },
   server: {
     port: 5173,
-    proxy: { '/api': 'http://localhost:3000' },
+    // `/api/` avec la barre, et pas `/api` : Vite compare par préfixe, et
+    // `/api` capterait aussi `/api.ts` — le client HTTP du front, servi alors
+    // par Fastify sous forme de coquille HTML. Page blanche, sans autre signe
+    // qu'un « Unexpected token '<' ».
+    proxy: { '/api/': 'http://localhost:3000' },
   },
 });

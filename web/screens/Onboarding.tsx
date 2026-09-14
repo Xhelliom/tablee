@@ -35,6 +35,7 @@ import {
   draftToBody, emptyDraft, ProfileFields, type ProfileDraft,
 } from '../components/EaterForm.tsx';
 import { dietLabel } from '../design/vocabulary.ts';
+import { ÉditionFiche } from './Eaters.tsx';
 
 type Étape = 'moi' | 'famille';
 
@@ -88,6 +89,7 @@ export function OnboardingScreen(): ReactElement {
           autres={eaters.filter((eater) => !eater.isMe)}
           liens={liens}
           onAdded={ajouté}
+          onChanged={refreshEaters}
           onRetourMoi={() => setÉtape('moi')}
         />
       )}
@@ -159,13 +161,14 @@ function MonAssiette({
 // ── 2. Qui d'autre est à table ──────────────────────────────────────────────
 
 function LaFamille({
-  foyer, moi, autres, liens, onAdded, onRetourMoi,
+  foyer, moi, autres, liens, onAdded, onChanged, onRetourMoi,
 }: {
   foyer: string;
   moi: Eater | null;
   autres: Eater[];
   liens: { prénom: string; url: string }[];
   onAdded: (result: AddedEater) => Promise<void>;
+  onChanged: () => Promise<void>;
   onRetourMoi: () => void;
 }): ReactElement {
   const [ouvert, setOuvert] = useState(autres.length === 0);
@@ -181,8 +184,8 @@ function LaFamille({
       </p>
 
       <div className="stack" style={{ marginTop: 20 }}>
-        {moi !== null ? <FicheBrève eater={moi} /> : null}
-        {autres.map((eater) => <FicheBrève key={eater.id} eater={eater} />)}
+        {moi !== null ? <FicheBrève eater={moi} onChanged={onChanged} /> : null}
+        {autres.map((eater) => <FicheBrève key={eater.id} eater={eater} onChanged={onChanged} />)}
       </div>
 
       {liens.map(({ prénom, url }) => (
@@ -219,14 +222,28 @@ function LaFamille({
       ) : null}
 
       <p className="meta" style={{ marginTop: 18, lineHeight: 1.6 }}>
-        Rien n’est définitif : tout se modifie depuis « La famille », et changer
-        une portion plus tard ne réécrit aucun repas déjà enregistré.
+        Rien n’est définitif : une fiche se corrige ici, ou plus tard depuis
+        « La famille », et changer une portion ne réécrit aucun repas déjà
+        enregistré.
       </p>
     </div>
   );
 }
 
-function FicheBrève({ eater }: { eater: Eater }): ReactElement {
+/**
+ * Une personne déjà à table, et de quoi la corriger sans quitter l'accueil.
+ *
+ * C'est ici qu'on se trompe — une date de naissance, un prénom, quelqu'un
+ * ajouté deux fois — et renvoyer vers « La famille » obligeait à sortir d'un
+ * parcours pas fini. Le formulaire est celui de la famille, retrait compris, et
+ * suit les mêmes droits : un parent corrige tout le monde, un adulte sa fiche.
+ */
+function FicheBrève({ eater, onChanged }: { eater: Eater; onChanged: () => Promise<void> }): ReactElement {
+  const { role } = useSession();
+  const [édition, setÉdition] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const modifiable = role === 'parent' || eater.isMe;
+
   return (
     <article className="card" style={{ padding: '12px 15px' }}>
       <div className="spread">
@@ -240,10 +257,28 @@ function FicheBrève({ eater }: { eater: Eater }): ReactElement {
             {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
           </p>
         </div>
-        {eater.claimEmail !== null ? (
-          <span className="chip">Invitée</span>
-        ) : null}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {eater.claimEmail !== null ? <span className="chip">Invitée</span> : null}
+          {modifiable && !édition ? (
+            <button type="button" className="chip" style={{ cursor: 'pointer' }}
+                    onClick={() => { setError(null); setÉdition(true); }}>
+              Modifier
+            </button>
+          ) : null}
+        </div>
       </div>
+
+      {édition ? (
+        <ÉditionFiche
+          eater={eater}
+          onCancel={() => setÉdition(false)}
+          onSaved={async () => { setÉdition(false); await onChanged(); }}
+          onError={setError}
+        />
+      ) : null}
+      {error !== null ? (
+        <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 8 }}>{error}</p>
+      ) : null}
     </article>
   );
 }

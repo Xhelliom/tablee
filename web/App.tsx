@@ -22,6 +22,7 @@ import { HouseholdScreen } from './screens/Household.tsx';
 import { OnboardingScreen } from './screens/Onboarding.tsx';
 import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 import { HouseholdSettingsScreen } from './screens/HouseholdSettings.tsx';
+import { AssistantScreen } from './screens/Assistant.tsx';
 
 export function App(): ReactElement {
   return (
@@ -86,6 +87,8 @@ function Routes(): ReactElement {
       return <Chrome tab="semaine"><WeekScreen /></Chrome>;
     case 'historique':
       return <Chrome tab="historique"><HistoryScreen /></Chrome>;
+    case 'conseils':
+      return <Chrome tab="conseils"><AssistantScreen /></Chrome>;
     case 'foyer':
       return <HouseholdSettingsScreen />;
     case 'membres':

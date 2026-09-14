@@ -12,19 +12,20 @@
 import { useRef, type ReactNode } from 'react';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
-import { IconBowl, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
+import { IconBowl, IconChat, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
 
-export type Tab = 'accueil' | 'semaine' | 'historique' | 'membres';
+export type Tab = 'accueil' | 'semaine' | 'historique' | 'conseils' | 'membres';
 
 const TABS: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] = [
   { tab: 'accueil', path: '/', label: 'Aujourd’hui', Icon: IconHome },
   { tab: 'semaine', path: '/semaine', label: 'La semaine', Icon: IconWeek },
   { tab: 'historique', path: '/historique', label: 'Historique', Icon: IconHistory },
+  { tab: 'conseils', path: '/conseils', label: 'Conseils', Icon: IconChat },
   { tab: 'membres', path: '/membres', label: 'La famille', Icon: IconUsers },
 ];
 
 export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): React.ReactElement {
-  const { user, signOut } = useSession();
+  const { user, signOut, ia } = useSession();
   const menu = useRef<HTMLDivElement>(null);
 
   return (
@@ -68,7 +69,8 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
       <main style={{ flex: 1 }}>{children}</main>
 
       <nav className="nav" aria-label="Navigation principale">
-        {TABS.map(({ tab: name, path, label, Icon }) => (
+        {/* Sans clé API côté serveur, pas d'onglet qui mènerait à un refus. */}
+        {TABS.filter(({ tab: name }) => ia || name !== 'conseils').map(({ tab: name, path, label, Icon }) => (
           <button
             key={name}
             type="button"

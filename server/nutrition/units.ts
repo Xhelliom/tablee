@@ -6,7 +6,7 @@
  *
  *   1. unité de masse          → conversion directe
  *   2. `food.unit_weights`     → poids propre à cet aliment
- *   3. `unit_default`          → repli générique, `confidence='moyenne'`
+ *   3. `unit_default`          → repli par forme, `confidence='basse'`
  *   4. sinon                   → **demander**, ne pas deviner (I1)
  *
  * ⚠️ **Écart assumé avec le point 1 du §6**, qui range `ml` parmi les unités
@@ -18,15 +18,34 @@
  * de I1, qui ne se négocie pas.
  */
 
-export type UnitConfidence = 'haute' | 'moyenne';
+export type UnitConfidence = 'haute' | 'moyenne' | 'basse';
 
 export interface UnitSource {
   /** Conversions propres à l'aliment : `{"piece":110,"poignee":30}`. */
   unitWeights?: Record<string, number> | null;
+  /** `food.category` : décide du repli par forme (`formOf`). */
+  category?: string | null;
 }
 
-/** Table `unit_default` : unité → grammes, avec la source qui l'atteste. */
+/**
+ * Table `unit_default` : un repli par unité **et par forme**, avec la source
+ * qui l'atteste. Clé `unité normalisée|forme` — voir `defaultKey`.
+ */
 export type UnitDefaults = Map<string, { grams: number; source: string }>;
+
+export type UnitForm = 'tout' | 'poudre';
+
+/**
+ * La forme d'un aliment, pour le repli (migration 013). Seule la catégorie
+ * `epice` est une poudre à coup sûr : la farine est rangée avec le riz
+ * (`cereale`) et le cacao avec les boissons. Ceux-là ont leur ligne propre dans
+ * `food-unit-weight.csv`, plutôt qu'une catégorie qui mentirait pour leurs
+ * voisins.
+ */
+export const formOf = (category: string | null | undefined): UnitForm =>
+  (category === 'epice' ? 'poudre' : 'tout');
+
+export const defaultKey = (unit: string, form: UnitForm): string => `${normalizeUnit(unit)}|${form}`;
 
 export type UnitResolution =
   | { resolved: true; grams: number; confidence: UnitConfidence; via: 'masse' | 'aliment' | 'defaut' }
@@ -116,15 +135,28 @@ export function resolveUnit(
 
   // Le poids porté par l'aliment lui-même l'emporte sur le repli générique :
   // une pièce de poulet et une pièce de radis n'ont rien en commun.
+  //
+  // ⚠️ Précisé le 14/09/2026 : `moyenne`, et non plus `haute`. Même propre à
+  // l'aliment, une pièce ou une cuillère n'est pas une pesée — l'œuf de la
+  // recette n'est pas celui qui a servi de mesure, et une valeur USDA décrit
+  // un produit américain (R6). Seule une masse est une mesure.
   const own = food?.unitWeights?.[key];
   if (typeof own === 'number' && Number.isFinite(own)) {
-    return { resolved: true, grams: round(quantity * own), confidence: 'haute', via: 'aliment' };
+    return { resolved: true, grams: round(quantity * own), confidence: 'moyenne', via: 'aliment' };
   }
 
-  const fallback = defaults.get(key);
+  // Le repli dégradé : par forme d'abord — une cuillère d'épice n'est pas une
+  // cuillère d'huile —, puis pour toutes les formes.
+  //
+  // ⚠️ Précisé le 14/09/2026 : `basse`, et non plus `moyenne` — dit
+  // « approximatif » sur une recette, où personne ne peut le corriger.
+  // C'est une médiane de mesures publiées sur d'autres aliments, pas une mesure
+  // de celui-ci (R6). Une cuillère n'est pas un instrument : à quelques grammes
+  // près, c'est ce qu'on sait dire.
+  const form = formOf(food?.category);
+  const fallback = (form === 'tout' ? undefined : defaults.get(`${key}|${form}`)) ?? defaults.get(`${key}|tout`);
   if (fallback !== undefined) {
-    // R6 : un repli générique est une estimation, et elle doit se voir.
-    return { resolved: true, grams: round(quantity * fallback.grams), confidence: 'moyenne', via: 'defaut' };
+    return { resolved: true, grams: round(quantity * fallback.grams), confidence: 'basse', via: 'defaut' };
   }
 
   return {

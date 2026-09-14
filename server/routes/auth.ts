@@ -74,7 +74,11 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
    */
   app.get('/api/me', async (request) => {
     const state = request.auth;
-    if (state.kind === 'anonyme') return { state: 'anonyme' };
+    // `google` dit aux écrans s'il faut proposer Google — pour entrer, ou pour
+    // lier son compte une fois connecté. Sur une instance qui ne l'a pas
+    // branché, un bouton qui échouerait à chaque tap ne s'affiche pas.
+    const google = ctx.auth.options.socialProviders?.google !== undefined;
+    if (state.kind === 'anonyme') return { state: 'anonyme', google };
 
     const userId = state.kind === 'actif' ? state.identity.userId : state.userId;
     const households = await listHouseholdsForUser(ctx.pool, userId);
@@ -84,6 +88,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
         state: 'sans_foyer',
         user: { id: state.userId, email: state.email, name: state.name },
         households,
+        google,
       };
     }
 
@@ -99,6 +104,10 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
       },
       role: identity.role,
       households,
+      google,
+      // « Découper avec l'IA » et l'onglet « Conseils » ne s'affichent que si
+      // le serveur sait le faire.
+      ia: (ctx.llm ?? null) !== null,
     };
   });
 

@@ -253,6 +253,23 @@ describe('assiettes et comptes (009)', { skip: enabled ? false : SKIP_MESSAGE },
       assert.equal(status, 403);
     });
 
+    it('un parent retire une fiche, qui quitte la table et libère son compte', async () => {
+      const { body } = await call('POST', '/api/eaters', parent.cookie, {
+        firstName: 'Erreur', birthDate: MAJEUR, sex: 'M', self: true,
+      });
+      const retrait = await call('PATCH', `/api/eaters/${body.eater.id}`, parent.cookie, {
+        active: false,
+      });
+      assert.equal(retrait.status, 200);
+      assert.equal((await eaters(parent.cookie)).length, 1, 'il ne reste que l’enfant');
+
+      // Sans le détachement, l'index de la 009 refuserait la nouvelle fiche.
+      const recréée = await call('POST', '/api/eaters', parent.cookie, {
+        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', self: true,
+      });
+      assert.equal(recréée.status, 201);
+    });
+
     it('un adulte ne rattache aucune fiche à personne', async () => {
       const { status } = await call('PUT', `/api/eaters/${enfant}/compte`, nounou.cookie, {
         self: true,
