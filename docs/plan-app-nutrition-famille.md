@@ -441,6 +441,24 @@ est la principale façon de faire échouer la V1.
 > Aucune migration ne les marque vérifiés d'office : ce serait affirmer une
 > preuve qu'on n'a pas. Détail dans la dette n° 7.
 
+> **Complété le 14/09/2026 — la connexion Google, au choix de l'hébergeur.**
+> Avec `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`, l'écran de connexion
+> propose « Continuer avec Google » : un tap au lieu d'une adresse et de douze
+> caractères. C'est toujours better-auth (`socialProviders.google`), et aucune
+> migration : la table `account` de la 007 porte déjà les comptes tiers.
+>
+> - **Un compte ouvert par Google est un compte comme un autre** : même état
+>   `sans_foyer`, mêmes invitations, même rattachement d'assiette par adresse.
+>   `user.name` n'en garde que le prénom, comme l'inscription le demande.
+> - **Une adresse déjà inscrite par mot de passe n'est reliée à Google que si
+>   elle est confirmée** — le défaut de better-auth, laissé tel quel. Sinon,
+>   inscrire l'adresse de quelqu'un avant lui suffirait à garder un mot de
+>   passe sur le compte qu'il ouvrira ensuite par Google. Sans `TABLEE_MAIL`,
+>   aucune adresse n'est confirmée : la personne entre avec son mot de passe,
+>   et l'écran le lui dit.
+> - **Le retour de Google garde le chemin, pas la query.** Une invitation
+>   survit ; un partage Jow reçu sans session est à refaire (dette n° 17).
+
 
 **Un compte par foyer. Pas de compte individuel.**
 
@@ -1445,6 +1463,12 @@ d'aliments et des agrégats anonymisés sortent, vers le LLM (R5).
 > dit pas qui invite ressemble à du hameçonnage et reste sans réponse. Sans
 > `TABLEE_MAIL`, rien de tout ça ne sort. Avec, le transporteur est un tiers de
 > plus à nommer dans « dire ce qui est stocké » (point 2 ci-dessus).
+
+> **Précisé le 14/09/2026 — ce qui passe par Google.** Sur une instance qui
+> propose la connexion Google (encart du §7), Google apprend qu'un de ses
+> comptes se connecte à cette instance, et Tablée reçoit de Google l'adresse,
+> le nom et l'URL de la photo du compte. **Rien ne part vers Google** : ni
+> convive, ni repas, ni foyer. Sans `GOOGLE_CLIENT_ID`, rien de tout ça.
 
 **Si l'app sort un jour du foyer**, ce n'est pas un changement d'échelle mais de
 nature : données de santé de mineurs, hébergement adapté, consentement parental,
