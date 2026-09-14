@@ -204,6 +204,12 @@ Trois voies, par priorité d'usage :
    > repas porte la source `ia` (migration 012), dont la confiance est
    > plafonnée à « moyenne » (R6). Facultatif : sans `ANTHROPIC_API_KEY`, la
    > saisie reste celle de la V1.
+   >
+   > ⚠️ **Précisé le même jour — le modèle choisit aussi l'aliment.** La
+   > recherche seule présélectionnait « Pâte à pizza cuite » pour des pâtes et
+   > « Pomme, sèche » pour une pomme. Un second appel reçoit les quinze premiers
+   > candidats de chaque ligne — des noms, sans valeurs — et désigne le bon par
+   > son numéro ; hors liste, il est ignoré, et « aucun » ne présélectionne rien. En-tête de `server/llm/decoupage.ts`.
 3. **Photo** — fallback uniquement (cantine, plat de famille). `confidence='basse'`.
 
 ### Référentiels et ETL
@@ -1171,7 +1177,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 >
 > | Méthode | Route | Pourquoi elle existe |
 > |---|---|---|
-> | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
+> | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Deux appels au modèle par requête depuis le 14/09/2026 : le découpage, puis le choix de l'aliment, par numéro, parmi quinze candidats Ciqual par ligne. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
 > | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. |
 > | `POST` | `/api/assistant/recipes` | V3 — le bouton « Demander à l'assistant des recettes » de l'accueil, pour rendre la semaine plus équilibrée. Même résumé du foyer que `/api/assistant`, plus l'ordre des repères et la liste des recettes Jow du foyer : le modèle **choisit** par numéro parmi elles et ajoute une ou deux idées de plats marquées « à vérifier », sans jamais écrire une valeur (R1). Le texte envoyé revient dans la réponse, pour se relire à l'écran. `409` quand il n'aurait rien sur quoi s'appuyer ; même plafond et même 503 que le découpage. Ce qu'il approxime : dette n° 20. |
 > | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |

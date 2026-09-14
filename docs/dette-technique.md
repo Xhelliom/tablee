@@ -433,7 +433,9 @@ comprises — et les mots du nom du compte sont retirés du texte, mot entier et
 sans égard à la casse ; un lien Jow collé perd son jeton. Chaque route IA est
 limitée à dix appels par minute par compte — **par route** : le découpage,
 l'assistant et les recettes de l'accueil ont chacun leur compteur, trente
-appels en tout.
+appels en tout. Depuis le 14/09/2026, un découpage en fait deux au modèle — le
+découpage, puis le choix dans Ciqual : quarante appels au modèle par minute, au
+plus.
 
 **Ce qui passe quand même.** Tout ce qui n'est pas un prénom enregistré :
 « mon fils », un surnom, le prénom d'un invité, un prénom tapé sans son accent
@@ -441,7 +443,7 @@ appels en tout.
 « une olive » du texte : la ligne manque, et la personne la rajoute.
 
 Et l'inscription est ouverte (§16) : n'importe qui peut créer un compte et un
-foyer, puis faire trente appels par minute sur la clé de l'hébergeur. Le plafond
+foyer, puis faire quarante appels au modèle par minute sur la clé de l'hébergeur. Le plafond
 borne la vitesse, pas le total.
 
 **Ce que ça coûte** — un prénom d'enfant qui part chez Anthropic quand
