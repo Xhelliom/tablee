@@ -24,7 +24,7 @@ import {
   createEater, findMembers, listEaters, updateEater, type Eater,
 } from '../repo/eaters.ts';
 import type { Identity } from '../auth/identity.ts';
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 import type { AppContext } from '../app.ts';
 
 /**
@@ -105,7 +105,7 @@ function traduireCollision(cause: unknown): never {
  * foyer courant, et il vient de la session, jamais du client.
  */
 async function compteDuFoyer(
-  db: Db,
+  db: HouseholdDb,
   organizationId: string,
   adresse: string,
 ): Promise<string | null> {

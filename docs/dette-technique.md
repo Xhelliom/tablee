@@ -221,28 +221,6 @@ propres au cluster. La passation les liste comme étant à remplacer.
 
 ---
 
-## 9. Le calcul des repas n'est pas concurrent-safe
-
-**Où** — `server/repo/meals.ts`, `withHousehold` dans `server/db.ts`.
-
-Le client Postgres d'une requête porte `app.household_id` en paramètre de
-session, hors transaction — un `set_config(…, true)` serait annulé au premier
-`commit`, et plusieurs fonctions ouvrent déjà la leur.
-
-**Ce que ça coûte.** Rien aujourd'hui : chaque requête tient son client en
-exclusivité du début à la fin. Mais si un jour une requête ouvrait deux
-opérations en parallèle sur le même client, ou si un traitement de fond
-réutilisait un client sans passer par `withHousehold`, le foyer courant
-deviendrait ambigu. Le garde-fou du démarrage ne voit pas ce cas.
-
-**Ce qui le lèverait.** Faire de `Db` un type qui ne s'obtient que par
-`withHousehold`, pour qu'un `pool.query` sur une table du domaine ne compile
-plus.
-
----
-
-
-
 ## 10. Le poids est stocké et lu par personne
 
 **Où** — `eater.weight_kg`, `.height_cm` (migration 009), saisis dans
@@ -352,6 +330,19 @@ référence visuelle. Rien n'a donc été touché.
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
 forme qu'il a. Le détail est dans l'historique git.
 
+- **Le type `Db` laissait écrire un `pool.query` sur une table du domaine.**
+  La dette n° 9 disait que le foyer courant deviendrait ambigu le jour où un
+  traitement réutiliserait un client sans passer par `withHousehold`, et que
+  le garde-fou du démarrage ne voit pas ce cas. `Db = pg.Pool | pg.PoolClient`
+  est remplacé par deux types : `HouseholdDb`, un client **marqué** que seul
+  `acquireForHousehold` produit et que toutes les fonctions du domaine
+  exigent, et `UnscopedDb`, nommé pour se voir en revue, réservé à ce qui
+  précède le foyer — la résolution de session, la création du foyer d'une
+  organisation, la liste des foyers d'un compte — et au référentiel public
+  hors RLS. Une erreur qui se compilait ne se compile plus ; `server/db.test.ts`
+  le vérifie par `@ts-expect-error`, de sorte qu'un relâchement du type casse
+  le typecheck au lieu de passer inaperçu. Au passage, `transaction()` ne prend
+  plus de pool du tout : le client est toujours celui de l'appelant.
 - **Le mois de saisonnalité était calculé en UTC.** Cinq requêtes lisaient
   `extract(month from eaten_at)` sans fuseau, alors que tout le reste du
   découpage des journées passe par `household.timezone`. Le fuseau est

@@ -14,7 +14,7 @@
  * l'assiette de sa femme aujourd'hui, elle s'inscrit dans trois semaines, et
  * le rattachement se fait tout seul à ce moment-là (`claimEatersForUser`).
  */
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 
 export interface Eater {
   id: string;
@@ -70,7 +70,7 @@ const COLUMNS = `id, first_name, birth_date, sex, portion_coef, diets, color, ac
 const SELECT = `select ${COLUMNS} from eater`;
 
 export async function listEaters(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   { includeInactive = false } = {},
 ): Promise<Eater[]> {
@@ -82,7 +82,7 @@ export async function listEaters(
   return rows.map(toEater);
 }
 
-export async function findMembers(db: Db, householdId: string, ids: string[]): Promise<Eater[]> {
+export async function findMembers(db: HouseholdDb, householdId: string, ids: string[]): Promise<Eater[]> {
   if (ids.length === 0) return [];
   const { rows } = await db.query<Row>(
     `${SELECT} where household_id = $1 and id = any($2::uuid[])`,
@@ -93,7 +93,7 @@ export async function findMembers(db: Db, householdId: string, ids: string[]): P
 
 /** L'assiette d'un compte dans ce foyer, s'il en a une. */
 export async function findEaterOfUser(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   userId: string,
 ): Promise<Eater | null> {
@@ -121,7 +121,7 @@ export interface MemberInput {
 }
 
 export async function createEater(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   input: MemberInput,
 ): Promise<Eater> {
@@ -156,7 +156,7 @@ export type MemberPatch = Partial<MemberInput> & { active?: boolean };
  * volontairement tout ce qu'elle sait faire.
  */
 export async function updateEater(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   id: string,
   patch: MemberPatch,
@@ -229,7 +229,7 @@ export async function updateEater(
  * Idempotent : rejouer ne rattache rien de plus.
  */
 export async function claimEatersForUser(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   userId: string,
   email: string,

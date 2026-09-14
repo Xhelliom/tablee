@@ -5,11 +5,11 @@
  * un dîner à 22 h 30 heure de Paris appartient à la journée de Paris, pas à
  * celle d'UTC. Se tromper là-dessus déplace un repas sur deux dans l'année.
  */
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 import { todayIn } from '../http/tz.ts';
 import type { DailyMeal } from '../nutrition/daily.ts';
 
-export async function householdTimezone(db: Db, householdId: string): Promise<string> {
+export async function householdTimezone(db: HouseholdDb, householdId: string): Promise<string> {
   const { rows } = await db.query<{ timezone: string }>(
     'select timezone from household where id = $1',
     [householdId],
@@ -23,7 +23,7 @@ export async function householdTimezone(db: Db, householdId: string): Promise<st
  * tôt le dernier jour d'un mois.
  */
 export async function currentMonth(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
 ): Promise<{ year: number; month: number }> {
   const today = todayIn(await householdTimezone(db, householdId));
@@ -40,7 +40,7 @@ export interface DayMealForMember extends DailyMeal {
  * été attribuée à l'écriture (R2 — on relit `share`, on ne le recalcule pas).
  */
 export async function mealsForDay(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   date: string,
   timezone: string,
@@ -88,7 +88,7 @@ export async function mealsForDay(
  * 0, qui se lirait « le foyer n'a mangé aucun végétal ».
  */
 export async function householdPlantAverage(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   days = 7,
 ): Promise<number | null> {
@@ -122,7 +122,7 @@ export interface WeekCell {
  * « rien de saisi », un 0 se lirait « rien mangé ».
  */
 export async function weekGrid(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   from: string,
   days: number,

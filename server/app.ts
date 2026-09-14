@@ -13,7 +13,7 @@ import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
-import { acquireForHousehold, type ScopedClient } from './db.ts';
+import { acquireForHousehold, type HouseholdDb, type ScopedClient } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
 import { redactRequestUrl } from './jow/share.ts';
@@ -49,9 +49,14 @@ declare module 'fastify' {
      * Le client Postgres de cette requête, sur lequel `app.household_id` est
      * posé — donc celui que la RLS de la migration 008 filtre. **Toute** lecture
      * ou écriture du domaine passe par lui ; `ctx.pool` ne porte aucun foyer et
-     * ne doit plus servir qu'à l'authentification.
+     * ne doit plus servir qu'à ce qui précède le foyer — la session, la liste
+     * des foyers d'un compte.
+     *
+     * Le type le dit maintenant, et le compilateur le fait respecter : les
+     * fonctions de `server/repo/` exigent un `HouseholdDb`, que seul
+     * `acquireForHousehold` produit. Un `ctx.pool` à leur place ne compile pas.
      */
-    db: pg.PoolClient;
+    db: HouseholdDb;
     /** Interne : la libération du client, appelée par le hook onResponse. */
     scoped: ScopedClient | null;
   }
@@ -106,7 +111,7 @@ export function buildApp(ctx: AppContext, options: { webDir?: string } = {}): Fa
   // serait partagé par référence entre toutes les requêtes. Le hook ci-dessous
   // affecte une valeur propre à chacune, avant toute route.
   app.decorateRequest<AuthState | null>('auth', null);
-  app.decorateRequest<pg.PoolClient | null>('db', null);
+  app.decorateRequest<HouseholdDb | null>('db', null);
   app.decorateRequest<ScopedClient | null>('scoped', null);
   app.decorateRequest('identity', function (this: { auth: AuthState | null }): Identity {
     if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();

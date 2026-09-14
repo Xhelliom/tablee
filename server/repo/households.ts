@@ -9,8 +9,23 @@
  * Tout part d'ici : la session dit quelle organisation est active, ce module
  * dit quel foyer c'est, et c'est ce `household_id` — jamais un identifiant
  * venu du client — que reçoivent toutes les requêtes du §12.
+ *
+ * ── Le seul module du dépôt qui lit hors foyer, et c'est structurel ─────────
+ *
+ * Trois de ces quatre fonctions prennent un `UnscopedDb` : elles s'exécutent
+ * **avant** qu'un foyer soit connu — créer celui d'une organisation qui vient
+ * de naître, lister ceux d'un compte qui doit en choisir un. Les scoper
+ * reviendrait à demander le foyer courant pour pouvoir l'établir.
+ *
+ * `household` est d'ailleurs délibérément hors RLS, et l'en-tête de la 008 dit
+ * pourquoi : une policy dessus rendrait la connexion impossible. Ce qui tient
+ * lieu de garantie, c'est la jointure obligatoire sur `"member"` — un foyer ne
+ * sort d'ici que si le compte y est effectivement membre.
+ *
+ * `updateHousehold`, elle, modifie le foyer **courant** : elle exige un client
+ * marqué, comme tout le reste du domaine.
  */
-import type { Db } from '../db.ts';
+import type { HouseholdDb, UnscopedDb } from '../db.ts';
 
 export interface Household {
   id: string;
@@ -41,7 +56,7 @@ const toHousehold = (row: Row): Household => ({
  * Idempotent — rejouer le hook ne crée pas un second foyer.
  */
 export async function createHouseholdForOrganization(
-  db: Db,
+  db: UnscopedDb,
   organizationId: string,
   name: string,
   timezone = 'Europe/Paris',
@@ -66,7 +81,7 @@ export async function createHouseholdForOrganization(
  * voulu — ses identifiants ont disparu avec l'ancienne authentification.
  */
 export async function findHouseholdByOrganization(
-  db: Db,
+  db: UnscopedDb,
   organizationId: string,
 ): Promise<Household | null> {
   const { rows } = await db.query<Row>(
@@ -84,7 +99,7 @@ export async function findHouseholdByOrganization(
  * familles : ce n'est pas un cas tordu, c'est un cas.
  */
 export async function listHouseholdsForUser(
-  db: Db,
+  db: UnscopedDb,
   userId: string,
 ): Promise<(Household & { role: string })[]> {
   const { rows } = await db.query<Row & { role: string }>(
@@ -100,7 +115,7 @@ export async function listHouseholdsForUser(
 
 /** Le fuseau du foyer, qui découpe les journées et les mois de saisonnalité. */
 export async function updateHousehold(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   fields: { name?: string; timezone?: string },
 ): Promise<Household | null> {

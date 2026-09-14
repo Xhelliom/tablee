@@ -11,8 +11,7 @@
  *   systématiquement par `redactShareText`, qui retire `key`, `userId` et les
  *   jetons associés.
  */
-import type pg from 'pg';
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 import { redactShareText } from '../jow/share.ts';
 import type { Confidence, MealNutrition, NutritionItem } from '../nutrition/compute.ts';
 import { calculerNutrition } from '../nutrition/compute.ts';
@@ -112,7 +111,7 @@ export interface StoredNutrition {
 // ── écriture ────────────────────────────────────────────────────────────────
 
 export async function createMeal(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   householdId: string,
   input: CreateMealInput,
 ): Promise<string> {
@@ -144,7 +143,7 @@ export async function createMeal(
 }
 
 async function writeItems(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   mealId: string,
   items: MealItemInput[],
 ): Promise<void> {
@@ -168,7 +167,7 @@ async function writeItems(
  * l'historique — et ce chemin-là n'existe nulle part.
  */
 async function writeShares(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   householdId: string,
   mealId: string,
   participants: { eaterId: string; present: boolean }[],
@@ -218,7 +217,7 @@ export interface MealPatch {
  * si la modification porte précisément sur qui était à table.
  */
 export async function updateMeal(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   householdId: string,
   mealId: string,
   patch: MealPatch,
@@ -267,7 +266,7 @@ export async function updateMeal(
   return true;
 }
 
-async function currentParticipants(client: pg.PoolClient, mealId: string): Promise<string[]> {
+async function currentParticipants(client: HouseholdDb, mealId: string): Promise<string[]> {
   const { rows } = await client.query<{ eater_id: string }>(
     'select eater_id from meal_participant where meal_id = $1',
     [mealId],
@@ -275,7 +274,7 @@ async function currentParticipants(client: pg.PoolClient, mealId: string): Promi
   return rows.map((r) => r.eater_id);
 }
 
-async function currentGuestCount(client: pg.PoolClient, mealId: string): Promise<number> {
+async function currentGuestCount(client: HouseholdDb, mealId: string): Promise<number> {
   const { rows } = await client.query<{ guest_count: number }>(
     'select guest_count from meal where id = $1',
     [mealId],
@@ -283,7 +282,7 @@ async function currentGuestCount(client: pg.PoolClient, mealId: string): Promise
   return rows[0]?.guest_count ?? 0;
 }
 
-export async function deleteMeal(db: Db, householdId: string, mealId: string): Promise<boolean> {
+export async function deleteMeal(db: HouseholdDb, householdId: string, mealId: string): Promise<boolean> {
   const { rowCount } = await db.query(
     'delete from meal where household_id = $1 and id = $2',
     [householdId, mealId],
@@ -301,7 +300,7 @@ export async function deleteMeal(db: Db, householdId: string, mealId: string): P
  * pas un total, on le refait.
  */
 export async function recomputeNutrition(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   mealId: string,
 ): Promise<MealNutrition> {
   const { rows: mealRows } = await client.query<{
@@ -397,7 +396,7 @@ export async function recomputeNutrition(
  * `meal_nutrition` est réécrit.
  */
 export async function recomputeMealsUsingIngredient(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   householdId: string,
   jowFoodId: string,
 ): Promise<number> {
@@ -440,7 +439,7 @@ interface MealRow {
 }
 
 export async function listMeals(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   from: string,
   to: string,
@@ -453,7 +452,7 @@ export async function listMeals(
   return hydrate(db, rows);
 }
 
-export async function getMeal(db: Db, householdId: string, id: string): Promise<Meal | null> {
+export async function getMeal(db: HouseholdDb, householdId: string, id: string): Promise<Meal | null> {
   const { rows } = await db.query<MealRow>(
     `${MEAL_SELECT} where m.household_id = $1 and m.id = $2`,
     [householdId, id],
@@ -471,7 +470,7 @@ export async function getMeal(db: Db, householdId: string, id: string): Promise<
  * ce qui doit rester courte pour que le bouton tienne sa promesse de deux taps.
  */
 export async function recentWithRecipe(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   days = 3,
   limit = 6,
@@ -489,7 +488,7 @@ export async function recentWithRecipe(
   return hydrate(db, rows);
 }
 
-async function hydrate(db: Db, rows: MealRow[]): Promise<Meal[]> {
+async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
 

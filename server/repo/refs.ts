@@ -8,26 +8,31 @@
  * saisonnalité. Une valeur inventée à leur place serait pire que leur
  * absence (I1).
  *
+ * Les deux premières sont du référentiel public, hors RLS : elles se lisent
+ * avec un `UnscopedDb`, y compris depuis un script de seed. `seasonalForMonth`
+ * fait autre chose — elle croise le catalogue avec ce que **ce** foyer a
+ * mangé — et exige donc un client marqué.
+ *
  * Le code alentour est écrit pour fonctionner **avec ces tables vides** :
  * l'unité non convertible déclenche une question, le repère absent donne une
  * barre « indisponible », la bande de saison ne s'affiche pas. Ce sont des
  * états nominaux.
  */
-import type { Db } from '../db.ts';
+import type { HouseholdDb, UnscopedDb } from '../db.ts';
 import type {
   ReferenceBasis, ReferenceKind, ReferenceTable,
 } from '../nutrition/references.ts';
 import type { UnitDefaults } from '../nutrition/units.ts';
 import { normalizeUnit } from '../nutrition/units.ts';
 
-export async function loadUnitDefaults(db: Db): Promise<UnitDefaults> {
+export async function loadUnitDefaults(db: UnscopedDb): Promise<UnitDefaults> {
   const { rows } = await db.query<{ unit: string; grams: number; source: string }>(
     'select unit, grams, source from unit_default',
   );
   return new Map(rows.map((r) => [normalizeUnit(r.unit), { grams: r.grams, source: r.source }]));
 }
 
-export async function loadReferences(db: Db): Promise<ReferenceTable[]> {
+export async function loadReferences(db: UnscopedDb): Promise<ReferenceTable[]> {
   const { rows } = await db.query<{
     sex: 'F' | 'M' | 'ALL'; age_min: number; age_max: number;
     nutrient: string; kind: ReferenceKind; basis: ReferenceBasis;
@@ -64,7 +69,7 @@ export interface SeasonalProduce {
  * produirait des coches fausses, et une coche fausse dans un jeu le ruine.
  */
 export async function seasonalForMonth(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   month: number,
   year: number,

@@ -579,7 +579,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         [rows[0]!.id],
       );
       const { applyKnownLinks } = await import('./repo/recipes.ts');
-      assert.equal(await applyKnownLinks(pool, rows[0]!.id), 1);
+      // `applyKnownLinks` exige un client marqué au foyer, comme tout
+      // `server/repo/` : le pool n'est plus un `Db` acceptable.
+      const liés = await withHousehold(pool, householdId, (client) =>
+        applyKnownLinks(client, rows[0]!.id));
+      assert.equal(liés, 1);
 
       const { body } = await call('GET', `/api/recipes/${rows[0]!.id}`);
       assert.equal(body.recipe.ingredients[0].foodId, carotte);
