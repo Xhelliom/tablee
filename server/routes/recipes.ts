@@ -18,7 +18,7 @@ import { ApiError } from '../http/errors.ts';
 import { body, str, uuid } from '../http/validate.ts';
 import {
   findRecipeByJowId, listRecipes, loadRecipe, markRecipeKnown, recipeGaps,
-  saveJowRecipe, seasonalCount,
+  resolveIngredients, saveJowRecipe, seasonalCount,
 } from '../repo/recipes.ts';
 import { currentMonth } from '../repo/dashboard.ts';
 import type { AppContext } from '../app.ts';
@@ -84,8 +84,11 @@ export function recipeRoutes(app: FastifyInstance, _ctx: AppContext): void {
    * pour proposer de rattacher chaque ingrédient au référentiel.
    */
   app.get<{ Params: { id: string } }>('/api/recipes/:id', async (request) => {
-    const recipe = await loadRecipe(request.db, uuid(request.params.id, 'id'));
-    if (recipe === null) throw ApiError.notFound('recette introuvable');
+    const found = await loadRecipe(request.db, uuid(request.params.id, 'id'));
+    if (found === null) throw ApiError.notFound('recette introuvable');
+    // Les grammes d'une cuillère ou d'une pièce se résolvent à la lecture : une
+    // conversion ajoutée au seed se voit sans réimporter la recette.
+    const recipe = { ...found, ingredients: await resolveIngredients(request.db, found.ingredients) };
     const { month } = await currentMonth(request.db, request.householdId());
     return {
       recipe,

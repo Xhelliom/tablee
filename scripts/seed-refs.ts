@@ -28,6 +28,7 @@ import {
   SeedError,
 } from '../server/food/seeds.ts';
 import { deriveTargets, type EnergyReference, type PercentReference } from '../server/nutrition/derive.ts';
+import { normalizeUnit } from '../server/nutrition/units.ts';
 import { closePool, getPool } from '../server/db.ts';
 
 const DIR = fileURLToPath(new URL('../db/seeds/', import.meta.url));
@@ -192,12 +193,17 @@ async function loadUnits(db: pg.Pool): Promise<void> {
 
     const source = requireSource(file, row);
     const unit = requiredText(file, row, 'unit');
+    // Migration 013 : un repli par forme. Vide = pour toutes les formes.
+    const forme = (row.values['forme'] ?? '').trim() || 'tout';
+    if (forme !== 'tout' && forme !== 'poudre') {
+      throw new SeedError(file, row.line, `forme inconnue : ${forme} (tout ou poudre)`);
+    }
 
     if (!dryRun) {
       await db.query(
-        `insert into unit_default (unit, grams, source) values ($1, $2, $3)
-         on conflict (unit) do update set grams = excluded.grams, source = excluded.source`,
-        [unit, grams, source],
+        `insert into unit_default (unit, forme, grams, source) values ($1, $2, $3, $4)
+         on conflict (unit, forme) do update set grams = excluded.grams, source = excluded.source`,
+        [unit, forme, grams, source],
       );
     }
     written += 1;
@@ -206,6 +212,73 @@ async function loadUnits(db: pg.Pool): Promise<void> {
   reports.push({
     file, written, skipped,
     reason: 'unités non pesées — l’app demandera la quantité',
+  });
+}
+
+// ── food.unit_weights (§6) ──────────────────────────────────────────────────
+
+/**
+ * Les conversions propres à un aliment : une pièce d'œuf, une cuillère de
+ * parmesan, un litre de lait. `unit_default` n'a qu'une valeur par unité, pour
+ * tous les aliments ; elles ne peuvent vivre que là.
+ *
+ * `food.unit_weights` n'est écrit que d'ici, et **remplacé intégralement** à
+ * chaque seed : une ligne retirée du fichier ne laisse pas de poids orphelin
+ * en base. Le réimport Ciqual n'y touche pas.
+ *
+ * La source est exigée ligne par ligne, puis ne suit pas en base — le jsonb
+ * porte des grammes, pas de provenance. Même compromis que la saisonnalité
+ * (dette n° 14) : le fichier versionné reste la trace, et l'app affiche ces
+ * conversions en « Estimation » (`resolveUnit`).
+ */
+async function loadFoodUnitWeights(db: pg.Pool): Promise<void> {
+  const file = 'food-unit-weight.csv';
+  const { rows } = await read(file);
+  const parCode = new Map<string, Record<string, number>>();
+  let written = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    const grams = optionalNumber(file, row, 'grams');
+    if (grams === null) { skipped += 1; continue; }
+    if (grams <= 0) throw new SeedError(file, row.line, 'un poids doit être strictement positif');
+    requireSource(file, row);
+    const code = requiredText(file, row, 'ciqual_code');
+    // La clé est celle que `resolveUnit` cherche : « Cuillère à soupe » et
+    // « cuillere a soupe » doivent tomber au même endroit.
+    const unit = normalizeUnit(requiredText(file, row, 'unit'));
+    parCode.set(code, { ...(parCode.get(code) ?? {}), [unit]: grams });
+    written += 1;
+  }
+
+  const unknownCodes: string[] = [];
+  if (!dryRun) {
+    const client = await db.connect();
+    try {
+      await client.query('begin');
+      await client.query(`update food set unit_weights = '{}'::jsonb where unit_weights <> '{}'::jsonb`);
+      for (const [code, weights] of parCode) {
+        const { rowCount } = await client.query(
+          `update food set unit_weights = $2::jsonb where source = 'ciqual' and external_id = $1`,
+          [code, JSON.stringify(weights)],
+        );
+        if (rowCount === 0) unknownCodes.push(code);
+      }
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  if (unknownCodes.length > 0) {
+    console.log(`⚠️  ${file} : codes Ciqual introuvables — ${unknownCodes.join(', ')}. Le référentiel est-il chargé ?`);
+  }
+  reports.push({
+    file, written, skipped,
+    reason: 'lignes sans poids — l’app demandera la quantité',
   });
 }
 
@@ -274,7 +347,7 @@ async function main(): Promise<void> {
   const files = await readdir(DIR);
   const expected = [
     'nutrient-reference.csv', 'energy-reference.csv',
-    'unit-default.csv', 'seasonal-produce.csv',
+    'unit-default.csv', 'food-unit-weight.csv', 'seasonal-produce.csv',
   ];
   const missing = expected.filter((f) => !files.includes(f));
   if (missing.length > 0) throw new Error(`fichier(s) de seed absent(s) : ${missing.join(', ')}`);
@@ -286,6 +359,7 @@ async function main(): Promise<void> {
     // Après les deux, puisqu'elle les croise.
     await deriveAbsoluteTargets(pool);
     await loadUnits(pool);
+    await loadFoodUnitWeights(pool);
     await loadSeasonal(pool);
 
     console.log(dryRun ? 'Simulation — rien n’a été écrit.\n' : '');

@@ -46,6 +46,8 @@ type Me = (
       household: Household;
       role: Role;
       households: HouseholdChoice[];
+      /** Le serveur sait découper un texte libre par IA (V3). */
+      ia: boolean;
     }
 ) & { google: boolean };
 
@@ -60,6 +62,8 @@ interface SessionValue {
   households: HouseholdChoice[];
   /** L'instance propose Google : pour entrer, et pour lier son compte une fois connecté. */
   google: boolean;
+  /** « Découper avec l'IA » est proposé : l'instance a une clé API. */
+  ia: boolean;
   eaters: Eater[];
   refreshEaters: () => Promise<void>;
   reload: () => Promise<void>;
@@ -114,6 +118,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       role,
       households,
       google: me.google,
+      ia: me.state === 'actif' && me.ia,
       eaters,
       refreshEaters,
       reload,

@@ -17,7 +17,7 @@ import type pg from 'pg';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from './app.ts';
 import type { Auth } from './auth/auth.ts';
-import { buildMailer, MailConfigError, type Mail } from './auth/mail.ts';
+import { buildMailer, composeMail, MailConfigError, type Mail } from './auth/mail.ts';
 import { buildTestAuth, TEST_BASE_URL } from './test-support/auth.ts';
 import { closeTestPool, resetDatabase, SKIP_MESSAGE, testDatabaseUrl, testPool } from './test-support/db.ts';
 
@@ -47,16 +47,44 @@ describe('configuration du mail', () => {
     const send = buildMailer({ TABLEE_MAIL: 'resend', TABLEE_MAIL_FROM: FROM, RESEND_API_KEY: 're_clef' });
     assert.ok(send);
 
-    await send({ to: 'mamie@example.net', subject: 'Objet', text: 'Corps' });
+    const mail = { to: 'mamie@example.net', subject: 'Objet', text: 'Corps', html: '<p>Corps</p>' };
+    await send(mail);
     const [url, init] = fetch.mock.calls[0]!.arguments as [string, RequestInit];
     assert.equal(url, 'https://api.resend.com/emails');
     assert.equal((init.headers as Record<string, string>)['authorization'], 'Bearer re_clef');
-    assert.deepEqual(JSON.parse(init.body as string), {
-      from: FROM, to: 'mamie@example.net', subject: 'Objet', text: 'Corps',
-    });
+    assert.deepEqual(JSON.parse(init.body as string), { from: FROM, ...mail });
 
     statut = 403;
-    await assert.rejects(send({ to: 'mamie@example.net', subject: 'Objet', text: 'Corps' }), /403/);
+    await assert.rejects(send(mail), /403/);
+  });
+});
+
+describe('mise en page d’un mail', () => {
+  const contenu = {
+    to: 'mamie@example.net',
+    subject: 'Invitation au foyer « <b>Les "Martin"</b> & co »',
+    title: 'Rejoindre le foyer « <b>Les "Martin"</b> & co »',
+    paragraphs: ['<img src=x onerror=alert(1)> vous invite.', 'Deuxième paragraphe.'],
+    action: { label: 'Rejoindre le foyer', url: 'https://tablee.example.net/api/auth/verify-email?token=a&callbackURL=%2F' },
+    footer: 'Le lien vaut sept jours.',
+  };
+
+  it('échappe ce que les comptes ont saisi : un nom de foyer n’écrit pas dans le HTML', () => {
+    const { html } = composeMail(contenu);
+    assert.doesNotMatch(html, /<b>|<img/, 'ni balise injectée, ni image distante');
+    assert.match(html, /&lt;b&gt;Les &quot;Martin&quot;&lt;\/b&gt; &amp; co/);
+  });
+
+  it('met le même lien derrière le bouton et dans le texte, qui garde tout en clair', () => {
+    const { text, html } = composeMail(contenu);
+    assert.ok(text.includes(contenu.action.url));
+    assert.ok(text.includes('<img src=x onerror=alert(1)> vous invite.'), 'le texte brut n’a rien à échapper');
+    assert.ok(html.includes('href="https://tablee.example.net/api/auth/verify-email?token=a&amp;callbackURL=%2F"'));
+  });
+
+  it('ne laisse pas un guillemet seul en bout de ligne', () => {
+    const { subject, text, html } = composeMail(contenu);
+    for (const rendu of [subject, text, html]) assert.doesNotMatch(rendu, /« | »| :/);
   });
 });
 
@@ -109,6 +137,7 @@ describe('ce que l’envoi de mail allume', { skip: enabled ? false : SKIP_MESSA
     assert.ok(mail, `aucun mail pour ${to}`);
     const url = /https?:\/\/\S+/.exec(mail.text)?.[0];
     assert.ok(url, 'un mail sans lien');
+    assert.ok(mail.html.includes(`href="${url.replaceAll('&', '&amp;')}"`), 'le bouton mène au lien du texte');
     const { pathname, search } = new URL(url);
     return pathname + search;
   };

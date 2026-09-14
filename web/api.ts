@@ -79,7 +79,7 @@ export const api = {
 
 export type Confidence = 'haute' | 'moyenne' | 'basse';
 export type Slot = 'petit_dej' | 'dejeuner' | 'gouter' | 'diner' | 'collation';
-export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
+export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel' | 'ia';
 export type Nutrient = 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'fiberG';
 /**
  * `encadre` — la source ne donne qu'un intervalle (« < 0,5 g » chez Ciqual).
@@ -256,6 +256,12 @@ export interface RecipeIngredient {
   quantity: number | null;
   unit: string | null;
   quantityG: number | null;
+  /**
+   * Quand les grammes sont estimés depuis une cuillère, une pièce, un litre :
+   * `moyenne` pour une conversion propre à l'aliment, `basse` pour un repli par
+   * défaut. `null` quand ils sont mesurés.
+   */
+  estimate: 'moyenne' | 'basse' | null;
   optional: boolean;
   position: number;
 }

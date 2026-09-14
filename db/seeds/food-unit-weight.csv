@@ -1,0 +1,219 @@
+# food.unit_weights — conversions propres à un aliment (§6 de la spec)
+#
+# RÈGLE ABSOLUE : aucune ligne sans `source`, et une source qu'on a lue soi-même.
+# Une valeur trouvée par un moteur de recherche ou par un modèle se vérifie dans
+# le document d'origine avant d'entrer ici (I1).
+#
+# ── Pourquoi par aliment, et pas dans unit-default.csv ──────────────────────
+#
+# Aucune équivalence générique publiée ne tient (recherche du 14/09/2026) : une
+# cuillère à soupe pèse 5 g de parmesan râpé et 16 g de beurre de cacahuète, une
+# gousse d'ail 3 g pour l'USDA et 5 à 8 g pour Aprifel. Une valeur par unité,
+# pour tous les aliments à la fois, serait fausse presque partout.
+#
+# ── Ce que l'app en fait ────────────────────────────────────────────────────
+#
+# `npm run seed:refs` remplace `food.unit_weights` en entier à partir de ce
+# fichier : retirer une ligne retire la conversion. Une conversion sort en
+# « Estimation » (confidence='moyenne') — une pièce ou une cuillère n'est pas une
+# pesée. La source n'est pas recopiée en base (dette n° 14) : ce fichier est la
+# trace.
+#
+# ── Colonnes ────────────────────────────────────────────────────────────────
+#   ciqual_code  le code de l'aliment dans Ciqual (`food.external_id`). Jamais
+#                de rattachement par ressemblance de nom.
+#   aliment      son nom Ciqual, pour la relecture — le chargeur l'ignore
+#   unit         l'unité telle que Jow l'écrit (casse et accents ignorés)
+#   grams        le poids d'une unité, en grammes
+#   source       d'où vient la valeur. « Pesée maison, <date> » convient.
+#
+# Sources citées :
+#   densités   FAO/INFOODS Density Database v2.0 (FAO, 2012), feuille
+#              « Density DB », colonne « Density in g/ml »
+#   portions   USDA FoodData Central, SR Legacy (avril 2018), food_portion.csv
+#   volumes    21 CFR 101.9(b)(5)(viii), FDA : « a teaspoon means 5 milliliters
+#              (mL), a tablespoon means 15 mL, a cup means 240 mL » — sert aux
+#              lignes « Calculé », qui passent d'une cuillère à l'autre
+# La cuillère à soupe de l'USDA vaut 14,8 mL, la française 15 mL : 1 % d'écart,
+# sous la précision de la mesure.
+#
+ciqual_code,aliment,unit,grams,source
+19041,"Lait demi-écrémé, UHT",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
+19042,"Lait demi-écrémé, pasteurisé",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
+19023,"Lait entier, UHT",Litre,1030,"FAO/INFOODS Density DB v2.0, « Milk, liquid, whole » : 1,030 g/ml (TB) et 1,031 g/ml (DK)"
+19024,"Lait entier, pasteurisé",Litre,1030,"FAO/INFOODS Density DB v2.0, « Milk, liquid, whole » : 1,030 g/ml (TB) et 1,031 g/ml (DK)"
+5215,"Vin blanc (sec)",Litre,992.5,"FAO/INFOODS Density DB v2.0, « Wine, table, white » : 0,9925 g/ml (USDA)"
+12120,Parmesan,Cuillère à soupe,5,"USDA SR Legacy 2018-04, FDC 171247 « Cheese, parmesan, grated » : 1 tbsp = 5 g"
+15202,"Beurre de cacahuète ou Pâte d'arachide",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 172470 « Peanut butter, smooth style, without salt » : 2 tbsp = 32 g"
+17270,"Huile d'olive vierge extra",Cuillère à soupe,13.5,"USDA SR Legacy 2018-04, FDC 171413 « Oil, olive, salad or cooking » : 1 tablespoon = 13.5 g"
+17270,"Huile d'olive vierge extra",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171413 « Oil, olive, salad or cooking » : 1 tsp = 4.5 g"
+17440,"Huile de tournesol",Cuillère à soupe,13.6,"USDA SR Legacy 2018-04, FDC 171025 « Oil, sunflower, linoleic, (approx. 65%) » : 1 tbsp = 13.6 g"
+17440,"Huile de tournesol",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171025 « Oil, sunflower, linoleic, (approx. 65%) » : 1 tsp = 4.5 g"
+17400,"Huile de sésame",Cuillère à soupe,13.6,"USDA SR Legacy 2018-04, FDC 171016 « Oil, sesame, salad or cooking » : 1 tablespoon = 13.6 g"
+17400,"Huile de sésame",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171016 « Oil, sesame, salad or cooking » : 1 tsp = 4.5 g"
+17040,"Huile d'arachide",Cuillère à soupe,13.5,"USDA SR Legacy 2018-04, FDC 171410 « Oil, peanut, salad or cooking » : 1 tbsp = 13.5 g"
+17040,"Huile d'arachide",Cuillère à café,4.5,"USDA SR Legacy 2018-04, FDC 171410 « Oil, peanut, salad or cooking » : 1 tsp = 4.5 g"
+11104,"Sauce soja, préemballée",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 174277 « Soy sauce made from soy and wheat (shoyu) » : 1 tbsp = 16 g"
+11104,"Sauce soja, préemballée",Cuillère à café,5.3,"USDA SR Legacy 2018-04, FDC 174277 « Soy sauce made from soy and wheat (shoyu) » : 1 tsp = 5.3 g"
+31008,Miel,Cuillère à soupe,21,"USDA SR Legacy 2018-04, FDC 169640 « Honey » : 1 tbsp = 21 g"
+16400,"Beurre à 82% MG, doux",Cuillère à soupe,14.2,"USDA SR Legacy 2018-04, FDC 173430 « Butter, without salt » : 1 tbsp = 14.2 g"
+11090,"Vinaigre de cidre",Cuillère à soupe,14.9,"USDA SR Legacy 2018-04, FDC 173469 « Vinegar, cider » : 1 tbsp = 14.9 g"
+11090,"Vinaigre de cidre",Cuillère à café,5,"USDA SR Legacy 2018-04, FDC 173469 « Vinegar, cider » : 1 tsp = 5 g"
+11091,"Vinaigre balsamique",Cuillère à soupe,16,"USDA SR Legacy 2018-04, FDC 172241 « Vinegar, balsamic » : 1 tbsp = 16 g"
+11091,"Vinaigre balsamique",Cuillère à café,5.3,"USDA SR Legacy 2018-04, FDC 172241 « Vinegar, balsamic » : 1 tsp = 5.3 g"
+11008,"Ketchup, préemballé",Cuillère à soupe,17,"USDA SR Legacy 2018-04, FDC 168556 « Catsup » : 1 tbsp = 17 g"
+11054,"Mayonnaise (70% MG min.), préemballée",Cuillère à soupe,13.8,"USDA SR Legacy 2018-04, FDC 171009 « Salad dressing, mayonnaise, regular » : 1 tbsp = 13.8 g"
+11017,"Sel blanc alimentaire, non iodé, non fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11017,"Sel blanc alimentaire, non iodé, non fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11058,"Sel blanc alimentaire, iodé, non fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11058,"Sel blanc alimentaire, iodé, non fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11096,"Sel blanc alimentaire, iodé, fluoré",Cuillère à soupe,18,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tbsp = 18 g"
+11096,"Sel blanc alimentaire, iodé, fluoré",Cuillère à café,6,"USDA SR Legacy 2018-04, FDC 173468 « Salt, table » : 1 tsp = 6 g"
+11015,"Poivre noir, poudre",Cuillère à soupe,6.9,"USDA SR Legacy 2018-04, FDC 170931 « Spices, pepper, black » : 1 tbsp, ground = 6.9 g"
+11015,"Poivre noir, poudre",Cuillère à café,2.3,"USDA SR Legacy 2018-04, FDC 170931 « Spices, pepper, black » : 1 tsp, ground = 2.3 g"
+11049,Paprika,Cuillère à soupe,6.8,"USDA SR Legacy 2018-04, FDC 171329 « Spices, paprika » : 1 tbsp = 6.8 g"
+11049,Paprika,Cuillère à café,2.3,"USDA SR Legacy 2018-04, FDC 171329 « Spices, paprika » : 1 tsp = 2.3 g"
+11005,"Curry, poudre",Cuillère à soupe,6.3,"USDA SR Legacy 2018-04, FDC 170924 « Spices, curry powder » : 1 tbsp = 6.3 g"
+11005,"Curry, poudre",Cuillère à café,2,"USDA SR Legacy 2018-04, FDC 170924 « Spices, curry powder » : 1 tsp = 2 g"
+11042,"Cumin, graine",Cuillère à soupe,6,"USDA SR Legacy 2018-04, FDC 170923 « Spices, cumin seed » : 1 tbsp, whole = 6 g"
+11042,"Cumin, graine",Cuillère à café,2.1,"USDA SR Legacy 2018-04, FDC 170923 « Spices, cumin seed » : 1 tsp, whole = 2.1 g"
+11013,Moutarde,Cuillère à café,5,"USDA SR Legacy 2018-04, FDC 172234 « Mustard, prepared, yellow » : 1 tsp or 1 packet = 5 g"
+11013,Moutarde,Cuillère à soupe,15,"Calculé : 1 tsp = 5 g (USDA SR Legacy 2018-04, FDC 172234 « Mustard, prepared, yellow ») × 3, une cuillère à soupe valant trois cuillères à café (21 CFR 101.9(b)(5)(viii) : 15 mL et 5 mL)"
+31016,"Sucre blanc",Cuillère à café,4.2,"USDA SR Legacy 2018-04, FDC 169655 « Sugars, granulated » : 1 tsp = 4.2 g"
+31016,"Sucre blanc",Cuillère à soupe,12.6,"Calculé : 1 tsp = 4.2 g (USDA SR Legacy 2018-04, FDC 169655 « Sugars, granulated ») × 3 (21 CFR 101.9(b)(5)(viii) : 15 mL et 5 mL)"
+9440,"Farine de blé tendre ou froment T45 (pour pâtisserie)",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16, une tasse valant seize cuillères à soupe (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9436,"Farine de blé tendre ou froment T55 (pour pains)",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9435,"Farine de blé tendre ou froment T65",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9445,"Farine de blé tendre ou froment T80",Cuillère à soupe,7.8,"Calculé : 1 cup = 125 g (USDA SR Legacy 2018-04, FDC 168894 « Wheat flour, white, all-purpose, enriched, bleached ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 7,81"
+9510,"Amidon de maïs ou fécule de maïs",Cuillère à soupe,8,"Calculé : 1 cup = 128 g (USDA SR Legacy 2018-04, FDC 169698 « Cornstarch ») ÷ 16 (21 CFR 101.9(b)(5)(viii) : 240 mL et 15 mL) → 8"
+9510,"Amidon de maïs ou fécule de maïs",Cuillère à café,2.7,"Calculé : 1 cup = 128 g (USDA SR Legacy 2018-04, FDC 169698 « Cornstarch ») ÷ 48 (21 CFR 101.9(b)(5)(viii) : 240 mL et 5 mL) → 2,67"
+11046,"Levure chimique ou Poudre à lever",Cuillère à café,4.6,"USDA SR Legacy 2018-04, FDC 172803 « Leavening agents, baking powder, double-acting, sodium aluminum sulfate » : 1 tsp = 4.6 g"
+11046,"Levure chimique ou Poudre à lever",Cuillère à soupe,13.8,"Calculé : 1 tsp = 4.6 g (USDA SR Legacy 2018-04, FDC 172803) × 3 (21 CFR 101.9(b)(5)(viii) : 15 mL et 5 mL)"
+18100,"Cacao, non sucré, poudre soluble",Cuillère à soupe,5.4,"Retenu d'office (14/09/2026) : USDA SR Legacy 2018-04, FDC 169593 « Cocoa, dry powder, unsweetened » : 1 tbsp = 5.4 g — un cacao non soluble, faute de mieux"
+17440,"Huile de tournesol",Litre,907,"Calculé : 1 tbsp = 13.6 g (USDA SR Legacy 2018-04, FDC 171025) ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 906,7 g/L"
+17270,"Huile d'olive vierge extra",Litre,900,"Calculé : 1 tablespoon = 13.5 g (USDA SR Legacy 2018-04, FDC 171413) ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 900 g/L"
+17400,"Huile de sésame",Litre,907,"Calculé : 1 tablespoon = 13.6 g (USDA SR Legacy 2018-04, FDC 171016) ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 906,7 g/L"
+17040,"Huile d'arachide",Litre,900,"Calculé : 1 tbsp = 13.5 g (USDA SR Legacy 2018-04, FDC 171410) ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 900 g/L"
+19436,"Crème de lait, 15 à 20% MG, légère, fluide, rayon frais",Litre,1000,"Calculé : 1 tbsp = 15 g (USDA SR Legacy 2018-04, FDC 170857 « Cream, fluid, light (coffee cream or table cream) ») ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 1000 g/L"
+19402,"Crème de lait ou spécialité à base de crème légère, teneur en matière grasse inconnue (aliment moyen)",Litre,1000,"Calculé : 1 tbsp = 15 g (USDA SR Legacy 2018-04, FDC 170857 « Cream, fluid, light (coffee cream or table cream) ») ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 1000 g/L"
+19415,"Crème de lait, 30% MG, semi-épaisse, UHT",Litre,1000,"Calculé : 1 tbsp = 15 g (USDA SR Legacy 2018-04, FDC 170859 « Cream, fluid, heavy whipping ») ÷ 15 mL (21 CFR 101.9(b)(5)(viii)) → 1000 g/L"
+#
+# Pièces, poignées, bouquets, tranches — **retenus d'office** le 14/09/2026 à la
+# demande du propriétaire du projet, d'après des pages web lues : fiches Aprifel,
+# étiquettes produit, Open Food Facts. Poids **brut** — épluchure, os, noyau
+# compris —, alors que Ciqual compte la partie comestible : un avocat, une
+# banane, un poulet entier sont surestimés (dette n° 18). Aprifel passe avant les
+# tableaux culinaires ; une fourchette donne son milieu.
+20009,"Carotte, crue",Pièce,125,"Retenu d'office. Aprifel, fiche carotte : « Une carotte pèse en moyenne 125 g »"
+20020,"Courgette, pulpe et peau, crue",Pièce,250,"Retenu d'office. Aprifel, fiche courgette : « Une courgette pèse en moyenne 250 g »"
+20021,"Courgette, pulpe et peau, cuite",Pièce,250,"Retenu d'office. Aprifel, fiche courgette : « Une courgette pèse en moyenne 250 g »"
+20313,"Courgette, pulpe et peau, rôtie/cuite au four",Pièce,250,"Retenu d'office. Aprifel, fiche courgette : « Une courgette pèse en moyenne 250 g »"
+20097,"Échalote, crue",Pièce,25,"Retenu d'office. Aprifel, fiche échalote : « Une échalote pèse en moyenne 25 g »"
+20034,"Oignon, cru",Pièce,100,"Retenu d'office. bloc-notes-culinaire.com, poids moyen des fruits et légumes : « Oignon M 0,100 » (kg) ; Université Lyon 1 : « Oignon 0.100 100 »"
+20047,"Tomate, crue",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
+20242,"Tomate, pulpe et peau, bouillie/cuite à l'eau",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
+20289,"Tomate, pulpe et peau, rôtie/cuite au four",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
+4008,"Pomme de terre, sans peau, crue",Pièce,160,"Retenu d'office. Aprifel, fiche pomme de terre : « 160 g lorsqu'elle est de calibre moyen » — avant épluchage"
+4002,"Pomme de terre, sans peau, rôtie/cuite au four",Pièce,160,"Retenu d'office. Aprifel, fiche pomme de terre : « 160 g lorsqu'elle est de calibre moyen » — avant épluchage"
+20019,"Concombre, pulpe et peau, cru",Pièce,450,"Retenu d'office. Aprifel, fiche concombre : « Un concombre pèse en moyenne 400 à 500 g » → 450"
+20210,"Concombre, pulpe, cru",Pièce,450,"Retenu d'office. Aprifel, fiche concombre : « Un concombre pèse en moyenne 400 à 500 g » → 450"
+20053,"Aubergine, crue",Pièce,240,"Retenu d'office. Aprifel, fiche aubergine : « pèse en moyenne 225 à 250 g selon le calibre » → 240"
+20300,"Aubergine, pulpe et peau, rôtie/cuite au four",Pièce,240,"Retenu d'office. Aprifel, fiche aubergine : « pèse en moyenne 225 à 250 g selon le calibre » → 240"
+13009,"Citron, pulpe, cru",Pièce,120,"Retenu d'office. Aprifel, fiche citron : « Un citron pèse en moyenne 120 g » — avec écorce"
+13039,"Pomme, pulpe et peau, crue",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
+13050,"Pomme, pulpe, crue",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
+13176,"Pomme, pulpe, bouillie/cuite à l'eau",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
+13175,"Pomme, pulpe, rôtie/cuite au four",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
+13005,"Banane, pulpe, crue",Pièce,120,"Retenu d'office. Aprifel, fiche banane : « Une banane pèse en moyenne 120 g » — avec peau"
+13004,"Avocat, pulpe, cru",Pièce,200,"Retenu d'office. Aprifel, fiche avocat : « Un avocat pèse en moyenne 200 g » — entier"
+36017,"Poulet, filet, sans peau, cru",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de poulet : « Poids net : 240g » pour deux"
+36039,"Poulet, filet, sans peau, cru, bio",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de poulet : « Poids net : 240g » pour deux"
+36040,"Poulet, filet, sans peau, cru, label rouge",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de poulet : « Poids net : 240g » pour deux"
+36018,"Poulet, filet, sans peau, sauté/poêlé",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de poulet : « Poids net : 240g » pour deux"
+36041,"Poulet, filet, sans peau, sauté/poêlé, bio",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de poulet : « Poids net : 240g » pour deux"
+36304,"Dinde, escalope, crue",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de dinde : « Poids net : 240g » pour deux"
+36308,"Dinde, escalope, rôtie/cuite au four",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de dinde : « Poids net : 240g » pour deux"
+36306,"Dinde, escalope, sautée/poêlée",Pièce,120,"Retenu d'office. Le Gaulois, belle escalope de dinde : « Poids net : 240g » pour deux"
+6521,"Veau, escalope, crue",Pièce,150,"Retenu d'office. comme-a-la-boucherie.com, escalope de veau : « chaque escalope pèse entre 150 g et 160 g »"
+6520,"Veau, escalope, cuite",Pièce,150,"Retenu d'office. comme-a-la-boucherie.com, escalope de veau : « chaque escalope pèse entre 150 g et 160 g »"
+26036,"Saumon, cru, élevage",Pièce,125,"Retenu d'office. Chronodrive, pavé de saumon : « Pavé de saumon individuel 125g » — avec peau"
+26161,"Saumon, cru, sauvage",Pièce,125,"Retenu d'office. Chronodrive, pavé de saumon : « Pavé de saumon individuel 125g » — avec peau"
+26229,"Saumon, grillé/poêlé",Pièce,125,"Retenu d'office. Chronodrive, pavé de saumon : « Pavé de saumon individuel 125g » — avec peau"
+26230,"Saumon, élevage, rôti/cuit au four",Pièce,125,"Retenu d'office. Chronodrive, pavé de saumon : « Pavé de saumon individuel 125g » — avec peau"
+26038,"Saumon, cuit à la vapeur",Pièce,125,"Retenu d'office. Chronodrive, pavé de saumon : « Pavé de saumon individuel 125g » — avec peau"
+20914,"Escalope végétale ou steak à base de soja",Pièce,90,"Retenu d'office. Open Food Facts 3560071234140 (Carrefour Sensation) : « 180 g (2 x 90 g) »"
+30742,"Saucisse de Strasbourg ou Knack",Pièce,35,"Retenu d'office. herta.fr, Knacki Original : « 10 saucisses | Poids : | 350g »"
+30131,"Saucisse de volaille, type Knack",Pièce,35,"Retenu d'office. herta.fr, Knacki Original : « 10 saucisses | Poids : | 350g »"
+20337,"Saucisse végétale au tofu (convient aux véganes ou végétaliens), préemballée",Pièce,35,"Retenu d'office. herta.fr, Knacki Veggie : « 6 saucisses | Poids : | 210g »"
+25232,"Saucisse végétale au blé ou seitan, préemballé",Pièce,35,"Retenu d'office. herta.fr, Knacki Veggie : « 6 saucisses | Poids : | 210g »"
+11001,"Bouillon de boeuf, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
+11174,"Bouillon de volaille, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
+25918,"Bouillon de viande et légumes type pot-au-feu, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
+25970,"Bouillon de viande et légumes type pot-au-feu, non dégraissé, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
+25971,"Bouillon de viande et légumes type pot-au-feu, dégraissé, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
+23410,"Pâte brisée, crue",Pièce,230,"Retenu d'office. herta.fr, pâte brisée : « 1 pâte à tarte | Poids : | 230 » — un rouleau"
+23414,"Pâte brisée, pur beurre, crue",Pièce,230,"Retenu d'office. herta.fr, pâte brisée : « 1 pâte à tarte | Poids : | 230 » — un rouleau"
+23415,"Pâte brisée, pur beurre, surgelée, crue",Pièce,230,"Retenu d'office. herta.fr, pâte brisée : « 1 pâte à tarte | Poids : | 230 » — un rouleau"
+23420,"Pâte feuilletée, matière grasse végétale, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
+23424,"Pâte feuilletée pur beurre, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
+23421,"Pâte feuilletée, surgelée, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
+23425,"Pâte feuilletée pur beurre, surgelée crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
+20272,"Mesclun ou salade, mélange de jeunes pousses",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20031,"Laitue, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+25604,"Salade verte, crue, sans assaisonnement",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20295,"Salade feuille de chêne, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20012,"Salade ou chicorée frisée, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20288,"Salade sucrine, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20171,"Laitue romaine, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20200,"Laitue iceberg, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20099,"Mâche, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
+20059,"Épinard, cru",Poignée,25,"Retenu d'office. fitatu.com, pousses d'épinards : « 1× poignée | 25 g »"
+20270,"Épinard, jeunes pousses pour salades, cru",Poignée,25,"Retenu d'office. fitatu.com, pousses d'épinards : « 1× poignée | 25 g »"
+20217,"Roquette, crue",Poignée,25,"Retenu d'office. fitatu.com, roquette : « 1× poignée | 25 g »"
+11014,"Persil, frais",Bouquet,30,"Retenu d'office. Open Food Facts 3333313126523 (Lamprien) : « Botte fraiche persil plat », « 30g »"
+11094,"Coriandre, fraiche",Bouquet,30,"Retenu d'office. Open Food Facts 3333313126233 (Lamprien) : « 30 g »"
+11033,"Basilic, frais",Bouquet,30,"Retenu d'office. comptoirdesrestaurateurs.fr, basilic à la botte : « poids par Pièce : 0.030 kg »"
+11093,"Aneth, frais",Bouquet,30,"Retenu d'office. comptoirdesrestaurateurs.fr : « Aneth 30g Cat1 », « 0.030 kg »"
+7200,"Pain de mie, courant",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+7111,"Pain de mie, complet",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+7112,"Pain de mie, au son",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+7113,"Pain de mie, multicéréale",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+7201,"Pain de mie, sans croûte, préemballé",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+7210,"Pain de mie brioché, préemballé",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
+28910,"Jambon cuit, choix",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28912,"Jambon cuit, choix, avec couenne",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28913,"Jambon cuit, choix, découenné dégraissé",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28925,"Jambon cuit, de Paris, découenné dégraissé",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28900,"Jambon cuit, supérieur",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28901,"Jambon cuit, supérieur, avec couenne",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28902,"Jambon cuit, supérieur, découenné",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28906,"Jambon cuit, supérieur, découenné dégraissé",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28907,"Jambon cuit, supérieur, à teneur réduite en sel",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+28803,"Jambon cuit, fumé",Tranche,40,"Retenu d'office. Open Food Facts 3095757526108 (Fleury Michon) : « 160 g (4 tranches de 40 g) »"
+20041,"Poivron, vert, jaune ou rouge, cru",Pièce,190,"Retenu d'office. Aprifel, fiches poivron rouge et poivron vert : « pèse en moyenne 125 à 250 g » → 190"
+20087,"Poivron rouge, cru",Pièce,190,"Retenu d'office. Aprifel, fiche poivron rouge : « pèse en moyenne 125 à 250 g » → 190"
+20088,"Poivron rouge, cuit",Pièce,190,"Retenu d'office. Aprifel, fiche poivron rouge : « pèse en moyenne 125 à 250 g » → 190"
+20085,"Poivron vert, cru",Pièce,190,"Retenu d'office. Aprifel, fiche poivron vert : « pèse en moyenne 125 à 250 g » → 190"
+20086,"Poivron vert, cuit",Pièce,190,"Retenu d'office. Aprifel, fiche poivron vert : « pèse en moyenne 125 à 250 g » → 190"
+20168,"Poivron jaune, cru",Pièce,190,"Retenu d'office. Aprifel, fiches poivron rouge et poivron vert : « pèse en moyenne 125 à 250 g » → 190"
+36016,"Poulet, viande et peau, cru",Pièce,1500,"Retenu d'office. volaille-francaise.fr, le poulet : « 1,5 kg poids moyen prêt à cuire » — os compris"
+36007,"Poulet (var. blanc), viande et peau, cru",Pièce,1500,"Retenu d'office. volaille-francaise.fr, le poulet : « 1,5 kg poids moyen prêt à cuire » — os compris"
+36008,"Poulet fermier, viande et peau, cru",Pièce,1500,"Retenu d'office. volaille-francaise.fr, le poulet : « 1,5 kg poids moyen prêt à cuire » — os compris"
+36005,"Poulet, viande et peau, rôti/cuit au four",Pièce,1500,"Retenu d'office. volaille-francaise.fr, le poulet : « 1,5 kg poids moyen prêt à cuire » — os compris, poids avant cuisson"
+11003,"Ciboule ou Ciboulette, fraîche",Bouquet,30,"Retenu d'office. comptoirdesrestaurateurs.fr : « Ciboulette 30g Cat1 (à la botte) », « poids par Pièce : 0.030 kg »"
+7100,"Pain, baguette ou boule, de campagne",Tranche,30,"Retenu d'office. Open Food Facts 3560070463862 (Carrefour Bio) : « 400 g (13 tranches, entame comprise) », portion « Deux tranches (61,5 g) » — pain prétranché"
+7261,"Pain de campagne maison (avec farine pour machine à pain)",Tranche,30,"Retenu d'office. Open Food Facts 3560070463862 (Carrefour Bio) : « 400 g (13 tranches, entame comprise) », portion « Deux tranches (61,5 g) » — pain prétranché"
+# Deux valeurs **retenues d'office** le 14/09/2026, à la demande du propriétaire
+# du projet : aucune source officielle ne mesure un œuf « taille FR » ni une
+# gousse, et « non converti » coûtait plus qu'une approximation. Les sources sont
+# des pages web non officielles, citées telles quelles ; une pesée maison les
+# remplace volontiers.
+22000,"Oeuf, cru",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22010,"Oeuf, dur",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22011,"Oeuf, poché",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22014,"Oeuf, à la coque",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22505,"Oeuf, au plat, sans matière grasse",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+22501,"Oeuf, au plat, frit, salé",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
+11000,"Ail, cru",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
+11306,"Ail, rôti/cuit au four",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
+11307,"Ail, sauté/poêlé, sans matière grasse",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
