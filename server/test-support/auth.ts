@@ -8,7 +8,7 @@
  * comme un foyer créé sans son organisation ou un rôle jamais posé.
  */
 import type pg from 'pg';
-import { buildAuth, type Auth } from '../auth/auth.ts';
+import { buildAuth, type Auth, type AuthOptions } from '../auth/auth.ts';
 import type { SendMail } from '../auth/mail.ts';
 
 export const TEST_BASE_URL = 'http://localhost';
@@ -19,9 +19,14 @@ const TEST_SECRET = 'test'.repeat(10);
 /**
  * Sans `mail`, l'instance n'en envoie pas : pas de confirmation d'adresse, et
  * `signUp` rend un compte qui peut entrer tout de suite. `mail.test.ts` passe
- * une boîte qui garde ce qu'elle reçoit.
+ * une boîte qui garde ce qu'elle reçoit. Sans `google`, pas de bouton Google ;
+ * `google.test.ts` passe un client factice.
  */
-export function buildTestAuth(pool: pg.Pool, mail: SendMail | null = null): Auth {
+export function buildTestAuth(
+  pool: pg.Pool,
+  mail: SendMail | null = null,
+  google: AuthOptions['google'] = null,
+): Auth {
   return buildAuth({
     pool,
     baseURL: TEST_BASE_URL,
@@ -29,6 +34,7 @@ export function buildTestAuth(pool: pg.Pool, mail: SendMail | null = null): Auth
     // `Secure` empêcherait le cookie de revenir en test, qui parle http.
     secureCookies: false,
     mail,
+    google,
   });
 }
 

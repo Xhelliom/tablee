@@ -126,6 +126,16 @@ spec:
               valueFrom:
                 secretKeyRef: { name: tablee, key: SMTP_URL, optional: true }
 
+            # La connexion Google : les deux clés dans le secret, ou aucune.
+            # URI de redirection à déclarer chez Google : `TABLEE_BASE_URL`
+            # suivi de `/api/auth/callback/google`.
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef: { name: tablee, key: GOOGLE_CLIENT_ID, optional: true }
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef: { name: tablee, key: GOOGLE_CLIENT_SECRET, optional: true }
+
             # « Découper avec l'IA » dans la saisie libre, et l'onglet
             # « Conseils » (V3). Absente, ni l'un ni l'autre. Voir `server/llm/`.
             - name: ANTHROPIC_API_KEY

@@ -552,6 +552,17 @@ base au dépôt.
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
 forme qu'il a. Le détail est dans l'historique git.
 
+- **Un partage Jow reçu sans session ne survivait pas à la connexion Google**
+  (ouverte et levée le 14/09/2026, sans numéro : le n° 17 est le découpage par
+  IA, ouvert en parallèle). Le retour de Google ne
+  ramenait que le chemin : la query porte les jetons `key` et `userId` (I6), et
+  better-auth la garde en base le temps de l'aller-retour. L'écran de connexion
+  la lui confie désormais passée par `redactRequestUrl` — la même expurgation
+  que celle du journal de requêtes, importée du serveur plutôt que recopiée,
+  pour qu'il n'y en ait qu'une. L'identifiant de recette, seul utile au
+  serveur, reste. Écarté en chemin : garder le texte dans `sessionStorage`,
+  qui aurait conservé côté navigateur ce qu'I6 demande de ne pas garder.
+
 - **Le type `Db` laissait écrire un `pool.query` sur une table du domaine.**
   La dette n° 9 disait que le foyer courant deviendrait ambigu le jour où un
   traitement réutiliserait un client sans passer par `withHousehold`, et que

@@ -37,7 +37,7 @@ export interface Account {
 }
 
 /** Ce que rend `GET /api/me`. */
-type Me =
+type Me = (
   | { state: 'anonyme' }
   | { state: 'sans_foyer'; user: Account; households: HouseholdChoice[] }
   | {
@@ -48,7 +48,8 @@ type Me =
       households: HouseholdChoice[];
       /** Le serveur sait découper un texte libre par IA (V3). */
       ia: boolean;
-    };
+    }
+) & { google: boolean };
 
 interface SessionValue {
   loading: boolean;
@@ -59,6 +60,8 @@ interface SessionValue {
   role: Role | null;
   /** Tous les foyers du compte — une personne peut en avoir plusieurs. */
   households: HouseholdChoice[];
+  /** L'instance propose Google : pour entrer, et pour lier son compte une fois connecté. */
+  google: boolean;
   /** « Découper avec l'IA » est proposé : l'instance a une clé API. */
   ia: boolean;
   eaters: Eater[];
@@ -76,7 +79,7 @@ const SessionContext = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }): ReactNode {
   const [loading, setLoading] = useState(true);
-  const [me, setMe] = useState<Me>({ state: 'anonyme' });
+  const [me, setMe] = useState<Me>({ state: 'anonyme', google: false });
   const [eaters, setEaters] = useState<Eater[]>([]);
 
   const refreshEaters = useCallback(async () => {
@@ -114,6 +117,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       household,
       role,
       households,
+      google: me.google,
       ia: me.state === 'actif' && me.ia,
       eaters,
       refreshEaters,
@@ -144,7 +148,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
       signOut: async () => {
         await api.post('/api/auth/sign-out');
-        setMe({ state: 'anonyme' });
+        setMe({ state: 'anonyme', google: me.google });
         setEaters([]);
       },
 
