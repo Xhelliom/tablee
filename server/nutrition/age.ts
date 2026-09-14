@@ -20,11 +20,11 @@ export function isMinor(birthDate: string, on: Date = new Date()): boolean {
 }
 
 /**
- * Tranche d'âge grossière, pour le contexte envoyé au LLM (V3).
+ * Tranche d'âge grossière, pour le contexte envoyé au LLM.
  *
  * I3 : le modèle reçoit « 1 enfant (6-9 ans) », jamais une date de naissance.
- * La fonction vit ici parce que la tranche se dérive de l'âge, mais elle n'a
- * aucun usage en V1 — aucun appel LLM n'existe encore.
+ * La fonction vit ici parce que la tranche se dérive de l'âge ; les assistants
+ * s'en servent pour décrire le foyer (`server/llm/conseil.ts`).
  */
 export function ageBracket(age: number): string {
   if (age < 1) return 'moins de 1 an';
