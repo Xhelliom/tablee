@@ -17,6 +17,9 @@ import type { DailyBalance, NutrientBar } from '../api.ts';
 import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
 import { formatGrams } from '../design/quantities.ts';
 import { IconClose } from '../icons.tsx';
+// Import circulaire avec `Bilan`, qui ouvre cette feuille : sans danger tant
+// que ces trois noms ne servent qu'au rendu, jamais au chargement du module.
+import { EmptyTrack, SCALE, Track } from './Bilan.tsx';
 
 interface Props {
   balance: DailyBalance;
@@ -25,6 +28,13 @@ interface Props {
 }
 
 export function ReferenceSheet({ balance, firstName, onClose }: Props): React.ReactElement {
+  // Ce que les exemples ont en commun ; chacun change ce qu'il montre. Ici et
+  // pas au niveau du module : `SCALE` n'existe pas encore quand il se charge.
+  const example = {
+    color: NUTRIENT_COLOR.proteinG, percentMax: null, state: 'disponible' as const,
+    scale: SCALE, reference: true, ceiling: null, marker: null, label: '',
+  };
+
   return (
     <div
       role="dialog"
@@ -45,12 +55,31 @@ export function ReferenceSheet({ balance, firstName, onClose }: Props): React.Re
         <div style={body}>
           <section style={{ marginBottom: 18 }}>
             <p style={sectionTitle}>Comment les lire</p>
-            <ul style={list}>
-              <li>La barre monte vers le <b>repère du jour</b>. Le trait pointillé, c’est le repère atteint.</li>
-              <li>Le trait ambre marque le <b>haut de l’intervalle</b>, quand la source en publie un.</li>
-              <li>Une partie translucide au-dessus veut dire que la source ne donne qu’un intervalle — la valeur est quelque part dedans.</li>
-              <li>Des hachures veulent dire <b>au moins ça</b> : un aliment n’est pas rattaché au référentiel, le total ne peut que monter.</li>
-              <li>Une barre grise et plate veut dire <b>on ne sait pas</b>. Jamais zéro.</li>
+            {/* Dessinés par la vraie piste de l'accueil, pas imités : une
+                légende qui s'écarterait du graphe expliquerait autre chose que
+                lui. Les pourcentages sont des positions d'exemple, pas des
+                valeurs. */}
+            <ul style={legend}>
+              <li style={legendRow}>
+                <span aria-hidden="true" style={exampleBox}><Track {...example} percent={70} /></span>
+                <span>La barre avance vers le <b>repère du jour</b>, le trait le plus marqué. Quand elle le franchit, il est atteint.</span>
+              </li>
+              <li style={legendRow}>
+                <span aria-hidden="true" style={exampleBox}><Track {...example} percent={105} ceiling={145} /></span>
+                <span>La zone grisée va du repère au <b>plafond</b>, marqué d’un petit trait gris quand la source en publie un.</span>
+              </li>
+              <li style={legendRow}>
+                <span aria-hidden="true" style={exampleBox}><Track {...example} state="encadre" percent={40} percentMax={90} /></span>
+                <span>La partie pâle, translucide, est possible sans être acquise&nbsp;: la source ne donne qu’un intervalle.</span>
+              </li>
+              <li style={legendRow}>
+                <span aria-hidden="true" style={exampleBox}><Track {...example} state="partiel" percent={55} /></span>
+                <span>Des hachures veulent dire <b>au moins ça</b>&nbsp;: un aliment n’est pas rattaché au référentiel, le total ne peut que monter.</span>
+              </li>
+              <li style={legendRow}>
+                <span aria-hidden="true" style={exampleBox}><EmptyTrack /></span>
+                <span>Une piste vide, en pointillé, veut dire <b>on ne sait pas</b>. Jamais zéro.</span>
+              </li>
             </ul>
           </section>
 
@@ -183,8 +212,18 @@ const text: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.55, color: 'var(--text-secondary)', marginBottom: 4,
 };
 
-const list: React.CSSProperties = {
-  ...text, margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4,
+const legend: React.CSSProperties = {
+  ...text, listStyle: 'none', margin: 0, padding: 0,
+  display: 'flex', flexDirection: 'column', gap: 12,
+};
+
+const legendRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 14,
+};
+
+/** Assez large pour que le trait du repère et celui du plafond se séparent. */
+const exampleBox: React.CSSProperties = {
+  display: 'flex', width: 110, flexShrink: 0,
 };
 
 const sources: React.CSSProperties = {
