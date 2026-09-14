@@ -255,7 +255,7 @@ a { color: inherit; }
   color: var(--on-coral-dim); display: flex;
 }
 
-/* Le compte : une initiale, comme le logo en face. */
+/* Le compte : son dessin (`Avatar.tsx`), rond comme le logo est carré en face. */
 .appbar__profil {
   width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
   background: var(--on-coral); color: var(--coral);

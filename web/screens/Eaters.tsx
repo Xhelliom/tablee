@@ -32,6 +32,7 @@ import { dietLabel, NUTRIENT_COLOR } from '../design/vocabulary.ts';
 import { navigate } from '../router.tsx';
 import { AddEaterForm, créerInvitation, LienÀTransmettre } from '../components/AddEater.tsx';
 import { ConfirmButton } from '../components/ConfirmButton.tsx';
+import { Avatar } from '../components/Avatar.tsx';
 import {
   Choix, COEF_CHOICES, coefLabel, draftToBody, ProfileFields, type ProfileDraft,
 } from '../components/EaterForm.tsx';
@@ -171,16 +172,19 @@ function FicheConvive({
   return (
     <article className="card" style={{ padding: '14px 15px' }}>
       <div className="spread">
-        <div>
-          <p style={{ fontSize: 16 }}>
-            {eater.firstName}
-            {eater.isMe ? <span className="meta"> · vous</span> : null}
-          </p>
-          <p className="meta" style={{ marginTop: 2 }}>
-            {eater.age} ans
-            {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
-          </p>
-          <Mesures eater={eater} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+          <Avatar seed={eater.id} size={38} />
+          <div>
+            <p style={{ fontSize: 16 }}>
+              {eater.firstName}
+              {eater.isMe ? <span className="meta"> · vous</span> : null}
+            </p>
+            <p className="meta" style={{ marginTop: 2 }}>
+              {eater.age} ans
+              {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
+            </p>
+            <Mesures eater={eater} />
+          </div>
         </div>
         {balance !== null ? (
           <NutrientBars balance={balance} firstName={eater.firstName} />

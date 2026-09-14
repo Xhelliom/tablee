@@ -20,6 +20,7 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfirmButton } from '../components/ConfirmButton.tsx';
+import { Avatar, accountSeed } from '../components/Avatar.tsx';
 import { InviteMembers } from './Invitation.tsx';
 import { Choix } from '../components/EaterForm.tsx';
 import { readTheme, setTheme, THEMES, type Theme } from '../design/theme.ts';
@@ -42,7 +43,7 @@ interface InvitationEnAttente {
 const libelléRôle = (role: string): string => (role === 'parent' ? 'Parent' : 'Adulte');
 
 export function HouseholdSettingsScreen(): React.ReactElement {
-  const { user, household, role, reload, signOut } = useSession();
+  const { user, household, role, reload, signOut, eaters } = useSession();
   const [membres, setMembres] = useState<Membre[]>([]);
   const [invitations, setInvitations] = useState<InvitationEnAttente[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -107,12 +108,15 @@ export function HouseholdSettingsScreen(): React.ReactElement {
             return (
               <article key={membre.id} className="card" style={{ padding: '13px 15px' }}>
                 <div className="spread">
-                  <div>
-                    <p style={{ fontSize: 15 }}>
-                      {membre.user.name}
-                      {cestMoi ? <span className="meta"> · vous</span> : null}
-                    </p>
-                    <p className="meta" style={{ marginTop: 2 }}>{membre.user.email}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <Avatar seed={accountSeed(membre.userId, eaters)} size={34} />
+                    <div>
+                      <p style={{ fontSize: 15 }}>
+                        {membre.user.name}
+                        {cestMoi ? <span className="meta"> · vous</span> : null}
+                      </p>
+                      <p className="meta" style={{ marginTop: 2 }}>{membre.user.email}</p>
+                    </div>
                   </div>
                   <span className="chip">{libelléRôle(membre.role)}</span>
                 </div>

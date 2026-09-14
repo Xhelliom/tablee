@@ -228,6 +228,40 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(shares[adulte] + shares[enfant], 1);
     });
 
+    /**
+     * « On n'a pas mangé ensemble le midi » : deux plats au même créneau, un
+     * par personne. Chacun ne compte que pour qui l'a mangé — une part entière,
+     * et rien dans le bilan de l'autre.
+     */
+    it('deux plats différents au même midi restent chacun à qui les a mangés', async () => {
+      const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const elle = await addEater('Adulte deux', '1987-01-01', 1);
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
+      const pates = await insertFood(pool, 'Pâtes cuites', { kcal: 150, protein: 5, carb: 30, fat: 1, fiber: 2 }, true);
+
+      const plat = async (eaterId: string, foodId: string, label: string): Promise<any> =>
+        (await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
+          participants: [{ eaterId }],
+          items: [{ foodId, label, quantity: 100, unit: 'g', quantityG: 100 }],
+        })).body.meal;
+      const monPlat = await plat(moi, riz, 'Riz');
+      const sonPlat = await plat(elle, pates, 'Pâtes');
+
+      assert.deepEqual(monPlat.participants.map((p: any) => [p.eaterId, p.share]), [[moi, 1]]);
+      assert.deepEqual(sonPlat.participants.map((p: any) => [p.eaterId, p.share]), [[elle, 1]]);
+
+      const { body: jour } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+      assert.equal(jour.meals.filter((m: any) => m.slot === 'dejeuner').length, 2);
+
+      const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const repas = Object.fromEntries(
+        bilan.dashboard.map((e: any) => [e.eater.id, e.balance.mealCount]),
+      );
+      assert.deepEqual(repas, { [moi]: 1, [elle]: 1, [enfant]: 0 });
+    });
+
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');

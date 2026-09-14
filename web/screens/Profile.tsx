@@ -31,6 +31,7 @@ import { api, ApiError } from '../api.ts';
 import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
+import { Avatar, accountSeed } from '../components/Avatar.tsx';
 import { coefLabel } from '../components/EaterForm.tsx';
 import { dietLabel } from '../design/vocabulary.ts';
 import { ÉditionFiche, Mesures } from './Eaters.tsx';
@@ -47,6 +48,15 @@ export function ProfileScreen(): ReactElement {
 
       <section className="sec" style={{ paddingTop: 18 }}>
         <h2 className="eyebrow">Votre compte</h2>
+        {user === null ? null : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <Avatar seed={accountSeed(user.id, eaters)} size={52} />
+            <p className="meta" style={{ lineHeight: 1.5 }}>
+              Ce dessin vous désigne partout dans l’app : sur les repas, dans
+              « Qui était à table ? », en haut à droite.
+            </p>
+          </div>
+        )}
         <dl className="card" style={{ margin: 0, padding: '2px 15px' }}>
           <Ligne libellé="Prénom">{user?.name}</Ligne>
           <Ligne libellé="Adresse e-mail">{user?.email}</Ligne>
