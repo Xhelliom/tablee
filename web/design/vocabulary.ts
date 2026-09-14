@@ -10,6 +10,27 @@
  */
 import type { Nutrient, Slot } from '../api.ts';
 
+/**
+ * Les régimes proposés à la saisie.
+ *
+ * Des **faits déclarés**, jamais un jugement (I2) : « végétarien » est un
+ * régime, « mange mal » n'en est pas un. La colonne `eater.diets` est un
+ * `text[]` libre — cette liste est ce que l'interface propose, pas ce que la
+ * base accepte.
+ */
+export const DIET_CHOICES: { value: string; label: string }[] = [
+  { value: 'vegetarien', label: 'Végétarien' },
+  { value: 'vegetalien', label: 'Végétalien' },
+  { value: 'sans_porc', label: 'Sans porc' },
+  { value: 'sans_gluten', label: 'Sans gluten' },
+  { value: 'sans_lactose', label: 'Sans lactose' },
+];
+
+const DIET_LABELS = new Map(DIET_CHOICES.map(({ value, label }) => [value, label]));
+
+/** Un régime tel qu'il s'écrit à l'écran. Une valeur inconnue se dit telle quelle. */
+export const dietLabel = (value: string): string => DIET_LABELS.get(value) ?? value;
+
 export const SLOT_LABELS: Record<Slot, string> = {
   petit_dej: 'Petit-déj',
   dejeuner: 'Déjeuner',

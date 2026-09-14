@@ -68,6 +68,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   get: <T,>(path: string): Promise<T> => request<T>('GET', path),
   post: <T,>(path: string, body?: unknown): Promise<T> => request<T>('POST', path, body ?? {}),
+  put: <T,>(path: string, body: unknown): Promise<T> => request<T>('PUT', path, body),
   patch: <T,>(path: string, body: unknown): Promise<T> => request<T>('PATCH', path, body),
   delete: <T,>(path: string): Promise<T> => request<T>('DELETE', path),
 };
@@ -98,6 +99,26 @@ export interface Eater {
   age: number;
   /** I5 : aucun objectif chiffré de calories ni de poids sur ce profil. */
   minor: boolean;
+  /**
+   * Le compte de ce convive, s'il en a un. `null` est l'état normal : un
+   * enfant est à table sans compte. Un convive n'est pas un compte (007).
+   */
+  userId: string | null;
+  /** Vrai quand cette assiette est celle du compte connecté. */
+  isMe: boolean;
+  /**
+   * L'adresse à qui la fiche est réservée, en attendant que cette personne
+   * s'inscrive. Le rattachement se fera tout seul à son arrivée.
+   */
+  claimEmail: string | null;
+  /**
+   * Majeurs uniquement, et **toujours `null` sur un profil mineur** — le
+   * serveur les retire à la lecture (I5). Une mesure, jamais une cible : ni
+   * barre, ni série, ni écart à un poids « idéal ».
+   */
+  weightKg: number | null;
+  weightRecordedAt: string | null;
+  heightCm: number | null;
 }
 
 export interface NutrientReference {

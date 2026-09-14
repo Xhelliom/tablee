@@ -46,7 +46,11 @@ les interdits ci-dessous, qui ne se négocient pas.
   stocké se réinjecte à chaque prompt et devient une étiquette durable.
 - **Ne jamais afficher d'objectif chiffré de calories ou de poids sur un profil
   mineur.** Les kcal existent en base ; elles ne sont jamais la métrique mise en
-  avant. Ni séries, ni scores par personne, nulle part.
+  avant. Ni séries, ni scores par personne, nulle part. Depuis la 009, le poids
+  existe aussi — **majeurs seulement**, comme une mesure datée et jamais comme
+  une cible. Sur un profil mineur le champ n'est pas grisé, il est absent :
+  l'API refuse (422), la lecture masque, et une date corrigée qui rend le profil
+  mineur efface la valeur. Ne pas « harmoniser » ces trois filets en un seul.
 - **Ne jamais envoyer au LLM** : prénoms, dates de naissance, allergènes, poids,
   photos de personnes. Uniquement des libellés d'aliments, des agrégats et des
   tranches d'âge.
@@ -87,7 +91,13 @@ Sur ces points, demander plutôt que choisir :
    vide. Gabarit commenté dans `db/seeds/unit-default.csv`.
 3. **Contenu de `seasonal_produce`** — saisie manuelle, ~40 produits. Toujours
    vide. Gabarit dans `db/seeds/seasonal-produce.csv`.
-4. Toute modification des règles ci-dessus.
+4. ~~**Stocker le poids**~~ — tranché le 14/09/2026 : oui, pour les **majeurs
+   seulement**, optionnel, jamais une cible. Lire l'encart du §9 avant d'y
+   toucher. Reste ouvert, et c'est le point 1 déguisé : **la ligne
+   `nutrient_reference` qui s'en servirait** — la RNP protéines de l'ANSES à
+   0,83 g/kg/j — n'est pas écrite. Tant qu'elle ne l'est pas, le poids est une
+   donnée de santé qui ne rend rien (dette n° 10).
+5. Toute modification des règles ci-dessus.
 
 Les valeurs se chargent depuis `db/seeds/*.csv`, versionnés, avec une colonne
 `source` **obligatoire sur chaque ligne** — le chargeur refuse un fichier qui
@@ -164,6 +174,30 @@ better-auth 1.7.4 (plugin `organization`), migrations 007 et 008. Quatre choses
 Deux rôles : `parent` (gère les accès) et `adulte` (saisit et lit). `jeune`
 est une valeur réservée **sans écran** — un enfant qui a un compte est un autre
 produit, soumis à I5, et ça se décidera le jour venu.
+
+### Le lien convive ↔ compte — ✅ écrit le 14/09/2026
+
+Migration 009, après la première mise en service. La 007 avait raison de
+séparer `eater` et `"user"` ; il manquait le cas où **une même personne est les
+deux**. `eater.user_id` dit laquelle de ces assiettes est la vôtre,
+`eater.claim_email` la réserve à quelqu'un qui n'est pas encore inscrit.
+
+- **C'est un lien, pas une fusion.** Cardinalité 0..1 des deux côtés. Les
+  enfants restent des convives sans compte, une nounou un compte sans convive,
+  et `meal.created_by` désigne toujours un `"user"`. Ne pas en profiter pour
+  refusionner les deux tables : c'est l'erreur que la 007 répare.
+- **Le rattachement se fait tout seul** à l'entrée dans le foyer
+  (`afterAcceptInvitation`, `afterAddMember`), et immédiatement si l'adresse est
+  déjà membre. Il **échoue en silence** exprès : une exception dans le crochet
+  ferait échouer l'acceptation de l'invitation, et une fiche non rattachée se
+  rattache d'un tap alors qu'une personne bloquée dehors est bloquée dehors.
+- **Les rôles s'appliquent enfin aux convives.** `/api/eaters` n'en vérifiait
+  aucun. Un `parent` compose le foyer et décide à qui appartient une fiche ; un
+  `adulte` ne modifie que la sienne, et ne voit pas le poids des autres. Ne pas
+  desserrer « pour simplifier » : sans la garde sur le rattachement, un compte
+  `adulte` s'attribue la fiche d'un enfant et gagne le droit de la modifier.
+- **Un foyer vide ouvre sur `/bienvenue`**, pas sur un accueil vide. `/share`
+  en est exclu : détourner cette navigation perdrait la recette partagée.
 
 ### Ensuite
 

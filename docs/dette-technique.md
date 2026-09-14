@@ -243,6 +243,51 @@ plus.
 
 
 
+## 10. Le poids est stocké et lu par personne
+
+**Où** — `eater.weight_kg`, `.height_cm` (migration 009), saisis dans
+`web/components/EaterForm.tsx`.
+
+Ces colonnes existent parce que la RNP des protéines de l'ANSES s'exprime **par
+kilogramme de poids corporel** — 0,83 g/kg/j chez l'adulte —, ce qui est
+exactement le terme qui manque pour dériver une cible en grammes plutôt qu'un
+intervalle en % de l'AET (§9). Sauf que ce calcul n'est pas fait : il demande
+une ligne `nutrient_reference` de plus, avec sa chaîne de sources complète, et
+le contenu de cette table ne se décide pas seul.
+
+**Ce que ça coûte.** Une donnée de santé demandée à l'utilisateur, qui ne lui
+rend rien pour l'instant. C'est le mauvais côté du marché, et ça ne doit pas
+durer : soit la ligne dérivée s'écrit, soit les colonnes se retirent.
+
+**Ce qui le lèverait.** Une ligne `protein_g` / `RNP` / `absolu` dérivée de
+`0,83 g/kg × poids`, avec `derived = true` et sa source, et la barre protéines
+qui la préfère à l'intervalle quand le poids est connu. À décider avec le
+propriétaire du dépôt, comme le reste de `nutrient_reference`.
+
+---
+
+## 11. « Poids réservé aux majeurs » n'est pas dans la base
+
+**Où** — `server/routes/eaters.ts`, fonctions `corps()` et `present()`.
+
+L'âge se dérive de `birth_date` et de la date du jour. Un `check` Postgres qui
+l'utiliserait serait non-immutable — donc refusé — et de toute façon faux le
+lendemain de l'anniversaire. La règle vit donc en applicatif, à trois endroits :
+l'écriture refuse (422), la lecture masque, et une date de naissance corrigée
+qui rend le profil mineur **efface** le poids.
+
+**Ce que ça coûte.** Un script qui écrirait directement en base — un seed, une
+reprise de données, un `psql` un soir — poserait un poids sur un profil mineur
+sans que rien ne bronche. L'interface ne le montrerait pas ; la colonne, elle,
+le porterait.
+
+**Ce qui le lèverait.** Rien de propre côté Postgres tant que l'âge est dérivé.
+Le contournement serait une colonne `is_minor` maintenue par déclencheur, qui
+échangerait un problème contre un pire. Consigné pour être su, pas pour être
+corrigé.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
@@ -268,6 +313,12 @@ forme qu'il a. Le détail est dans l'historique git.
   cet état avant qu'on s'en aperçoive —, et `assertIsolation()` empêche
   désormais de démarrer plutôt que d'écrire un avertissement que personne ne
   lit.
+- **Rien ne reliait une fiche de convive à un compte.** Créer son compte menait
+  à une app vide, un conjoint saisi à la main restait orphelin de son compte, et
+  `/api/eaters` n'appliquait **aucun** contrôle de rôle alors que `ROLES.adulte`
+  n'en porte aucun sur les convives. La migration 009 pose le lien facultatif
+  (`eater.user_id`, `eater.claim_email`), et les rôles s'appliquent enfin :
+  un `parent` compose le foyer, un `adulte` ne modifie que sa propre fiche.
 - **Les polices venaient de Google Fonts.** Fraunces et Inter sont embarquées
   dans `web/public/fonts/`, en sous-ensemble `latin` seul : vérification faite
   sur les 3 185 noms de Ciqual et sur tous les textes de l'interface, aucun

@@ -78,6 +78,23 @@ export function isoDate(value: unknown, field: string): string {
   return text;
 }
 
+/**
+ * Une adresse e-mail, ramenée en minuscules.
+ *
+ * La validation est volontairement grossière — « une arobase, et un point
+ * après ». Une expression rationnelle exhaustive refuse des adresses valides,
+ * et de toute façon rien ici ne prouve qu'une adresse existe : la vérification
+ * attend un serveur SMTP (dette n° 7). Ce qui compte, c'est la normalisation :
+ * `Marie@Exemple.fr` et `marie@exemple.fr` doivent rattacher la même assiette.
+ */
+export function email(value: unknown, field: string): string {
+  const text = str(value, field, { max: 254 }).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+    throw ApiError.badRequest(`« ${text} » n’est pas une adresse e-mail`);
+  }
+  return text;
+}
+
 export function isoDateTime(value: unknown, field: string): string {
   const text = str(value, field, { max: 40 });
   const date = new Date(text);
