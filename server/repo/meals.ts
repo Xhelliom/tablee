@@ -24,7 +24,7 @@ import { loadUnitDefaults } from './refs.ts';
 export const SLOTS = ['petit_dej', 'dejeuner', 'gouter', 'diner', 'collation'] as const;
 export type Slot = (typeof SLOTS)[number];
 
-export const SOURCES = ['jow', 'texte', 'photo', 'template', 'manuel'] as const;
+export const SOURCES = ['jow', 'texte', 'photo', 'template', 'manuel', 'ia'] as const;
 export type MealSource = (typeof SOURCES)[number];
 
 export interface MealItemInput {

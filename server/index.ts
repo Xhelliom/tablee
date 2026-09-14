@@ -12,6 +12,7 @@ import { buildAuth } from './auth/auth.ts';
 import { buildMailer, MailConfigError, type SendMail } from './auth/mail.ts';
 import { closePool, getPool } from './db.ts';
 import { assertIsolation, IsolationError } from './db/guard.ts';
+import { buildLlm } from './llm/index.ts';
 
 const port = Number(process.env['PORT'] ?? 3000);
 const host = process.env['HOST'] ?? '0.0.0.0';
@@ -66,6 +67,12 @@ try {
   throw error;
 }
 
+/**
+ * L'IA (V3), facultative : `ANTHROPIC_API_KEY`, voir `server/llm/`. Sans elle,
+ * la saisie reste aliment par aliment et l'onglet « Conseils » n'apparaît pas.
+ */
+const llm = buildLlm(process.env);
+
 const pool = getPool();
 
 // Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
@@ -83,11 +90,12 @@ try {
 
 const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail });
 
-const app = buildApp({ pool, auth, baseURL });
+const app = buildApp({ pool, auth, baseURL, llm });
 await app.listen({ port, host });
 console.log(
   `Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL}, `
-    + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']})`,
+    + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']}, `
+    + `IA : ${llm === null ? 'non' : 'oui'})`,
 );
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

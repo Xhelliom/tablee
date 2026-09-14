@@ -26,6 +26,7 @@
  * - **Toute estimation porte un `confidence` affiché** (R6).
  */
 import type { Confidence } from '../jow/types.ts';
+import type { MealSource } from '../repo/meals.ts';
 import { resolveUnit, type UnitDefaults, type UnitSource } from './units.ts';
 
 export type { Confidence };
@@ -81,7 +82,7 @@ export interface MealInput {
    * portions que personne n'avait mangées — corrigé le 14/09/2026.
    */
   servings: number;
-  source: 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
+  source: MealSource;
   recipe: RecipeSnapshot | null;
   /** Items hors-Jow, ou ajustements. */
   items: NutritionItem[];
@@ -120,6 +121,20 @@ export interface MealNutrition extends Macros {
 
 const RANK: Record<Confidence, number> = { haute: 3, moyenne: 2, basse: 1 };
 const worst = (a: Confidence, b: Confidence): Confidence => (RANK[a] <= RANK[b] ? a : b);
+
+/**
+ * Ce qu'une source permet d'affirmer, au mieux (R6). Un `Record` : une source
+ * ajoutée ne compile pas tant qu'on n'a pas décidé du sien.
+ */
+const PLAFOND: Record<MealSource, Confidence> = {
+  jow: 'haute', texte: 'haute', template: 'haute', manuel: 'haute',
+  // Une photo ne donne ni quantité ni composition : quoi qu'on en tire, c'est
+  // une estimation (§5 de la spec).
+  photo: 'basse',
+  // Une composition proposée par un LLM, même rattachée et relue, reste une
+  // estimation : les grammes viennent du modèle (migration 012).
+  ia: 'moyenne',
+};
 
 const LABELS: Record<Nutrient, string> = {
   kcal: 'énergie',
@@ -171,9 +186,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
     }
   }
 
-  // Une photo ne donne ni quantité ni composition : quoi qu'on en tire, c'est
-  // une estimation (§5 de la spec).
-  if (meal.source === 'photo') confidence = 'basse';
+  confidence = worst(confidence, PLAFOND[meal.source]);
 
   const plant = plantRatio(meal, items, servings, warnings);
 

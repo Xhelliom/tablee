@@ -46,6 +46,19 @@ const meal = (over: Partial<MealInput>): MealInput => ({
   servings: 1, source: 'manuel', recipe: null, items: [], ...over,
 });
 
+describe('calculerNutrition — repas découpé par IA', () => {
+  it('reste une estimation, même entièrement rattaché (R6)', () => {
+    const result = calculerNutrition(meal({ source: 'ia', items: [item('du riz', RIZ, 150)] }), VIDE);
+    assert.equal(result.kcal, 195);
+    assert.equal(result.confidence, 'moyenne');
+  });
+
+  it('ne remonte pas une confiance déjà basse', () => {
+    const result = calculerNutrition(meal({ source: 'ia', items: [item('une truffe', null, 20)] }), VIDE);
+    assert.equal(result.confidence, 'basse');
+  });
+});
+
 describe('calculerNutrition — repas Jow', () => {
   const galette = {
     perServing: { kcal: 320, proteinG: 18, carbG: 16, fatG: 20, fiberG: 12 },

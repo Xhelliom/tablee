@@ -6,8 +6,12 @@ import { transaction } from '../db.ts';
 import { ApiError } from '../http/errors.ts';
 import {
   body, int, isoDateTime, mealItems, num, optionalStr, optionalUuid,
-  participants, slot, source, uuid,
+  participants, slot, source, str, uuid,
 } from '../http/validate.ts';
+import { SplitRefused } from '../llm/decoupage.ts';
+import { anonymize, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index.ts';
+import { listEaters } from '../repo/eaters.ts';
+import { searchFoods, type FoodSummary } from '../repo/foods.ts';
 import {
   createMeal, deleteMeal, getMeal, listMeals, recentWithRecipe, updateMeal,
 } from '../repo/meals.ts';
@@ -16,7 +20,49 @@ import { householdTimezone } from '../repo/dashboard.ts';
 import { nextDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
-export function mealRoutes(app: FastifyInstance, _ctx: AppContext): void {
+export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
+  /**
+   * V3, §5 voie 2 — un texte libre découpé en aliments, **à valider**.
+   *
+   * Rien n'est écrit : la route propose des lignes rapprochées de Ciqual, et
+   * c'est l'écran de saisie qui enregistre, avec la source `ia`, ce que la
+   * personne a gardé. Ce qui part chez Anthropic, et pourquoi : en-tête de
+   * `server/llm/decoupage.ts`.
+   */
+  app.post('/api/meals/decoupage', { config: { rateLimit: LLM_RATE_LIMIT } }, async (request) => {
+    const { splitMeal } = requireLlm(ctx.llm);
+    const identity = request.identity();
+    const text = str(body(request.body)['text'], 'text', { max: 500 });
+
+    const eaters = await listEaters(request.db, identity.householdId, { includeInactive: true });
+    const envoyé = anonymize(text, namesToHide(eaters, identity.name));
+    // Plus rien à lire sous RLS : le client retourne au pool avant l'attente du
+    // modèle. La recherche qui suit lit `food`, référentiel public, sur le pool.
+    await request.releaseDb();
+
+    const proposed = await splitMeal(envoyé).catch((cause: unknown) => {
+      if (cause instanceof SplitRefused) {
+        throw new ApiError(
+          422, 'decoupage_impossible',
+          'l’IA n’a pas su découper ce texte — ajoutez les aliments un par un',
+        );
+      }
+      request.log.error(cause);
+      throw new ApiError(502, 'ia_injoignable', 'l’IA n’a pas répondu — ajoutez les aliments un par un');
+    });
+
+    const items: { label: string; grams: number | null; foods: FoodSummary[] }[] = [];
+    for (const item of proposed) {
+      // La recherche exige tous les mots : à défaut, le premier seul, pour que
+      // « pain complet de campagne » propose au moins des pains.
+      const premier = item.search.split(/\s+/)[0] ?? '';
+      let foods = await searchFoods(ctx.pool, item.search, 5);
+      if (foods.length === 0 && premier !== item.search) foods = await searchFoods(ctx.pool, premier, 5);
+      items.push({ label: item.label, grams: item.grams, foods });
+    }
+    return { items };
+  });
+
   app.post('/api/meals', async (request, reply) => {
     const input = body(request.body);
     const householdId = request.householdId();

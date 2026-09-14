@@ -44,7 +44,16 @@ rebâtir sans redémarrer sert une coquille qui pointe vers un bundle renommé.
 En développement : `npm run dev` (serveur, rechargé à chaud) et
 `npm run dev:web` (Vite sur le port 5173, qui proxie `/api`). Sur
 `http://localhost`, poser `TABLEE_INSECURE_COOKIE=1` pour que le cookie de
-session soit accepté sans HTTPS.
+session soit accepté sans HTTPS, et `TABLEE_BASE_URL=http://localhost:5173` :
+une fois connecté, better-auth refuse toute requête dont l'en-tête `Origin`
+n'est pas celui de `TABLEE_BASE_URL`, et le proxy de Vite le transmet tel quel.
+
+Plutôt que des `export`, les variables peuvent vivre dans un `.env` à la racine
+— gabarit dans `.env.example`, jamais commité. `dev`, `migrate` et `seed` le
+lisent d'eux-mêmes ; une variable déjà exportée l'emporte sur le fichier.
+`npm start` et `npm test` ne le lisent **pas** : en production les variables
+viennent de l'environnement, et une suite qui trouverait `TEST_DATABASE_URL`
+dans un fichier tronquerait une base sans qu'on l'ait demandé.
 
 **En production, HTTPS est obligatoire** : le share target Android ne
 fonctionne pas autrement (§4). Caddy devant le serveur suffit.

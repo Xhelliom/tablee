@@ -6,15 +6,20 @@
  * en hiver et le bilan du jour devient faux sans prévenir.
  */
 
-/** La date du jour, telle que le foyer la lit. */
-export function todayIn(timezone: string): string {
-  return new Intl.DateTimeFormat('fr-CA', { timeZone: timezone }).format(new Date());
+/** La date du jour telle que le foyer la lit — ou celle d'un instant donné. */
+export function todayIn(timezone: string, at: Date = new Date()): string {
+  return new Intl.DateTimeFormat('fr-CA', { timeZone: timezone }).format(at);
+}
+
+/** Une date AAAA-MM-JJ décalée de `delta` jours. Une date n'a pas de fuseau. */
+export function shiftDay(date: string, delta: number): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + delta);
+  return day.toISOString().slice(0, 10);
 }
 
 export function nextDay(date: string): string {
-  const day = new Date(`${date}T00:00:00Z`);
-  day.setUTCDate(day.getUTCDate() + 1);
-  return day.toISOString().slice(0, 10);
+  return shiftDay(date, 1);
 }
 
 /** Semaine ISO : elle commence le lundi. */

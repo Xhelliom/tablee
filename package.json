@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.9"
   },
   "scripts": {
     "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
@@ -12,15 +12,15 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.json",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
     "jow:capture": "node --import tsx scripts/jow-capture.ts",
-    "migrate": "node --import tsx scripts/migrate.ts",
-    "seed:food": "node --import tsx scripts/seed-food.ts",
+    "migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
+    "seed:food": "node --env-file-if-exists=.env --import tsx scripts/seed-food.ts",
     "start": "node --import tsx server/index.ts",
-    "dev": "node --import tsx --watch server/index.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx --watch server/index.ts",
     "test:db": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
     "dev:web": "vite",
     "build:web": "vite build",
     "icons": "node --import tsx scripts/make-icons.ts",
-    "seed:refs": "node --import tsx scripts/seed-refs.ts",
+    "seed:refs": "node --env-file-if-exists=.env --import tsx scripts/seed-refs.ts",
     "seed": "npm run seed:food && npm run seed:refs"
   },
   "devDependencies": {
@@ -36,6 +36,7 @@
     "vite": "^8.3.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@fastify/cookie": "^11.1.2",
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/static": "^10.1.3",

@@ -99,6 +99,9 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
       },
       role: identity.role,
       households,
+      // « Découper avec l'IA » et l'onglet « Conseils » ne s'affichent que si
+      // le serveur sait le faire.
+      ia: (ctx.llm ?? null) !== null,
     };
   });
 

@@ -415,6 +415,52 @@ dit pas — « cette modification-là change les lignes déjà en base ».
 
 ---
 
+## 17. Le découpage par IA : un filet pour les prénoms, et une clé ouverte à l'inscription
+
+**Où** — `server/llm/index.ts` (`anonymize`, et la marque `Anonymized` sans
+laquelle rien ne part), `POST /api/meals/decoupage`, `POST /api/assistant`.
+
+**Ce qui est fait.** Avant l'envoi, les prénoms des fiches du foyer — retirées
+comprises — et les mots du nom du compte sont retirés du texte, mot entier et
+sans égard à la casse ; un lien Jow collé perd son jeton. Chaque route IA est
+limitée à dix appels par minute par compte — **par route** : le découpage et
+l'assistant ont chacun leur compteur, vingt appels en tout.
+
+**Ce qui passe quand même.** Tout ce qui n'est pas un prénom enregistré :
+« mon fils », un surnom, le prénom d'un invité, un prénom tapé sans son accent
+(« Lea » pour « Léa »). À l'inverse, un enfant prénommé Olive fait disparaître
+« une olive » du texte : la ligne manque, et la personne la rajoute.
+
+Et l'inscription est ouverte (§16) : n'importe qui peut créer un compte et un
+foyer, puis faire vingt appels par minute sur la clé de l'hébergeur. Le plafond
+borne la vitesse, pas le total.
+
+**Ce que ça coûte** — un prénom d'enfant qui part chez Anthropic quand
+quelqu'un l'écrit autrement que sur sa fiche. Et une facture qui peut monter
+sans que l'hébergeur le voie, s'il ne pose pas de limite de dépense sur la clé.
+
+**Ce qui le lèverait** — pour les prénoms, rien d'automatique n'est complet :
+l'écran invite déjà à décrire l'assiette plutôt que qui l'a mangée, et c'est la
+seule vraie défense. Pour la clé, en attendant mieux, une limite de dépense
+côté console Anthropic ; ensuite, un quota quotidien par foyer en base, ou
+l'IA réservée aux foyers que l'hébergeur désigne. Écarté tant que l'instance ne
+sert que des familles connues.
+
+**L'assistant ajoute un angle mort.** Le même filet retire les prénoms de la
+question, de la conversation renvoyée par l'écran et des libellés de plats ;
+mêmes trous. Mais surtout, **ce qu'il répond n'est relu par rien** avant
+l'écran. Sa consigne lui interdit tout chiffre absent des faits — repères
+compris —, tout objectif de calories ou de poids, tout jugement sur une
+personne. Une consigne se suit presque toujours, pas toujours : un « deux
+portions de poisson par semaine » tiré de sa mémoire, c'est un repère sans
+source (I1) affiché tel quel. Le lever demanderait une relecture automatique
+de la réponse — un second appel, ou une liste de motifs refusés — et ni l'un
+ni l'autre n'est complet. C'est pour ça que l'écran dit « vérifiez ce qu'il
+propose » et que rien n'est gardé : une réponse fausse ne survit pas à la
+conversation.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

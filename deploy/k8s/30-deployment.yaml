@@ -124,6 +124,12 @@ spec:
               valueFrom:
                 secretKeyRef: { name: tablee, key: SMTP_URL, optional: true }
 
+            # « Découper avec l'IA » dans la saisie libre, et l'onglet
+            # « Conseils » (V3). Absente, ni l'un ni l'autre. Voir `server/llm/`.
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef: { name: tablee, key: ANTHROPIC_API_KEY, optional: true }
+
             # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
             - name: TABLEE_LOG
               value: '0'

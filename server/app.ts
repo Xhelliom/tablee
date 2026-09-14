@@ -17,9 +17,11 @@ import type pg from 'pg';
 import { acquireForHousehold, type HouseholdDb, type ScopedClient } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
+import type { Llm } from './llm/index.ts';
 import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
 import { SECURITY_HEADERS } from './http/headers.ts';
+import { assistantRoutes } from './routes/assistant.ts';
 import { authRoutes } from './routes/auth.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
@@ -34,6 +36,12 @@ export interface AppContext {
   auth: Auth;
   /** Origine publique du service. Sert à better-auth et aux liens d'invitation. */
   baseURL: string;
+  /**
+   * L'IA (V3) — découpage et assistant —, `null` ou absente sans clé API.
+   * Facultative pour que les suites qui n'en ont pas l'usage n'aient pas à le
+   * dire.
+   */
+  llm?: Llm | null;
 }
 
 /**
@@ -104,6 +112,13 @@ declare module 'fastify' {
     db: HouseholdDb;
     /** Interne : la libération du client, appelée par le hook onResponse. */
     scoped: ScopedClient | null;
+    /**
+     * Rend le client Postgres avant la fin de la requête, pour qu'une attente
+     * longue — un appel au LLM, jusqu'à une minute — n'immobilise pas l'un des
+     * dix clients du pool. `request.db` est inutilisable ensuite ; le hook
+     * onResponse, lui, n'a plus rien à rendre.
+     */
+    releaseDb(): Promise<void>;
   }
 }
 
@@ -169,6 +184,12 @@ export function buildApp(
     if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();
     return this.auth.identity.householdId;
   });
+  app.decorateRequest('releaseDb', async function (this: { scoped: ScopedClient | null }): Promise<void> {
+    const scoped = this.scoped;
+    if (scoped === null) return;
+    this.scoped = null;
+    await scoped.release();
+  });
 
   /**
    * Les en-têtes de sécurité, sur toute réponse — page, fichier, API, erreur,
@@ -220,12 +241,7 @@ export function buildApp(
   // Rendre le client quoi qu'il arrive — réponse normale, erreur, 404.
   // `onResponse` passe dans tous ces cas ; ne pas le faire viderait le pool en
   // quelques dizaines de requêtes.
-  app.addHook('onResponse', async (request) => {
-    const scoped = request.scoped;
-    if (scoped === null) return;
-    request.scoped = null;
-    await scoped.release();
-  });
+  app.addHook('onResponse', (request) => request.releaseDb());
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
@@ -295,6 +311,7 @@ export function buildApp(
     mealRoutes(api, ctx);
     templateRoutes(api, ctx);
     dashboardRoutes(api, ctx);
+    assistantRoutes(api, ctx);
   });
 
   registerWeb(app, options.webDir);

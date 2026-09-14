@@ -55,6 +55,8 @@ server/
   nutrition/      les trois algorithmes du §11, en applicatif
   food/           export Ciqual : source épinglée, lecture, mapping des groupes
   jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
+  llm/            l'IA (V3) : la seule porte vers Anthropic (index.ts), le
+                  découpage d'un texte libre, l'assistant
   test-support/   fabriques de comptes/foyers, base de test, migrations
   *.test.ts       les suites d'intégration vivent à la racine de server/
 web/
@@ -275,6 +277,21 @@ l'IA : un assistant diététicien branché sur trois repas mal saisis ne produit
 que des banalités. La V3 demande une relecture humaine de 4 synthèses sur des
 données réelles, la V4 un an d'historique — les écrire avant, c'est produire de
 l'invérifiable.
+
+> **Précisé le 14/09/2026 — la V3 a commencé par le texte libre, et par lui
+> seul** : c'est la seule case qui ne demande aucun historique. « Découper avec
+> l'IA » (`server/llm/decoupage.ts`) rend des libellés et des grammes estimés,
+> jamais une teneur ; les prénoms du foyer sont retirés avant l'envoi (dette
+> n° 17), et le repas porte la source `ia`, plafonnée à « Estimation ». Ne pas
+> en conclure que la synthèse peut suivre : elle attend des semaines de repas
+> réels.
+>
+> **L'assistant a suivi le même jour, à la demande du propriétaire** (onglet
+> « Conseils », `server/llm/conseil.ts`). Trois choses à ne pas défaire : il ne
+> reçoit que des **moyennes du foyer**, jamais par personne — c'est ce qui
+> l'empêche de glisser vers un jugement sur un enfant ; il ne reçoit **pas
+> l'énergie** ; et **rien n'est stocké**. Brancher `family_note` ou un
+> historique de conversation, c'est la synthèse : relire le §14 d'abord.
 
 ---
 

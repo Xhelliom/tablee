@@ -79,7 +79,7 @@ export const api = {
 
 export type Confidence = 'haute' | 'moyenne' | 'basse';
 export type Slot = 'petit_dej' | 'dejeuner' | 'gouter' | 'diner' | 'collation';
-export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel';
+export type MealSource = 'jow' | 'texte' | 'photo' | 'template' | 'manuel' | 'ia';
 export type Nutrient = 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'fiberG';
 /**
  * `encadre` — la source ne donne qu'un intervalle (« < 0,5 g » chez Ciqual).
