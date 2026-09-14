@@ -94,12 +94,6 @@ export const IconFridge = (p: IconProps) => (
   </Base>
 );
 
-export const IconLogout = (p: IconProps) => (
-  <Base {...p}>
-    <g><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2" /><path d="M20 12H10m10 0-3-3m3 3-3 3" /></g>
-  </Base>
-);
-
 export const IconChevron = (p: IconProps) => (
   <Base {...p}><g><path d="m9 5 7 7-7 7" /></g></Base>
 );

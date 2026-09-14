@@ -255,6 +255,32 @@ a { color: inherit; }
   color: var(--on-coral-dim); display: flex;
 }
 
+/* Le compte : une initiale, comme le logo en face. */
+.appbar__profil {
+  width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: var(--on-coral); color: var(--coral);
+  font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  anchor-name: --compte;
+}
+
+/* Le menu du compte. Un popover vit dans la couche supérieure, hors de la
+   colonne de 480 px : sans ancrage CSS, on le cale à la main sous le bouton ;
+   avec, `anchor()` redéfinit `top` et `right` et le suit. */
+.menu {
+  position: fixed; inset: auto; margin: 0;
+  top: calc(64px + env(safe-area-inset-top));
+  right: max(18px, calc(50vw - 222px));
+  position-anchor: --compte;
+  top: calc(anchor(bottom) + 6px);
+  right: anchor(right);
+  min-width: 210px; padding: 6px 0;
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+}
+.menu .row { padding: 11px 14px; font-size: 14px; }
+.menu .row:hover { background: var(--surface-1); }
+
 .sec { padding: 0 18px; }
 
 .eyebrow {
