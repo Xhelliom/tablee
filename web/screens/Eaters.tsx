@@ -466,7 +466,7 @@ function AccessSection(): ReactElement {
   const monAssiette = eaters.find((eater) => eater.isMe) ?? null;
 
   return (
-    <section className="sec">
+    <section className="sec" id="compte" style={{ scrollMarginTop: 72 }}>
       <h2 className="eyebrow">Votre compte</h2>
       <p className="meta" style={{ lineHeight: 1.6 }}>
         {user?.name} · {user?.email}

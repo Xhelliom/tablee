@@ -4,11 +4,15 @@
  * §8ter : le terracotta porte tout le chrome, en aplat plein. Les cinq
  * couleurs de nutriments n'apparaissent nulle part ici — ni sur l'onglet
  * actif, ni sur un badge, ni sur un fond.
+ *
+ * En haut à droite, le compte et non la sortie. Le bouton déconnectait d'un
+ * seul tap, et un tap malencontreux perdait la session : « Se déconnecter »
+ * vit désormais dans le menu qu'il ouvre, à deux gestes.
  */
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
-import { IconBowl, IconHistory, IconHome, IconLogout, IconUsers, IconWeek } from '../icons.tsx';
+import { IconBowl, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
 
 export type Tab = 'accueil' | 'semaine' | 'historique' | 'membres';
 
@@ -20,7 +24,8 @@ const TABS: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] =
 ];
 
 export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): React.ReactElement {
-  const { signOut } = useSession();
+  const { user, signOut } = useSession();
+  const menu = useRef<HTMLDivElement>(null);
 
   return (
     <div className="app" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -29,14 +34,35 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
           <span className="appbar__logo"><IconBowl size={14} /></span>
           Tablée
         </div>
+        {/* ponytail: `popover` natif — le clic ailleurs et Échap le ferment sans une ligne de JS. */}
         <button
           type="button"
-          className="appbar__action"
-          onClick={() => { void signOut(); }}
-          aria-label="Se déconnecter"
+          className="appbar__profil"
+          popoverTarget="menu-compte"
+          aria-label={`Votre compte : ${user?.name ?? ''}`}
         >
-          <IconLogout size={19} />
+          {(user?.name.trim()[0] ?? '?').toUpperCase()}
         </button>
+        <div id="menu-compte" popover="auto" ref={menu} className="menu card">
+          <div style={{ padding: '8px 14px 10px' }}>
+            <p style={{ fontSize: 14 }}>{user?.name}</p>
+            <p className="meta" style={{ marginTop: 2 }}>{user?.email}</p>
+          </div>
+          <button
+            type="button" className="row"
+            onClick={() => {
+              menu.current?.hidePopover();
+              navigate('/membres');
+              // `navigate` remonte en haut ; la section « Votre compte » est en pied d'écran.
+              requestAnimationFrame(() => document.getElementById('compte')?.scrollIntoView());
+            }}
+          >
+            Votre compte
+          </button>
+          <button type="button" className="row" onClick={() => { void signOut(); }}>
+            Se déconnecter
+          </button>
+        </div>
       </header>
 
       <main style={{ flex: 1 }}>{children}</main>
