@@ -195,6 +195,15 @@ Trois voies, par priorité d'usage :
 2. **Texte libre** — « big mac + frites moyennes », « 2 œufs, 1 muffin anglais ».
    En V1 : recherche plein texte sur `food`. En V3 : le LLM éclate en items +
    quantités, l'utilisateur valide.
+
+   > **Écrit le 14/09/2026.** Le LLM rend des libellés, des mots de recherche
+   > et des grammes — jamais une teneur (R1) : le rapprochement avec `food` est
+   > la recherche plein texte du dépôt, et chaque ligne se corrige avant
+   > l'enregistrement. Les prénoms du foyer et les jetons Jow sont retirés du
+   > texte avant l'envoi (I3, I6), sans garantie complète (dette n° 17). Le
+   > repas porte la source `ia` (migration 012), dont la confiance est
+   > plafonnée à « moyenne » (R6). Facultatif : sans `ANTHROPIC_API_KEY`, la
+   > saisie reste celle de la V1.
 3. **Photo** — fallback uniquement (cantine, plat de famille). `confidence='basse'`.
 
 ### Référentiels et ETL
@@ -233,6 +242,34 @@ Trois voies, par priorité d'usage :
 > et `Litre` en sont volontairement absents : une pièce de poulet et une pièce
 > de radis n'ont rien en commun, et ces deux-là relèvent de `food.unit_weights`,
 > au cas par cas.
+>
+> **Précisé le 14/09/2026 — `food.unit_weights` a son seed.** Une recherche de
+> sources publiées n'a trouvé **aucune** équivalence générique défendable : la
+> cuillère à soupe va de 5 g (parmesan râpé) à 16 g (beurre de cacahuète), la
+> gousse d'ail de 3 g (USDA) à 5-8 g (Aprifel). Les conversions sourcées sont
+> toutes propres à un aliment ; elles vivent dans `db/seeds/food-unit-weight.csv`
+> (code Ciqual, unité, grammes, source), chargé par `seed:refs`, qui remplace
+> `food.unit_weights` en entier. Deux changements suivent : une conversion par
+> aliment sort en `confidence='moyenne'`, plus en `haute` — une pièce ou une
+> cuillère n'est pas une pesée, et une valeur USDA décrit un produit américain
+> (R6) ; et le déploiement charge Ciqual **avant** les repères, puisque ce fichier
+> s'y rattache par code. Les pesées maison y ont leur place, source datée.
+>
+> **Complété le même jour — un repli dégradé, par forme.** Quand l'aliment n'a
+> pas sa conversion, `unit_default` (migration 013) donne une valeur par unité
+> **et par forme** : une cuillère à soupe vaut 15 g (médiane de 14 mesures USDA
+> de liquides, pâtes et grains), 6,5 g pour une épice ; une cuillère à café 5 g
+> ou 2,2 g ; un litre 1 kg. La forme vient de `food.category`, jamais du nom.
+> Le point 3 ci-dessous change donc : ce repli sort en `confidence='basse'` —
+> « approximatif » sur une recette — et non plus `moyenne`. Une cuillère n'est pas une mesure, et
+> ce que ce repli approxime est consigné (dette n° 18). Pièce, poignée, gousse,
+> bouquet et tranche n'en ont pas : aucun volume sur quoi s'appuyer.
+>
+> Deux défauts de branchement corrigés au passage : les ingrédients d'une
+> recette Jow ne passaient jamais par la résolution d'unité — une cuillère de
+> sauce ne comptait pas dans la part végétale —, et l'écran de la recette
+> montrait les grammes figés à l'import. Il les résout maintenant à la lecture,
+> avec leur confiance.
 
 Les recettes Jow utilisent des unités non métriques (`1 poignée`, `1/10 botte`,
 `×1 steak`). Le calcul nutritionnel exige des grammes.
@@ -1105,10 +1142,12 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
 > | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
 >
-> **Ajoutée le 14/09/2026** :
+> **Ajoutées le 14/09/2026** :
 >
 > | Méthode | Route | Pourquoi elle existe |
 > |---|---|---|
+> | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
+> | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. |
 > | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
 >
 > **Ajoutées le 13/09/2026 avec les comptes** (§7 renversé) :
@@ -1175,6 +1214,7 @@ depuis les `portion_coef` courants (R2).
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
 | **Synthèse** (V3) | Texte hebdomadaire + notes famille. |
+| **Conseils** (V3) | *Ajouté le 14/09/2026.* Une question, une réponse de l'assistant, et la conversation qui suit. Dit avant la première question ce qu'il ne sait pas — prénoms, allergies — et qu'il n'est pas un avis médical. Onglet absent sans clé API. La conversation s'efface en changeant d'onglet. |
 
 **Contraintes UI :**
 - Enregistrer un repas Jow ≤ **3 taps** après le partage.
@@ -1246,6 +1286,25 @@ Pas de prénom, pas de date de naissance, pas d'allergène.
 - Ton : constat et suggestion, jamais reproche. Pas de vocabulaire de régime.
 - Le LLM ne produit **aucun chiffre** : il commente ceux qu'on lui donne (R1).
 - `facts_used` stocke ce qui a été injecté → une synthèse bizarre est traçable.
+
+> **Ajouté le 14/09/2026 — l'assistant, avant la synthèse.** Un onglet
+> « Conseils » où l'on pose une question sur les repas du foyer
+> (`POST /api/assistant`, `server/llm/conseil.ts`). Il reçoit la forme de
+> prompt ci-dessus, et rien d'autre : tranches d'âge, régimes, part végétale
+> sur 7 et 28 jours, % du repère des protéines, glucides, lipides et fibres en
+> **moyenne du foyer** — jamais par personne, ni l'énergie — et les libellés
+> des plats de la semaine. Les prénoms du foyer sont retirés de tout ce qui
+> part, question comprise (dette n° 17).
+>
+> Les garde-fous de la synthèse valent pour lui, adaptés à une conversation :
+> il répond quand on lui demande, jamais après un repas (I4) ; aucun chiffre
+> absent des faits, repères chiffrés compris (R1, I1) ; aucun jugement ; la
+> saisie est dite incomplète pour qu'un pourcentage bas ne devienne pas un
+> manque. **Rien n'est stocké** — ni conversation, ni réponse : une réponse
+> relue plus tard se lirait comme un fait sur la famille (I2), et `facts_used`
+> n'a de sens que pour une synthèse qu'on garde. Il ne connaît pas les
+> allergies — elles ne sont saisies nulle part, et I3 les lui interdirait —
+> et l'écran le dit.
 
 ---
 
@@ -1329,7 +1388,8 @@ on accumule, on ne juge personne.
 > **Objectif :** passer de « on a testé » à « on l'utilise ».
 
 ### V3 — L'IA
-- [ ] Parsing texte libre par LLM, avec validation utilisateur
+- [x] Parsing texte libre par LLM, avec validation utilisateur — 14/09/2026,
+      encart du §5
 - [ ] Synthèse hebdomadaire + `facts_used`
 - [ ] `family_note` (saisie et relecture)
 - [ ] Photo en fallback
@@ -1338,6 +1398,20 @@ on accumule, on ne juge personne.
 
 **L'ordre compte.** La tentation sera de commencer par l'IA. Un assistant
 diététicien branché sur trois repas mal saisis ne produit que des banalités.
+
+> **Commencée le 14/09/2026 par le texte libre, et par lui seul.** C'est la
+> seule case de la V3 qui ne demande aucun historique : elle attaque la
+> friction de saisie — le vrai risque du projet — au lieu de commenter des
+> repas qui n'existent pas encore. Un conseiller sans données a été discuté et
+> écarté pour la même raison que ci-dessus. La synthèse hebdomadaire et
+> `family_note` attendent trois à quatre semaines de repas réels : sans elles,
+> la revue manuelle des quatre synthèses n'aurait rien à relire.
+>
+> ⚠️ **Renversé le même jour pour le conseiller.** Le propriétaire du projet a
+> demandé l'assistant sans attendre l'historique : il répond à partir de la
+> semaine telle qu'elle est saisie, et sa consigne lui dit qu'elle est
+> incomplète. Encart du §14. La phrase au-dessus reste vraie pour la synthèse
+> hebdomadaire et `family_note`, qui attendent toujours leurs semaines.
 
 ### V4 — Modules mémoire (§14bis)
 - [ ] Souvenirs « il y a un an »

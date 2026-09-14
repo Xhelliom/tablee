@@ -118,6 +118,7 @@ c'est nominal, pas un échec.
 | `TABLEE_MAIL_FROM` | L'expéditeur, `Tablée <tablee@example.net>`. Requis avec `TABLEE_MAIL`. Chez Resend, le domaine doit y être vérifié. |
 | `RESEND_API_KEY` | Avec `TABLEE_MAIL=resend`. Passe par HTTPS : utile quand la sortie SMTP est fermée. |
 | `SMTP_URL` | Avec `TABLEE_MAIL=smtp` : `smtps://utilisateur:motdepasse@hôte:465`, ou `smtp://…:587` pour STARTTLS. Encoder `@`, `/`, `:`, `#` dans le mot de passe. |
+| `ANTHROPIC_API_KEY` | Facultatif. Allume « Découper avec l'IA » dans la saisie libre et l'onglet « Conseils » (V3) ; absent, ni l'un ni l'autre. Poser une limite de dépense sur la clé côté console Anthropic : l'inscription étant ouverte, n'importe quel compte peut s'en servir (dette n° 17). |
 
 ⚠️ L'inscription est **ouverte**, et c'est voulu : des amis doivent pouvoir
 créer leur foyer sans passer par vous. Ça veut dire que quiconque trouve l'URL

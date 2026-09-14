@@ -61,6 +61,10 @@ export const IconUsers = (p: IconProps) => (
   </Base>
 );
 
+export const IconChat = (p: IconProps) => (
+  <Base {...p}><g><path d="M4 5h16v11H9l-5 4Z" /><path d="M8 9h8M8 12h5" /></g></Base>
+);
+
 export const IconPlus = (p: IconProps) => (
   <Base {...p}><g><path d="M12 5v14M5 12h14" /></g></Base>
 );

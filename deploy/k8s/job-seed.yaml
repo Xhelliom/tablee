@@ -20,6 +20,9 @@
 # humaines (§17), chaque ligne exigeant une source ou une pesée. Les barres
 # concernées afficheront « indisponible », jamais 0. C'est le comportement
 # attendu, pas un échec de déploiement.
+#
+# Ciqual d'abord, les repères ensuite : les conversions par aliment
+# (`food-unit-weight.csv`) et la saisonnalité se rattachent à ses codes.
 
 apiVersion: batch/v1
 kind: Job
@@ -41,8 +44,8 @@ spec:
           command: ['/bin/sh', '-ceu']
           args:
             - |
-              node --import tsx scripts/seed-refs.ts
               node --import tsx scripts/seed-food.ts --dir=/ciqual --force
+              node --import tsx scripts/seed-refs.ts
           env:
             - name: DATABASE_URL
               valueFrom:

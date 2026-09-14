@@ -158,6 +158,9 @@
   --text-warning: light-dark(#854F0B, #F0C273);
   --bg-success:   light-dark(#E1F5EE, #0F2B23);
   --text-success: light-dark(#0F6E56, #7DD3B6);
+  /* Le rouge d'une confirmation armée, et de rien d'autre. Ne bascule pas : il
+     porte du blanc (6,6 pour 1), comme le terracotta, et se distingue de lui. */
+  --danger: #B42318;
   /* Le vert des aplats de plat et de saisonnalité — pas celui des fibres. */
   --green-100: light-dark(#C0DD97, #24361A);
   --green-600: light-dark(#3B6D11, #4F8F18);
@@ -293,6 +296,8 @@ a { color: inherit; }
   background: var(--surface-2); color: var(--text-primary);
   border: .5px solid var(--border);
 }
+/* Le liseré garde la taille du `--quiet` qu'il remplace sous le doigt. */
+.btn--danger { background: var(--danger); border: .5px solid var(--danger); }
 
 .chip {
   font-size: 12px; padding: 4px 9px; border-radius: var(--radius);

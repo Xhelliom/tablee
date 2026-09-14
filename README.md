@@ -44,7 +44,16 @@ rebâtir sans redémarrer sert une coquille qui pointe vers un bundle renommé.
 En développement : `npm run dev` (serveur, rechargé à chaud) et
 `npm run dev:web` (Vite sur le port 5173, qui proxie `/api`). Sur
 `http://localhost`, poser `TABLEE_INSECURE_COOKIE=1` pour que le cookie de
-session soit accepté sans HTTPS.
+session soit accepté sans HTTPS, et `TABLEE_BASE_URL=http://localhost:5173` :
+une fois connecté, better-auth refuse toute requête dont l'en-tête `Origin`
+n'est pas celui de `TABLEE_BASE_URL`, et le proxy de Vite le transmet tel quel.
+
+Plutôt que des `export`, les variables peuvent vivre dans un `.env` à la racine
+— gabarit dans `.env.example`, jamais commité. `dev`, `migrate` et `seed` le
+lisent d'eux-mêmes ; une variable déjà exportée l'emporte sur le fichier.
+`npm start` et `npm test` ne le lisent **pas** : en production les variables
+viennent de l'environnement, et une suite qui trouverait `TEST_DATABASE_URL`
+dans un fichier tronquerait une base sans qu'on l'ait demandé.
 
 **En production, HTTPS est obligatoire** : le share target Android ne
 fonctionne pas autrement (§4). Caddy devant le serveur suffit.
@@ -145,17 +154,26 @@ besoins d'un nourrisson ne sont pas ceux d'un enfant de 4 ans en plus petit, et
 c'est l'âge où une valeur plausible et fausse fait le plus de dégâts. Les
 barres affichent « repère indisponible ».
 
-### Ce qu'il y a à peser pour `unit_default`
+### Ce qu'il y a à peser
 
-Un bol sur la balance, tare, et on pèse : une poignée de salade, une gousse
-d'ail épluchée, un bouquet de persil, une tranche de pain, une cuillère à
-soupe rase d'huile. Trois fois chacune, on garde la moyenne. « Pesée maison,
-09/2026 » est une source valable — c'est même la meilleure, parce que c'est
-votre poignée.
+Les cuillères et le litre ont un repli dans `unit_default` (« approximatif »), et
+une quarantaine d'aliments courants leur conversion propre, sourcée, dans
+`db/seeds/food-unit-weight.csv`. Les pièces, poignées, bouquets et tranches
+courants — légumes, fruits, escalopes, saumon, knacks, pâtes à tarte, salades,
+herbes, pain, jambon — y ont une valeur **retenue d'office** d'après des pages
+web lues, poids brut compris. Un aliment qui n'y figure pas reste « non
+converti » jusqu'à ce qu'on l'ajoute (dette n° 19). Une pesée maison remplace
+volontiers une valeur retenue d'office. Un bol sur la
+balance, tare, et on pèse, trois fois ; on garde la moyenne et on l'écrit par
+aliment dans `food-unit-weight.csv`. « Pesée maison, 09/2026 » est une source
+valable — c'est même la meilleure, parce que c'est votre poignée.
 
 `Pièce` et `Litre` n'ont volontairement pas de valeur générique : une pièce de
 poulet et une pièce de radis n'ont rien en commun, et 35 ml d'huile ne pèsent
-pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas.
+pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas : une
+ligne par aliment dans `db/seeds/food-unit-weight.csv` (code Ciqual, unité,
+grammes, source), puis `npm run seed:refs`. Un œuf pesé chez vous y va aussi,
+avec « Pesée maison, <date> » pour source.
 
 ## Où se trouve quoi
 

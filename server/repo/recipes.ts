@@ -9,6 +9,9 @@ import type { HouseholdDb } from '../db.ts';
 import type { ParsedRecipe } from '../jow/types.ts';
 import type { NutritionItem, RecipeSnapshot } from '../nutrition/compute.ts';
 import type { Confidence } from '../jow/types.ts';
+import { resolveUnit, type UnitSource } from '../nutrition/units.ts';
+import { loadFoodValues } from './foods.ts';
+import { loadUnitDefaults } from './refs.ts';
 
 export interface RecipeIngredient {
   id: string;
@@ -19,6 +22,12 @@ export interface RecipeIngredient {
   unit: string | null;
   /** Grammes **par convive**, ou `null` si l'unité n'a pas de source (§6). */
   quantityG: number | null;
+  /**
+   * Grammes estimés depuis une cuillère, une pièce, un litre : `moyenne` par
+   * une conversion propre à l'aliment, `basse` par un repli. `null` quand ils
+   * sont mesurés, ou pas encore résolus (`resolveIngredients`).
+   */
+  estimate: Confidence | null;
   optional: boolean;
   position: number;
 }
@@ -191,7 +200,7 @@ export async function loadIngredients(db: HouseholdDb, recipeId: string): Promis
   );
   return rows.map((r) => ({
     id: r.id, label: r.label, foodId: r.food_id, jowFoodId: r.jow_food_id,
-    quantity: r.quantity, unit: r.unit, quantityG: r.quantity_g,
+    quantity: r.quantity, unit: r.unit, quantityG: r.quantity_g, estimate: null,
     optional: r.optional, position: r.position,
   }));
 }
@@ -385,7 +394,7 @@ export async function listLinks(db: HouseholdDb): Promise<KnownLink[]> {
 /** Les ingrédients, vus par le calcul nutritionnel — quantités **par convive**. */
 export function ingredientsAsItems(
   ingredients: RecipeIngredient[],
-  foods: Map<string, { name: string; plantBased: boolean | null }>,
+  foods: Map<string, { name: string; plantBased: boolean | null } & UnitSource>,
 ): NutritionItem[] {
   return ingredients.map((ingredient) => {
     const food = ingredient.foodId === null ? undefined : foods.get(ingredient.foodId);
@@ -398,10 +407,42 @@ export function ingredientsAsItems(
               name: food.name,
               plantBased: food.plantBased,
               per100g: { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null },
+              // Les conversions de l'aliment suivent : sans elles, une cuillère
+              // d'huile ne pesait rien dans la part végétale.
+              unitWeights: food.unitWeights ?? null,
+              category: food.category ?? null,
             },
       quantity: ingredient.quantity,
       unit: ingredient.unit,
       quantityG: ingredient.quantityG,
+    };
+  });
+}
+
+/**
+ * Les grammes d'un ingrédient tels que l'écran doit les montrer : ceux de
+ * l'import quand Jow donnait une masse, sinon la conversion du moment —
+ * propre à l'aliment, ou repli par forme — avec sa confiance (R6).
+ *
+ * Rien n'est réécrit : `recipe_ingredient.quantity_g` reste ce que Jow a
+ * publié. Une conversion ajoutée au seed se voit donc à la lecture suivante,
+ * sans reprise de données.
+ */
+export async function resolveIngredients(
+  db: HouseholdDb,
+  ingredients: RecipeIngredient[],
+): Promise<RecipeIngredient[]> {
+  const ids = [...new Set(ingredients.map((i) => i.foodId).filter((id): id is string => id !== null))];
+  const [foods, defaults] = await Promise.all([loadFoodValues(db, ids), loadUnitDefaults(db)]);
+  return ingredients.map((ingredient) => {
+    if (ingredient.quantityG !== null) return ingredient;
+    const food = ingredient.foodId === null ? null : foods.get(ingredient.foodId) ?? null;
+    const resolution = resolveUnit(ingredient.quantity, ingredient.unit, food, defaults);
+    if (!resolution.resolved) return ingredient;
+    return {
+      ...ingredient,
+      quantityG: resolution.grams,
+      estimate: resolution.via === 'masse' ? null : resolution.confidence,
     };
   });
 }

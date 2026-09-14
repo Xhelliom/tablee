@@ -10,9 +10,19 @@
  * propres équivalences (`food.unit_weights`), elles sont proposées ; sinon
  * c'est le gramme, parce que `unit_default` est vide et qu'inventer le poids
  * d'une poignée est exactement ce qu'interdit I1.
+ *
+ * ⚠️ Précisé le 14/09/2026 — la V3 commence ici. Quand le serveur a une clé
+ * (`ANTHROPIC_API_KEY`), « Découper avec l'IA » éclate un repas tapé d'un trait
+ * en lignes rapprochées de Ciqual, grammes **estimés** compris. Ce n'est pas le
+ * poids d'une poignée écrit dans une table : il est proposé ligne à ligne, dit
+ * « estimé », se corrige avant l'enregistrement, et le repas porte la source
+ * `ia`, plafonnée à « Estimation » (R6). La recherche aliment par aliment
+ * reste, pour qui n'en veut pas ou pour une instance sans clé.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type FoodSearchResponse, type FoodSummary, type Meal, type Slot } from '../api.ts';
+import {
+  api, ApiError, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
+} from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
@@ -25,10 +35,23 @@ interface Draft {
   foodId: string | null;
   label: string;
   grams: number | null;
+  /**
+   * Présent sur une ligne découpée par l'IA, et là seulement : les aliments
+   * Ciqual proposés (vide si le référentiel ne connaît rien), et des grammes
+   * qui sont une estimation.
+   */
+  foods?: FoodSummary[];
+}
+
+/** Ce que rend `POST /api/meals/decoupage`. */
+interface Découpage {
+  items: { label: string; grams: number | null; foods: FoodSummary[] }[];
 }
 
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
-  const { eaters } = useSession();
+  const { eaters, ia } = useSession();
+  const [découpage, setDécoupage] = useState(false);
+  const [erreurIA, setErreurIA] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodSummary[]>([]);
   /** `null` tant qu'aucune recherche n'a abouti : on ne dit rien avant de savoir. */
@@ -69,6 +92,30 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setResults([]);
   };
 
+  const découper = async (): Promise<void> => {
+    setDécoupage(true);
+    setErreurIA(null);
+    try {
+      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: query.trim() });
+      // Le premier aliment proposé est présélectionné ; la liste permet d'en
+      // changer, ou de n'en garder aucun.
+      setItems((current) => [
+        ...current,
+        ...lignes.map((ligne) => ({
+          foodId: ligne.foods[0]?.id ?? null,
+          label: ligne.label,
+          grams: ligne.grams,
+          foods: ligne.foods,
+        })),
+      ]);
+      setQuery('');
+      setResults([]);
+    } catch (cause) {
+      setErreurIA(cause instanceof ApiError ? cause.message : 'le découpage n’a pas abouti');
+    }
+    setDécoupage(false);
+  };
+
   const addFreeText = (): void => {
     const label = query.trim();
     if (label.length === 0) return;
@@ -93,7 +140,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
       const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
         eatenAt: new Date().toISOString(),
         slot,
-        source: 'texte',
+        source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
         servings: 1,
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
@@ -126,7 +173,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addFreeText(); }}
-            placeholder="Courgette, pain complet, yaourt…"
+            placeholder={ia ? 'Un aliment, ou tout le repas : 2 œufs, un café…' : 'Courgette, pain complet, yaourt…'}
             aria-label="Chercher un aliment"
             style={{
               border: 0, outline: 'none', flex: 1, fontSize: 15,
@@ -173,6 +220,16 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
             Ajouter « {query.trim()} » sans valeurs
           </button>
         ) : null}
+
+        {ia && query.trim().length >= 3 ? (
+          <button type="button" className="btn btn--ghost" style={{ marginTop: 10 }}
+                  disabled={découpage} onClick={() => { void découper(); }}>
+            {découpage ? 'Découpage…' : 'Découper avec l’IA'}
+          </button>
+        ) : null}
+        {erreurIA !== null ? (
+          <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 8 }}>{erreurIA}</p>
+        ) : null}
       </section>
 
       {items.length > 0 ? (
@@ -183,6 +240,27 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               <div key={`${item.label}-${index}`} className="spread">
                 <span style={{ fontSize: 14, flex: 1, minWidth: 0 }}>
                   {item.label}
+                  {item.foods !== undefined && item.foods.length > 0 ? (
+                    <select
+                      className="field" style={{ marginTop: 6, padding: '6px 8px', fontSize: 13 }}
+                      value={item.foodId ?? ''}
+                      aria-label={`Aliment du référentiel pour ${item.label}`}
+                      onChange={(e) => {
+                        const foodId = e.target.value === '' ? null : e.target.value;
+                        setItems((current) =>
+                          current.map((draft, i) => (i === index ? { ...draft, foodId } : draft)),
+                        );
+                      }}
+                    >
+                      {item.foods.map((food) => <option key={food.id} value={food.id}>{food.name}</option>)}
+                      <option value="">Aucun de ceux-là</option>
+                    </select>
+                  ) : null}
+                  {item.foods !== undefined && item.grams !== null ? (
+                    <span className="meta" style={{ display: 'block' }}>
+                      quantité estimée par l’IA, pour tout le repas — à vérifier
+                    </span>
+                  ) : null}
                   {/* Dire avant l'enregistrement ce qui ne sera pas compté, plutôt
                       que de le découvrir après coup sur un badge « à vérifier ». */}
                   {item.foodId === null ? (

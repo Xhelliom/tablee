@@ -46,6 +46,19 @@ const meal = (over: Partial<MealInput>): MealInput => ({
   servings: 1, source: 'manuel', recipe: null, items: [], ...over,
 });
 
+describe('calculerNutrition — repas découpé par IA', () => {
+  it('reste une estimation, même entièrement rattaché (R6)', () => {
+    const result = calculerNutrition(meal({ source: 'ia', items: [item('du riz', RIZ, 150)] }), VIDE);
+    assert.equal(result.kcal, 195);
+    assert.equal(result.confidence, 'moyenne');
+  });
+
+  it('ne remonte pas une confiance déjà basse', () => {
+    const result = calculerNutrition(meal({ source: 'ia', items: [item('une truffe', null, 20)] }), VIDE);
+    assert.equal(result.confidence, 'basse');
+  });
+});
+
 describe('calculerNutrition — repas Jow', () => {
   const galette = {
     perServing: { kcal: 320, proteinG: 18, carbG: 16, fatG: 20, fiberG: 12 },
@@ -179,12 +192,39 @@ describe('calculerNutrition — somme des items', () => {
   });
 
   it('résout les grammes manquants et les rend à l’appelant', () => {
-    const defaults: UnitDefaults = new Map([['piece', { grams: 60, source: 'test' }]]);
+    const defaults: UnitDefaults = new Map([['piece|tout', { grams: 60, source: 'test' }]]);
     const result = calculerNutrition(
       meal({ items: [{ label: 'Œuf', food: POULET, quantity: 2, unit: 'Pièce', quantityG: null }] }),
       defaults,
     );
     assert.equal(result.items[0]?.quantityG, 120);
+  });
+
+  it('déclasse un repas dont une quantité vient du repli par défaut (R6)', () => {
+    const defaults: UnitDefaults = new Map([['cuillere a soupe|tout', { grams: 15, source: 'test' }]]);
+    const result = calculerNutrition(
+      meal({ items: [{ label: 'Riz', food: RIZ, quantity: 2, unit: 'Cuillère à soupe', quantityG: null }] }),
+      defaults,
+    );
+    assert.equal(result.items[0]?.quantityG, 30);
+    assert.equal(result.confidence, 'basse');
+  });
+
+  it('compte les cuillères d’un ingrédient Jow dans la part végétale, et le dit', () => {
+    const defaults: UnitDefaults = new Map([['cuillere a soupe|tout', { grams: 15, source: 'test' }]]);
+    const huile = food('Huile d’olive', { kcal: 900 }, true);
+    const result = calculerNutrition(
+      meal({
+        source: 'jow',
+        servings: 2,
+        recipe: { perServing: { kcal: 300, proteinG: 10, carbG: 30, fatG: 10, fiberG: 3 }, confidence: 'haute' },
+        recipeIngredients: [{ label: 'Huile', food: huile, quantity: 1, unit: 'Cuillère à soupe', quantityG: null }],
+      }),
+      defaults,
+    );
+    assert.equal(result.gramsTotal, 30, 'une cuillère par convive, deux convives');
+    assert.equal(result.plantRatio, 100);
+    assert.ok(result.warnings.some((w) => /approximatives/.test(w)), result.warnings.join(' | '));
   });
 
   it('n’a pas de valeurs plutôt que zéro quand aucun item n’est exploitable', () => {

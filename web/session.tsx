@@ -46,6 +46,8 @@ type Me =
       household: Household;
       role: Role;
       households: HouseholdChoice[];
+      /** Le serveur sait découper un texte libre par IA (V3). */
+      ia: boolean;
     };
 
 interface SessionValue {
@@ -57,6 +59,8 @@ interface SessionValue {
   role: Role | null;
   /** Tous les foyers du compte — une personne peut en avoir plusieurs. */
   households: HouseholdChoice[];
+  /** « Découper avec l'IA » est proposé : l'instance a une clé API. */
+  ia: boolean;
   eaters: Eater[];
   refreshEaters: () => Promise<void>;
   reload: () => Promise<void>;
@@ -110,6 +114,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       household,
       role,
       households,
+      ia: me.state === 'actif' && me.ia,
       eaters,
       refreshEaters,
       reload,

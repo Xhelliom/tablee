@@ -22,14 +22,14 @@ import type { HouseholdDb, UnscopedDb } from '../db.ts';
 import type {
   ReferenceBasis, ReferenceKind, ReferenceTable,
 } from '../nutrition/references.ts';
-import type { UnitDefaults } from '../nutrition/units.ts';
-import { normalizeUnit } from '../nutrition/units.ts';
+import type { UnitDefaults, UnitForm } from '../nutrition/units.ts';
+import { defaultKey } from '../nutrition/units.ts';
 
 export async function loadUnitDefaults(db: UnscopedDb): Promise<UnitDefaults> {
-  const { rows } = await db.query<{ unit: string; grams: number; source: string }>(
-    'select unit, grams, source from unit_default',
+  const { rows } = await db.query<{ unit: string; forme: UnitForm; grams: number; source: string }>(
+    'select unit, forme, grams, source from unit_default',
   );
-  return new Map(rows.map((r) => [normalizeUnit(r.unit), { grams: r.grams, source: r.source }]));
+  return new Map(rows.map((r) => [defaultKey(r.unit, r.forme), { grams: r.grams, source: r.source }]));
 }
 
 export async function loadReferences(db: UnscopedDb): Promise<ReferenceTable[]> {

@@ -34,22 +34,37 @@ describe('resolveUnit', () => {
     });
   });
 
-  it('préfère le poids porté par l’aliment au repli générique', () => {
-    const defaults: UnitDefaults = new Map([['piece', { grams: 60, source: 'test' }]]);
+  it('préfère le poids porté par l’aliment au repli générique, et le dit estimé', () => {
+    const defaults: UnitDefaults = new Map([['piece|tout', { grams: 60, source: 'test' }]]);
     const poulet = { unitWeights: { piece: 1200 } };
     const resolution = resolveUnit(0.25, 'Pièce', poulet, defaults);
+    // R6 : une pièce n'est pas une pesée, même propre à l'aliment.
     assert.deepEqual(resolution, {
-      resolved: true, grams: 300, confidence: 'haute', via: 'aliment',
+      resolved: true, grams: 300, confidence: 'moyenne', via: 'aliment',
     });
   });
 
-  it('marque le repli générique comme une estimation', () => {
-    // R6 : une conversion générique est une estimation, elle doit se voir.
-    const defaults: UnitDefaults = new Map([['poignee', { grams: 30, source: 'test' }]]);
+  it('marque le repli par défaut « à vérifier »', () => {
+    // R6 : une médiane mesurée sur d'autres aliments n'est pas une mesure de celui-ci.
+    const defaults: UnitDefaults = new Map([['poignee|tout', { grams: 30, source: 'test' }]]);
     const resolution = resolveUnit(1, 'Poignée', null, defaults);
     assert.deepEqual(resolution, {
-      resolved: true, grams: 30, confidence: 'moyenne', via: 'defaut',
+      resolved: true, grams: 30, confidence: 'basse', via: 'defaut',
     });
+  });
+
+  it('prend le repli « poudre » pour une épice, et « tout » ailleurs', () => {
+    const defaults: UnitDefaults = new Map([
+      ['cuillere a soupe|tout', { grams: 15, source: 'test' }],
+      ['cuillere a soupe|poudre', { grams: 6.5, source: 'test' }],
+    ]);
+    const grammes = (food: { category: string } | null): number | false => {
+      const resolution = resolveUnit(1, 'Cuillère à soupe', food, defaults);
+      return resolution.resolved && resolution.grams;
+    };
+    assert.equal(grammes({ category: 'epice' }), 6.5);
+    assert.equal(grammes({ category: 'sauce' }), 15);
+    assert.equal(grammes(null), 15, 'un ingrédient non rattaché prend le repli commun');
   });
 
   // Cas nominal tant que `unit_default` est vide : la donnée manque, on demande.
@@ -69,7 +84,7 @@ describe('resolveUnit', () => {
   });
 
   it('ignore la casse et les accents du libellé d’unité', () => {
-    const defaults: UnitDefaults = new Map([['cuillere a soupe', { grams: 15, source: 'test' }]]);
+    const defaults: UnitDefaults = new Map([['cuillere a soupe|tout', { grams: 15, source: 'test' }]]);
     const resolution = resolveUnit(2, 'Cuillère à Soupe', null, defaults);
     assert.equal(resolution.resolved && resolution.grams, 30);
     assert.equal(normalizeUnit('  Cuillère à   soupe '), 'cuillere a soupe');
