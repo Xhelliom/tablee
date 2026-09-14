@@ -221,28 +221,6 @@ propres au cluster. La passation les liste comme étant à remplacer.
 
 ---
 
-## 9. Le calcul des repas n'est pas concurrent-safe
-
-**Où** — `server/repo/meals.ts`, `withHousehold` dans `server/db.ts`.
-
-Le client Postgres d'une requête porte `app.household_id` en paramètre de
-session, hors transaction — un `set_config(…, true)` serait annulé au premier
-`commit`, et plusieurs fonctions ouvrent déjà la leur.
-
-**Ce que ça coûte.** Rien aujourd'hui : chaque requête tient son client en
-exclusivité du début à la fin. Mais si un jour une requête ouvrait deux
-opérations en parallèle sur le même client, ou si un traitement de fond
-réutilisait un client sans passer par `withHousehold`, le foyer courant
-deviendrait ambigu. Le garde-fou du démarrage ne voit pas ce cas.
-
-**Ce qui le lèverait.** Faire de `Db` un type qui ne s'obtient que par
-`withHousehold`, pour qu'un `pool.query` sur une table du domaine ne compile
-plus.
-
----
-
-
-
 ## 10. Le poids est stocké et lu par personne
 
 **Où** — `eater.weight_kg`, `.height_cm` (migration 009), saisis dans
@@ -345,6 +323,55 @@ uniquement. **Ce n'est pas une décision à prendre seul** : les cinq valeurs so
 celles du §8ter et des maquettes, et les changer désaccorde l'app de sa
 référence visuelle. Rien n'a donc été touché.
 
+## 14. La source d'une ligne de saisonnalité est exigée, puis jetée
+
+**Où** — `scripts/seed-refs.ts`, `loadSeasonal` ; table `seasonal_produce`
+(migration 001).
+
+Le chargeur appelle `requireSource()` sur chaque ligne du CSV et refuse un
+fichier qui en manque une — comme pour les deux autres tables de référence.
+Mais `seasonal_produce` n'a pas de colonne `source`, contrairement à
+`nutrient_reference` et `unit_default` : la provenance est **vérifiée à
+l'entrée, puis perdue**.
+
+**Ce que ça coûte.** Rien de faux ne s'écrit — la vérification, elle, a bien
+lieu. Ce qui manque, c'est la traçabilité : l'app peut dire d'où vient un
+repère nutritionnel, pas d'où vient « la courgette est de saison en juillet ».
+Sur un jeu, c'est moins grave que sur un repère ; ça reste une règle du projet
+à moitié tenue.
+
+**Ce qui le lèverait.** Une migration ajoutant `source text not null`, et
+trois caractères dans l'`insert`. À faire quand la table se remplira — elle
+est vide aujourd'hui, et sa saisie manuelle est justement l'un des points du
+« ne pas décider seul ».
+
+
+---
+
+## 15. Ce que la passe de sécurité du 14/09/2026 laisse ouvert
+
+Trois angles morts connus, tous assumés, aucun bloquant.
+
+**La CSP autorise les styles en ligne.** `style-src 'self' 'unsafe-inline'`,
+parce que le front pose ses styles en attribut `style=…` sur presque chaque
+élément. Une injection HTML pourrait donc encore repeindre la page — mais pas
+exécuter de script (`script-src 'self'`), ni appeler un tiers
+(`connect-src 'self'`). Le lever demande de sortir les styles des composants
+vers des feuilles, ce qui est une passe à soi seule.
+
+**Les requêtes anonymes partagent un compteur de débit.** `trustProxy` n'est
+pas activé — un `x-forwarded-for` cru sur parole se falsifie, et le plafond se
+contournerait d'une ligne — donc `request.ip` est celle de Caddy. Conséquence :
+un scanner qui martèle `/api/auth` peut faire attendre une minute devant
+l'écran de connexion. Les requêtes authentifiées sont comptées par compte et ne
+sont pas concernées. Le lever suppose de décider quel proxy est de confiance,
+ce qui dépend de l'installation.
+
+**HSTS n'est pas posé par l'app.** L'app ne sert qu'en HTTP derrière Caddy, qui
+porte le TLS : `Strict-Transport-Security` se pose là, une ligne de Caddyfile
+(`docs/mise-en-service.md`). Tant qu'elle n'y est pas, une toute première
+visite en `http://` reste interceptable.
+
 ---
 
 ## Levées
@@ -352,6 +379,19 @@ référence visuelle. Rien n'a donc été touché.
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
 forme qu'il a. Le détail est dans l'historique git.
 
+- **Le type `Db` laissait écrire un `pool.query` sur une table du domaine.**
+  La dette n° 9 disait que le foyer courant deviendrait ambigu le jour où un
+  traitement réutiliserait un client sans passer par `withHousehold`, et que
+  le garde-fou du démarrage ne voit pas ce cas. `Db = pg.Pool | pg.PoolClient`
+  est remplacé par deux types : `HouseholdDb`, un client **marqué** que seul
+  `acquireForHousehold` produit et que toutes les fonctions du domaine
+  exigent, et `UnscopedDb`, nommé pour se voir en revue, réservé à ce qui
+  précède le foyer — la résolution de session, la création du foyer d'une
+  organisation, la liste des foyers d'un compte — et au référentiel public
+  hors RLS. Une erreur qui se compilait ne se compile plus ; `server/db.test.ts`
+  le vérifie par `@ts-expect-error`, de sorte qu'un relâchement du type casse
+  le typecheck au lieu de passer inaperçu. Au passage, `transaction()` ne prend
+  plus de pool du tout : le client est toujours celui de l'appelant.
 - **Le mois de saisonnalité était calculé en UTC.** Cinq requêtes lisaient
   `extract(month from eaten_at)` sans fuseau, alors que tout le reste du
   découpage des journées passe par `household.timezone`. Le fuseau est

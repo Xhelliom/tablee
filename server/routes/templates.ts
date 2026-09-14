@@ -16,7 +16,7 @@ import {
 } from '../repo/templates.ts';
 import type { AppContext } from '../app.ts';
 
-export function templateRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function templateRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.get('/api/templates', async (request) => ({
     templates: await listTemplates(request.db, request.householdId()),
   }));

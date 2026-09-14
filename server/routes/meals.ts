@@ -16,7 +16,7 @@ import { householdTimezone } from '../repo/dashboard.ts';
 import { nextDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
-export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function mealRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.post('/api/meals', async (request, reply) => {
     const input = body(request.body);
     const householdId = request.householdId();
@@ -39,7 +39,11 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
         note: optionalStr(input['note'], 'note', { max: 1000 }),
         // I6 : expurgé une seconde fois par `createMeal`, avant l'insertion.
         rawInput: optionalStr(input['raw_input'] ?? input['rawInput'], 'raw_input', { max: 4000 }),
-        createdBy: optionalUuid(input['created_by'] ?? input['createdBy'], 'created_by'),
+        // Qui a saisi le repas se lit dans la **session**, jamais dans le
+        // corps de la requête. L'accepter du client laissait attribuer un
+        // repas à n'importe quel compte — la nounou, le conjoint — et
+        // `meal.created_by` est précisément ce qui dit « qui a agi » (007).
+        createdBy: request.identity().userId,
       }),
     );
 

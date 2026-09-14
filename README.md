@@ -51,16 +51,17 @@ fonctionne pas autrement (§4). Caddy devant le serveur suffit.
 ## Tests
 
 ```bash
-npm test        # unitaires — aucune base requise
+npm run lint    # ESLint typé — des bugs, pas du style
 npm run typecheck
+npm test        # unitaires — aucune base requise
 
 createdb tablee_test
 TEST_DATABASE_URL=postgres://…/tablee_test npm test   # + tests d'intégration
 ```
 
 Sans `TEST_DATABASE_URL`, les suites qui touchent à Postgres sont **sautées
-avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 149
-sur 216, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
+avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 186
+sur 265, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
 l'étanchéité entre eux et au contrat d'API — c'est-à-dire ce qui casse mal.
 
 Le rôle Postgres de cette base **ne doit pas être superutilisateur** — il
@@ -206,3 +207,14 @@ applicatif entre les deux.
 - **Aucune requête vers un tiers au chargement.** Les polices sont embarquées
   (`web/public/fonts/`). Seules les photos de plats viennent de Jow, et c'est
   le §8ter qui le demande.
+
+---
+
+## Licence
+
+[AGPL-3.0-only](LICENSE). Copyleft de réseau : quiconque héberge une version
+modifiée de Tablée — et c'est le mode d'emploi même du projet — doit en publier
+les sources. C'est le choix cohérent avec un logiciel auto-hébergé qu'on veut
+voir rester ouvert.
+
+Copyright (C) 2026 Xhelliom et les contributeurs de Tablée.

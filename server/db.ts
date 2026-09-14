@@ -17,7 +17,51 @@ pg.types.setTypeParser(pg.types.builtins.NUMERIC, (v) => Number(v));
 /** `date` (sans heure) reste une chaîne `YYYY-MM-DD` : pas de dérive de fuseau. */
 pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 
-export type Db = pg.Pool | pg.PoolClient;
+/**
+ * ── Deux types d'accès, et un seul sert au domaine ──────────────────────────
+ *
+ * La migration 008 filtre les tables du domaine sur `app.household_id`, posé
+ * par `acquireForHousehold` sur **un** client. Une requête partie du pool n'en
+ * porte aucun : elle ne lève pas, elle ne rend rien — et « rien » ressemble à
+ * « le foyer est vide » jusqu'à ce que quelqu'un ouvre les journaux.
+ *
+ * Tant que le type disait `pg.Pool | pg.PoolClient`, cette erreur **se
+ * compilait**. Elle ne se compile plus : `HouseholdDb` porte une marque que
+ * seul ce module pose, à l'endroit exact où le foyer est écrit sur le client.
+ * Passer `ctx.pool` à `getMeal` est désormais une erreur de type, pas une
+ * relecture attentive.
+ *
+ * Les lectures d'avant-foyer restent légitimes — résoudre une session suppose
+ * bien de lire `"member"` et `household` sans savoir encore de quel foyer il
+ * s'agit. Elles prennent `UnscopedDb`, qui est nommé pour se voir en revue :
+ * une fonction du domaine qui l'accepterait se repère à l'œil.
+ */
+
+declare const foyerPosé: unique symbol;
+
+/**
+ * Un client Postgres **marqué au foyer courant**, et le seul type que les
+ * fonctions de `server/repo/` acceptent pour toucher une table scopée.
+ *
+ * La marque est un type fantôme : elle n'existe qu'à la compilation, ne coûte
+ * rien à l'exécution, et n'est posée que par `acquireForHousehold`. Un
+ * `as unknown as HouseholdDb` la contrefait, comme toute marque en TypeScript
+ * — mais il faut alors l'écrire, et ça se lit en revue.
+ */
+export type HouseholdDb = pg.PoolClient & { readonly [foyerPosé]: true };
+
+/**
+ * Un accès Postgres qui ne porte **aucun** foyer : le pool, ou un client nu.
+ *
+ * Réservé à ce qui se passe avant qu'un foyer soit connu — la résolution de
+ * session (`server/auth/identity.ts`), la création du foyer d'une organisation
+ * qui vient de naître, la liste des foyers d'un compte — et aux tables hors
+ * RLS que tout le monde lit : `food`, `nutrient_reference`, `unit_default`.
+ *
+ * Un `HouseholdDb` y est accepté : un client marqué reste un client, et lire
+ * le référentiel public depuis une requête scopée est normal. L'inverse, non.
+ */
+export type UnscopedDb = pg.Pool | pg.PoolClient;
 
 let pool: pg.Pool | null = null;
 
@@ -45,28 +89,29 @@ export async function closePool(): Promise<void> {
 /**
  * Exécute `fn` dans une transaction, et la déroule à la moindre erreur.
  *
- * Accepte un pool **ou** un client déjà acquis. Le second cas est celui des
- * routes : elles reçoivent le client marqué au foyer par `acquireForHousehold`,
- * et la transaction doit se tenir **sur ce client-là** — en prendre un autre
- * dans le pool écrirait hors du foyer courant, sans que rien ne le signale.
- * Un client prêté n'est ni rendu ni fermé ici : il appartient à l'appelant.
+ * La transaction se tient sur **le client de l'appelant** — celui que
+ * `acquireForHousehold` a marqué au foyer. En prendre un autre dans le pool
+ * écrirait hors du foyer courant, sans que rien ne le signale ; c'est
+ * désormais impossible à écrire, puisque le pool n'est plus un `HouseholdDb`.
+ *
+ * Le client n'est ni rendu ni fermé ici : il appartient à l'appelant, et la
+ * requête HTTP le rend dans son hook `onResponse`.
  */
 export async function transaction<T>(
-  db: Db,
-  fn: (client: pg.PoolClient) => Promise<T>,
+  db: HouseholdDb,
+  fn: (client: HouseholdDb) => Promise<T>,
 ): Promise<T> {
-  const emprunté = 'release' in db;
-  const client = emprunté ? (db as pg.PoolClient) : await (db as pg.Pool).connect();
+  await db.query('begin');
   try {
-    await client.query('begin');
-    const result = await fn(client);
-    await client.query('commit');
+    const result = await fn(db);
+    await db.query('commit');
     return result;
   } catch (error) {
-    await client.query('rollback');
+    // `catch` et non `await` nu : un `rollback` qui échoue — connexion coupée,
+    // transaction déjà avortée — remplacerait sinon l'erreur d'origine par une
+    // erreur de nettoyage, et c'est la première qui dit ce qui s'est passé.
+    await db.query('rollback').catch(() => undefined);
     throw error;
-  } finally {
-    if (!emprunté) client.release();
   }
 }
 
@@ -91,7 +136,7 @@ export async function transaction<T>(
  * intérieur. Un paramètre de session traverse les transactions, lui.
  */
 export interface ScopedClient {
-  client: pg.PoolClient;
+  client: HouseholdDb;
   /** À appeler quoi qu'il arrive. Efface le foyer, puis rend le client. */
   release(): Promise<void>;
 }
@@ -113,7 +158,10 @@ export async function acquireForHousehold(
   }
 
   return {
-    client,
+    // La marque est posée **ici**, et nulle part ailleurs : c'est la seule
+    // ligne du dépôt où un client devient un `HouseholdDb`, et elle suit
+    // immédiatement le `set_config` qui lui donne son foyer.
+    client: client as HouseholdDb,
     release: async () => {
       // `catch` et non `await` nu : si l'effacement échoue, le client doit
       // quand même être rendu, et masquer l'erreur d'origine serait pire.
@@ -126,7 +174,7 @@ export async function acquireForHousehold(
 export async function withHousehold<T>(
   pool: pg.Pool,
   householdId: string,
-  fn: (client: pg.PoolClient) => Promise<T>,
+  fn: (client: HouseholdDb) => Promise<T>,
 ): Promise<T> {
   const scoped = await acquireForHousehold(pool, householdId);
   try {

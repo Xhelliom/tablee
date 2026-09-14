@@ -14,37 +14,15 @@
  *
  * Le changer déplace la frontière entre hier et aujourd'hui. Un fuseau invalide
  * ferait donc échouer, ou pire, fausser silencieusement tous les bilans — d'où
- * la validation stricte ci-dessous plutôt qu'un texte libre.
+ * la validation stricte de `timezone()` (`server/http/validate.ts`) plutôt
+ * qu'un texte libre.
  */
 import type { FastifyInstance } from 'fastify';
+import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
-import { body, optionalStr } from '../http/validate.ts';
+import { body, optionalStr, timezone } from '../http/validate.ts';
 import { updateHousehold } from '../repo/households.ts';
 import type { AppContext } from '../app.ts';
-
-/**
- * Un identifiant de fuseau IANA, et rien d'autre.
- *
- * `Intl.DateTimeFormat` lève sur une valeur inconnue : c'est la même base que
- * celle de Postgres pour les noms courants, et s'appuyer dessus évite de
- * maintenir une liste qui vieillirait mal — les fuseaux changent, les pays en
- * créent et en suppriment.
- */
-function timezone(value: unknown, field: string): string {
-  const raw = optionalStr(value, field, { max: 64 });
-  if (raw === undefined || raw === null) {
-    throw ApiError.badRequest(`${field} est requis`);
-  }
-  try {
-    new Intl.DateTimeFormat('fr-FR', { timeZone: raw });
-  } catch {
-    throw ApiError.badRequest(
-      `« ${raw} » n’est pas un fuseau horaire connu`,
-      'fuseau_inconnu',
-    );
-  }
-  return raw;
-}
 
 export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
   /**
@@ -52,7 +30,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
    * que l'écran de gestion puisse se rafraîchir sans recharger la session
    * entière.
    */
-  app.get('/api/household', async (request) => {
+  app.get('/api/household', (request) => {
     const identity = request.identity();
     return {
       household: {
@@ -69,9 +47,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
     const identity = request.identity();
     // Un `adulte` saisit et lit ; il ne redéfinit pas ce qu'est une journée
     // pour tout le foyer.
-    if (identity.role !== 'parent') {
-      throw new ApiError(403, 'droits_insuffisants', 'seul un parent modifie le foyer');
-    }
+    assertParent(identity, 'seul un parent modifie le foyer');
 
     const input = body(request.body);
     const patch: { name?: string; timezone?: string } = {};

@@ -126,6 +126,17 @@ une invitation acceptée — mais les adresses ne sont pas vérifiées faute de 
 ```caddyfile
 tablee.example.net {
     reverse_proxy localhost:3000
+
+    # HSTS. La seule ligne de sécurité que l'app ne peut pas poser elle-même :
+    # elle ne sert qu'en HTTP derrière ce proxy, et un en-tête HSTS n'a de sens
+    # que sur la connexion chiffrée. Tout le reste — CSP, `nosniff`,
+    # `referrer-policy` et les autres — est posé par le serveur lui-même
+    # (`server/http/headers.ts`), pour suivre l'image quel que soit le proxy.
+    #
+    # ⚠️ À poser une fois le domaine servi en HTTPS et pas avant : le
+    # navigateur retient la consigne pendant un an, y compris si vous
+    # redescendez en HTTP.
+    header Strict-Transport-Security "max-age=31536000"
 }
 ```
 

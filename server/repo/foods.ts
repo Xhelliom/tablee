@@ -1,7 +1,7 @@
 /**
  * Référentiel `food` : recherche plein texte et lecture des valeurs.
  */
-import type { Db } from '../db.ts';
+import type { UnscopedDb } from '../db.ts';
 import type { FoodValues } from '../nutrition/compute.ts';
 
 export interface FoodSummary {
@@ -46,7 +46,7 @@ const toValues = (row: ValuesRow): FoodValues => ({
   },
 });
 
-export async function loadFoodValues(db: Db, ids: string[]): Promise<Map<string, FoodValues>> {
+export async function loadFoodValues(db: UnscopedDb, ids: string[]): Promise<Map<string, FoodValues>> {
   if (ids.length === 0) return new Map();
   const { rows } = await db.query<ValuesRow>(
     `select id, name, plant_based,
@@ -68,7 +68,7 @@ export async function loadFoodValues(db: Db, ids: string[]): Promise<Map<string,
  * quoi il faut taper le mot entier avant d'avoir le moindre résultat, et
  * personne ne le fait deux fois.
  */
-export async function searchFoods(db: Db, query: string, limit = 20): Promise<FoodSummary[]> {
+export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Promise<FoodSummary[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
@@ -112,7 +112,7 @@ function prefixQuery(raw: string): string | null {
 
 /** Crée un aliment saisi à la main. Aucune valeur n'est déduite (I1). */
 export async function createManualFood(
-  db: Db,
+  db: UnscopedDb,
   input: { name: string; plantBased?: boolean | null },
 ): Promise<string> {
   const { rows } = await db.query<{ id: string }>(

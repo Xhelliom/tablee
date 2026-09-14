@@ -11,8 +11,7 @@
  * ressortir des parts de janvier au mois d'août (R2 fige le passé, pas le
  * futur).
  */
-import type pg from 'pg';
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 import { createMeal, type MealItemInput, type MealSource, type Slot } from './meals.ts';
 
 export interface TemplatePayload {
@@ -52,7 +51,7 @@ const toTemplate = (row: Row): MealTemplate => ({
  * fait le « deux taps » : le petit-déj quotidien doit être en haut de l'écran
  * sans qu'on ait à le chercher.
  */
-export async function listTemplates(db: Db, householdId: string): Promise<MealTemplate[]> {
+export async function listTemplates(db: HouseholdDb, householdId: string): Promise<MealTemplate[]> {
   const { rows } = await db.query<Row>(
     `select id, name, slot, payload, use_count, last_used_at
      from meal_template where household_id = $1
@@ -63,7 +62,7 @@ export async function listTemplates(db: Db, householdId: string): Promise<MealTe
 }
 
 export async function getTemplate(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   id: string,
 ): Promise<MealTemplate | null> {
@@ -78,7 +77,7 @@ export async function getTemplate(
 
 /** Crée un template depuis un repas existant : l'usage réel, pas un formulaire. */
 export async function createTemplateFromMeal(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   mealId: string,
   name: string,
@@ -131,7 +130,7 @@ export async function createTemplateFromMeal(
   return row === undefined ? null : toTemplate(row);
 }
 
-export async function deleteTemplate(db: Db, householdId: string, id: string): Promise<boolean> {
+export async function deleteTemplate(db: HouseholdDb, householdId: string, id: string): Promise<boolean> {
   const { rowCount } = await db.query(
     'delete from meal_template where household_id = $1 and id = $2',
     [householdId, id],
@@ -154,7 +153,7 @@ export interface ApplyOptions {
  * écriture de repas comme une autre, donc R2 s'applique normalement.
  */
 export async function applyTemplate(
-  client: pg.PoolClient,
+  client: HouseholdDb,
   householdId: string,
   templateId: string,
   options: ApplyOptions = {},
@@ -201,7 +200,7 @@ export interface TemplateSuggestion {
  * propose pas de créer ce qui existe.
  */
 export async function suggestTemplates(
-  db: Db,
+  db: HouseholdDb,
   householdId: string,
   { minOccurrences = 3, days = 30 } = {},
 ): Promise<TemplateSuggestion[]> {

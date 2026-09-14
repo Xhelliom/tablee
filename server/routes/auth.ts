@@ -8,6 +8,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../app.ts';
+import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
 import { listHouseholdsForUser } from '../repo/households.ts';
 
@@ -110,12 +111,10 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
    * rendre l'URL correspondante, pour que le front n'ait pas à la fabriquer et
    * que sa forme reste décidée au même endroit que la route qui la reçoit.
    */
-  app.get('/api/invitations/:id/lien', async (request) => {
+  app.get('/api/invitations/:id/lien', (request) => {
     const state = request.auth;
     if (state.kind !== 'actif') throw ApiError.unauthorized();
-    if (state.identity.role !== 'parent') {
-      throw new ApiError(403, 'droits_insuffisants', 'seul un parent peut inviter');
-    }
+    assertParent(state.identity, 'seul un parent peut inviter');
     const { id } = request.params as { id: string };
     return { url: new URL(`/invitation/${encodeURIComponent(id)}`, ctx.baseURL).toString() };
   });

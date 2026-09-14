@@ -5,7 +5,7 @@
  * un instantané, pas une vue. Une recette modifiée chez Jow après qu'un repas
  * l'a utilisée ne doit pas réécrire ce repas.
  */
-import type { Db } from '../db.ts';
+import type { HouseholdDb } from '../db.ts';
 import type { ParsedRecipe } from '../jow/types.ts';
 import type { NutritionItem, RecipeSnapshot } from '../nutrition/compute.ts';
 import type { Confidence } from '../jow/types.ts';
@@ -39,7 +39,7 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
-export async function findRecipeByJowId(db: Db, jowRecipeId: string): Promise<Recipe | null> {
+export async function findRecipeByJowId(db: HouseholdDb, jowRecipeId: string): Promise<Recipe | null> {
   const { rows } = await db.query<{ id: string }>(
     "select id from recipe where source = 'jow' and jow_recipe_id = $1",
     [jowRecipeId],
@@ -48,7 +48,7 @@ export async function findRecipeByJowId(db: Db, jowRecipeId: string): Promise<Re
   return id === undefined ? null : loadRecipe(db, id);
 }
 
-export async function loadRecipe(db: Db, id: string): Promise<Recipe | null> {
+export async function loadRecipe(db: HouseholdDb, id: string): Promise<Recipe | null> {
   const { rows } = await db.query<{
     id: string; source: 'jow' | 'manuel'; title: string; url: string | null;
     image_url: string | null; jow_recipe_id: string | null; jow_slug: string | null;
@@ -91,7 +91,7 @@ export async function loadRecipe(db: Db, id: string): Promise<Recipe | null> {
   };
 }
 
-export async function loadIngredients(db: Db, recipeId: string): Promise<RecipeIngredient[]> {
+export async function loadIngredients(db: HouseholdDb, recipeId: string): Promise<RecipeIngredient[]> {
   const { rows } = await db.query<{
     id: string; label: string; food_id: string | null; jow_food_id: string | null;
     quantity: number | null; unit: string | null; quantity_g: number | null;
@@ -119,7 +119,7 @@ export async function loadIngredients(db: Db, recipeId: string): Promise<RecipeI
  * `raw`. `redactUrl` est appliquée par acquit de conscience sur l'URL finale,
  * qui ne devrait de toute façon jamais porter de `key` (I6).
  */
-export async function saveJowRecipe(db: Db, parsed: ParsedRecipe): Promise<Recipe> {
+export async function saveJowRecipe(db: HouseholdDb, parsed: ParsedRecipe): Promise<Recipe> {
   const { rows } = await db.query<{ id: string }>(
     `insert into recipe (
        source, jow_recipe_id, jow_slug, title, url, image_url, base_servings,
@@ -203,7 +203,7 @@ export interface LinkResult {
  * met à jour que sa propre ligne : rien à propager sans clé stable.
  */
 export async function linkIngredientToFood(
-  db: Db,
+  db: HouseholdDb,
   ingredientId: string,
   foodId: string | null,
   confirmedBy: string | null = null,
@@ -255,7 +255,7 @@ export async function linkIngredientToFood(
  * déjà câblée pour tout ingrédient rencontré auparavant. C'est ce qui fait que
  * l'effort décroît au lieu de se répéter.
  */
-export async function applyKnownLinks(db: Db, recipeId: string): Promise<number> {
+export async function applyKnownLinks(db: HouseholdDb, recipeId: string): Promise<number> {
   const { rowCount } = await db.query(
     `update recipe_ingredient ri
      set food_id = l.food_id
@@ -277,7 +277,7 @@ export interface KnownLink {
 }
 
 /** Les correspondances déjà posées — pour les relire et les corriger. */
-export async function listLinks(db: Db): Promise<KnownLink[]> {
+export async function listLinks(db: HouseholdDb): Promise<KnownLink[]> {
   const { rows } = await db.query<{
     jow_food_id: string; food_id: string; label: string;
     food_name: string; plant_based: boolean | null;
@@ -359,7 +359,7 @@ export function recipeGaps(recipe: Recipe): string[] {
  * — elle l'est, sa saisie relève du §17 — le compte vaut 0 et le badge ne
  * s'affiche pas. C'est l'état attendu, pas une panne.
  */
-export async function seasonalCount(db: Db, recipeId: string, month: number): Promise<number> {
+export async function seasonalCount(db: HouseholdDb, recipeId: string, month: number): Promise<number> {
   const { rows } = await db.query<{ count: number }>(
     `select count(distinct sp.id)::int as count
      from recipe_ingredient ri

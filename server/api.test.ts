@@ -70,6 +70,32 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     cookie = foyer.cookie;
   });
 
+  /**
+   * « Qui a agi » vient de la session, pas du client.
+   *
+   * `meal.created_by` pointe vers un **compte** (migration 007). Le lire dans
+   * le corps de la requête laissait attribuer un repas à n'importe qui — par
+   * exemple à la nounou. Le champ n'est d'ailleurs pas exposé par l'API : il
+   * se vérifie donc en base.
+   */
+  describe('qui a saisi', () => {
+    it('attribue le repas au compte connecté, et ignore ce que le client prétend', async () => {
+      const autre = '00000000-0000-4000-8000-000000000000';
+      const { status, body } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+        created_by: autre,
+        participants: [],
+      });
+      assert.equal(status, 201);
+
+      const [row] = await sql<{ created_by: string | null }>(
+        'select created_by from meal where id = $1', [body.meal.id],
+      );
+      assert.notEqual(row?.created_by, autre, 'le client ne choisit pas l’auteur');
+      assert.equal(typeof row?.created_by, 'string', 'mais l’auteur est bien enregistré');
+    });
+  });
+
   // ── auth ──────────────────────────────────────────────────────────────────
 
   describe('session', () => {
@@ -579,7 +605,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         [rows[0]!.id],
       );
       const { applyKnownLinks } = await import('./repo/recipes.ts');
-      assert.equal(await applyKnownLinks(pool, rows[0]!.id), 1);
+      // `applyKnownLinks` exige un client marqué au foyer, comme tout
+      // `server/repo/` : le pool n'est plus un `Db` acceptable.
+      const liés = await withHousehold(pool, householdId, (client) =>
+        applyKnownLinks(client, rows[0]!.id));
+      assert.equal(liés, 1);
 
       const { body } = await call('GET', `/api/recipes/${rows[0]!.id}`);
       assert.equal(body.recipe.ingredients[0].foodId, carotte);

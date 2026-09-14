@@ -6,12 +6,29 @@
 
 name: Image
 
+# Un seul déclencheur par commit. `push` sur toutes les branches **et**
+# `pull_request` faisaient tourner deux fois le même travail sur chaque commit
+# d'une PR : deux suites de tests, et deux images multi-architecture pour un
+# seul commit. Le `push` suffit — il couvre les branches de PR, et le tableau
+# des tags de `docs/deploiement-kubernetes.md` en dépend (`<branche>`).
+#
+# Ce qu'on y perd : une PR venue d'un **fork** ne déclenche plus rien, son
+# `push` n'étant pas un événement de ce dépôt. Les gardes
+# `if: github.event_name != 'pull_request'` sont conservées telles quelles,
+# pour que remettre `pull_request:` ici ne publie pas d'image depuis un fork.
 on:
   push:
     branches: ['**']
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
+
+# Une poussée en annule la précédente sur la même référence : pousser trois
+# fois d'affilée ne doit pas occuper trois runners à construire de l'arm64 par
+# émulation. Sauf sur la branche par défaut et sur un tag, où la construction
+# publie — l'annuler laisserait un tag sans image.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref_name != github.event.repository.default_branch }}
 
 env:
   REGISTRY: ghcr.io
@@ -62,6 +79,11 @@ jobs:
             create role tablee login password 'tablee';
             create database tablee_test owner tablee;
           SQL
+
+      # ESLint avant le typecheck : ses règles typées disent des choses que
+      # `tsc` ne dit pas — une promesse jamais attendue, un `async` passé là où
+      # Fastify attend un gestionnaire. Voir `eslint.config.js`.
+      - run: npm run lint
 
       - run: npm run typecheck
 
@@ -120,6 +142,13 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
+          # `metadata-action` remplit `description` depuis celle du dépôt, qui
+          # est vide : le label sortait donc vide sur toutes les images. Écrit
+          # ici, il reste avec l'image partout où elle va — `docker inspect`,
+          # la page du paquet GHCR, un scanner.
+          labels: |
+            org.opencontainers.image.description=Tablée — suivi alimentaire familial : un repas partagé, un bilan par convive
+            org.opencontainers.image.licenses=AGPL-3.0-only
 
       - uses: docker/build-push-action@v6
         with:

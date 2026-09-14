@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '../api.ts';
 import { navigate } from '../router.tsx';
-import { useSession, type Role } from '../session.tsx';
+import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { InviteMembers } from './Invitation.tsx';
 import { Choix } from '../components/EaterForm.tsx';

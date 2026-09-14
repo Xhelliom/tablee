@@ -254,6 +254,48 @@ describe('étanchéité entre foyers (§16)', { skip: enabled ? false : SKIP_MES
       assert.equal(body.error.code, 'droits_insuffisants');
     });
 
+    /**
+     * Les rôles de `server/auth/auth.ts` disent `eater: []` pour un `adulte` :
+     * une nounou saisit les repas, elle ne compose pas la famille. better-auth
+     * ne garde que ses propres routes — celles du §12 sont à nous, et cette
+     * vérification-là n'existait pas.
+     */
+    it('n’autorise pas un adulte à composer la famille', async () => {
+      const nounou = await signUp(auth, 'nounou-convives@exemple.test');
+      await inviteAndAccept(auth, nous, nounou, 'adulte');
+
+      const ajout = await call('POST', '/api/eaters', nounou.cookie, {
+        firstName: 'Invité surprise', birthDate: '2015-05-05', sex: 'M', portionCoef: 0.75,
+      });
+      assert.equal(ajout.status, 403);
+      assert.equal(ajout.body.error.code, 'droits_insuffisants');
+
+      // Et le coefficient de portion d'un convive existant ne bouge pas non
+      // plus : c'est lui qui décide de la part de chacun dans un repas.
+      const créé = await call('POST', '/api/eaters', nous.cookie, {
+        firstName: 'Enfant', birthDate: '2016-06-06', sex: 'F', portionCoef: 0.5,
+      });
+      const modif = await call(
+        'PATCH', `/api/eaters/${créé.body.eater.id}`, nounou.cookie, { portionCoef: 2 },
+      );
+      assert.equal(modif.status, 403);
+
+      const après = await call('GET', '/api/eaters', nous.cookie);
+      assert.equal(après.body.eaters[0].portionCoef, 0.5);
+    });
+
+    it('laisse malgré tout un adulte lire les convives — il en a besoin', async () => {
+      const nounou = await signUp(auth, 'nounou-lecture@exemple.test');
+      await inviteAndAccept(auth, nous, nounou, 'adulte');
+      await call('POST', '/api/eaters', nous.cookie, {
+        firstName: 'Enfant', birthDate: '2016-06-06', sex: 'F', portionCoef: 0.5,
+      });
+
+      const { status, body } = await call('GET', '/api/eaters', nounou.cookie);
+      assert.equal(status, 200);
+      assert.equal(body.eaters.length, 1, 'les allergènes et les régimes lui servent');
+    });
+
     it('ne laisse pas modifier le foyer du voisin', async () => {
       await call('PATCH', '/api/household', voisins.cookie, { name: 'Renommé par eux' });
       // Chacun n'a touché qu'au sien : la route ne prend aucun identifiant du

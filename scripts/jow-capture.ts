@@ -47,8 +47,7 @@ for (const id of ids) {
       `${JSON.stringify({ capturedAt: new Date().toISOString(), url: page.url, recipe }, null, 1)}\n`,
       'utf8',
     );
-    const similar = (recipe['similarRecipes'] as unknown) ?? null;
-    console.log(`✓ ${id} → fixtures/${file}  « ${String(recipe['title'])} »${similar ? '' : ''}`);
+    console.log(`✓ ${id} → fixtures/${file}  « ${String(recipe['title'])} »`);
   } catch (error) {
     console.error(`✗ ${id} : ${error instanceof Error ? error.message : String(error)}`);
   }

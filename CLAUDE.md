@@ -65,6 +65,7 @@ web/
   components/     ce que plusieurs écrans partagent
   design/         tokens.css (couleurs, typo), vocabulary.ts (les mots)
 deploy/k8s/       manifestes ; Dockerfile à la racine
+eslint.config.js  règles typées : des bugs, pas du style — en CI avant le typecheck
 ```
 
 Où chercher, selon la question :
@@ -328,7 +329,24 @@ Conventions de code :
 - Une valeur inconnue est `NULL`, jamais `0`.
 - Une route du domaine lit et écrit par **`request.db`**, le client marqué au
   foyer courant — jamais `ctx.pool`, qui n'en porte aucun et que la RLS ne
-  filtre donc pas.
+  filtre donc pas. Depuis le 14/09/2026 le compilateur le fait respecter :
+  `request.db` est un `HouseholdDb`, une marque que seul `acquireForHousehold`
+  pose, et les fonctions de `server/repo/` l'exigent.
+- **L'exception, et c'en est une vraie : ce qui précède le foyer.** Résoudre
+  une session suppose de lire `"member"` et `household` sans savoir encore de
+  quel foyer il s'agit — c'est pourquoi `household` est délibérément hors RLS
+  (lire l'en-tête de `008_rls.sql`). Trois endroits passent donc légitimement
+  `ctx.pool`, et les « corriger » casserait `/api/me` :
+  `server/auth/identity.ts` (la résolution de session),
+  `createHouseholdForOrganization` (le hook d'après-création d'organisation),
+  et `listHouseholdsForUser` (`server/routes/auth.ts`, la liste des foyers d'un
+  compte qui n'en a pas encore choisi un). Ces trois-là prennent un
+  `UnscopedDb`, nommé pour se voir en revue — comme le référentiel public hors
+  RLS (`food`, `nutrient_reference`, `unit_default`), que tout le monde lit.
+- `npm run lint` fait tourner ESLint **typé** (`eslint.config.js`) : il cherche
+  des bugs, pas du style. Aucune règle de mise en forme, pas de Prettier — le
+  style du dépôt est homogène et un reformatage noierait les vraies
+  corrections. Il tourne en CI avant le typecheck.
 - L'image ne contient **ni secret, ni export Ciqual** : les premiers viennent
   de l'environnement, le second d'un seed joué une fois. Et `tsx` est une
   dépendance de service, pas de développement — le serveur exécute du
