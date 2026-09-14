@@ -158,6 +158,14 @@
   --text-warning: light-dark(#854F0B, #F0C273);
   --bg-success:   light-dark(#E1F5EE, #0F2B23);
   --text-success: light-dark(#0F6E56, #7DD3B6);
+  /* Sur le bilan de l'accueil, trois textes disent où en est une assiette :
+     « à compléter » en --coral-600 — le terracotta du geste qui y répond —,
+     « dans le repère » en --text-success, « au-delà » en --text-warning. Ce
+     qu'on ne sait pas reste en --text-secondary. Toujours avec un mot et une
+     icône, et sans rouge : rien n'y est une faute (web/components/Bilan.tsx). */
+  /* La zone d'une barre entre le repère et le plafond : une ombre de la piste,
+     pas une couleur. */
+  --band: light-dark(rgba(0, 0, 0, .12), rgba(255, 255, 255, .14));
   /* Le rouge d'une confirmation armée, et de rien d'autre. Ne bascule pas : il
      porte du blanc (6,6 pour 1), comme le terracotta, et se distingue de lui. */
   --danger: #B42318;
