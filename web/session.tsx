@@ -37,8 +37,8 @@ export interface Account {
 }
 
 /** Ce que rend `GET /api/me`. */
-type Me =
-  | { state: 'anonyme'; google: boolean }
+type Me = (
+  | { state: 'anonyme' }
   | { state: 'sans_foyer'; user: Account; households: HouseholdChoice[] }
   | {
       state: 'actif';
@@ -46,7 +46,8 @@ type Me =
       household: Household;
       role: Role;
       households: HouseholdChoice[];
-    };
+    }
+) & { google: boolean };
 
 interface SessionValue {
   loading: boolean;
@@ -57,7 +58,7 @@ interface SessionValue {
   role: Role | null;
   /** Tous les foyers du compte — une personne peut en avoir plusieurs. */
   households: HouseholdChoice[];
-  /** L'instance propose la connexion Google. Dit à l'anonyme, le seul à qui ça sert. */
+  /** L'instance propose Google : pour entrer, et pour lier son compte une fois connecté. */
   google: boolean;
   eaters: Eater[];
   refreshEaters: () => Promise<void>;
@@ -112,7 +113,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       household,
       role,
       households,
-      google: me.state === 'anonyme' && me.google,
+      google: me.google,
       eaters,
       refreshEaters,
       reload,
@@ -142,9 +143,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
 
       signOut: async () => {
         await api.post('/api/auth/sign-out');
-        // Recharger plutôt que poser `anonyme` à la main : l'écran de
-        // connexion a besoin de savoir si Google est proposé.
-        await reload();
+        setMe({ state: 'anonyme', google: me.google });
+        setEaters([]);
       },
 
       /**

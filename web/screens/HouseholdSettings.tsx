@@ -16,7 +16,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '../api.ts';
-import { navigate } from '../router.tsx';
+import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { InviteMembers } from './Invitation.tsx';
@@ -212,6 +212,8 @@ export function HouseholdSettingsScreen(): React.ReactElement {
 
       {parent ? <HouseholdForm onSaved={reload} /> : null}
 
+      <ConnexionGoogle />
+
       <Apparence />
 
       {error !== null ? (
@@ -266,6 +268,80 @@ function traduire(error: ApiError): string {
   if (error.status === 403) return 'Vous n’avez pas les droits pour cette action.';
   if (error.status === 404) return 'Introuvable — la page est peut-être périmée.';
   return m;
+}
+
+// ── Connexion Google ────────────────────────────────────────────────────────
+
+/**
+ * Lier Google à un compte ouvert par mot de passe, pour entrer ensuite d'un tap.
+ *
+ * C'est la porte des comptes que la connexion Google refuse de relier d'elle-
+ * même : une adresse jamais confirmée — sans `TABLEE_MAIL`, toutes. Ici la
+ * session prouve le compte et Google prouve le sien, si bien que les deux
+ * adresses peuvent différer. Sur un appareil sans session, le mot de passe
+ * continue de marcher : lier n'enlève rien.
+ */
+function ConnexionGoogle(): React.ReactElement | null {
+  const { google } = useSession();
+  const { query } = useRoute();
+  const [lié, setLié] = useState<boolean | null>(null);
+  // Google ramène ici avec `?error=…` quand la liaison n'a pas abouti.
+  const [error, setError] = useState<string | null>(() => erreurLiaison(query.get('error')));
+
+  useEffect(() => {
+    if (!google) return;
+    void api.get<{ providerId: string }[]>('/api/auth/list-accounts')
+      .then((comptes) => setLié(comptes.some((c) => c.providerId === 'google')))
+      .catch(() => setLié(null));
+  }, [google]);
+
+  if (!google || lié === null) return null;
+
+  const lier = async (): Promise<void> => {
+    setError(null);
+    try {
+      const { url } = await api.post<{ url: string }>('/api/auth/link-social', {
+        provider: 'google', callbackURL: '/foyer', errorCallbackURL: '/foyer',
+      });
+      window.location.assign(url);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'liaison impossible');
+    }
+  };
+
+  return (
+    <section className="sec">
+      <h2 className="eyebrow">Connexion</h2>
+      {lié ? (
+        <p className="meta" style={{ lineHeight: 1.6 }}>
+          Votre compte Google est lié : « Continuer avec Google » vous fait
+          entrer d’un tap.
+        </p>
+      ) : (
+        <>
+          <p className="meta" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+            Liez votre compte Google pour entrer d’un tap. Votre mot de passe
+            continue de marcher.
+          </p>
+          <button type="button" className="btn btn--ghost" onClick={() => { void lier(); }}>
+            Lier mon compte Google
+          </button>
+        </>
+      )}
+      {error !== null ? (
+        <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 10 }}>{error}</p>
+      ) : null}
+    </section>
+  );
+}
+
+/** `access_denied`, c'est la personne qui a renoncé chez Google : rien à dire. */
+function erreurLiaison(code: string | null): string | null {
+  if (code === null || code === 'access_denied') return null;
+  if (code === 'account_already_linked_to_different_user') {
+    return 'Ce compte Google est déjà lié à un autre compte Tablée.';
+  }
+  return 'La liaison avec Google n’a pas abouti. Réessayez.';
 }
 
 // ── Apparence ───────────────────────────────────────────────────────────────

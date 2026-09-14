@@ -415,32 +415,20 @@ dit pas — « cette modification-là change les lignes déjà en base ».
 
 ---
 
-## 17. Un partage Jow reçu sans session ne survit pas à la connexion Google
-
-**Où** — `web/screens/Login.tsx` (`avecGoogle`).
-
-Le partage Android ouvre `/share?text=…`. Sans session, l'écran de connexion
-s'affiche sans quitter l'URL : entrer par mot de passe garde donc la query,
-rien ne navigue. Entrer par Google quitte la page, et le retour ne ramène que
-le **chemin** — la query porte le jeton `key` du lien Jow (I6), et la confier à
-better-auth l'écrirait en base, dans le `state` de la table `verification`.
-
-**Ce que ça coûte** — la recette est à repartager depuis Jow, une fois, et
-seulement pour qui n'avait pas de session : elles durent 30 jours et se
-prolongent à l'usage. Une invitation, elle, survit : son identifiant est dans
-le chemin.
-
-**Ce qui le lèverait** — garder le texte partagé dans le navigateur le temps
-de l'aller-retour (`sessionStorage`), expurgé de `key` et `userId`. Écarté pour
-l'instant : c'est garder, même localement, ce qu'I6 demande de ne pas garder,
-pour un cas qui se produit une fois par appareil.
-
----
-
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
 forme qu'il a. Le détail est dans l'historique git.
+
+- **Un partage Jow reçu sans session ne survivait pas à la connexion Google**
+  (ex-dette n° 17, ouverte et levée le 14/09/2026). Le retour de Google ne
+  ramenait que le chemin : la query porte les jetons `key` et `userId` (I6), et
+  better-auth la garde en base le temps de l'aller-retour. L'écran de connexion
+  la lui confie désormais passée par `redactRequestUrl` — la même expurgation
+  que celle du journal de requêtes, importée du serveur plutôt que recopiée,
+  pour qu'il n'y en ait qu'une. L'identifiant de recette, seul utile au
+  serveur, reste. Écarté en chemin : garder le texte dans `sessionStorage`,
+  qui aurait conservé côté navigateur ce qu'I6 demande de ne pas garder.
 
 - **Le type `Db` laissait écrire un `pool.query` sur une table du domaine.**
   La dette n° 9 disait que le foyer courant deviendrait ambigu le jour où un

@@ -22,6 +22,8 @@ import { api, ApiError } from '../api.ts';
 import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { IconBowl } from '../icons.tsx';
+// Le seul import du serveur : une expurgation I6, pas deux qui divergeraient.
+import { redactRequestUrl } from '../../server/jow/share.ts';
 
 /** Même minimum que le serveur. Le dire avant, pas après le refus. */
 const MIN_MOT_DE_PASSE = 12;
@@ -88,9 +90,11 @@ export function LoginScreen(): React.ReactElement {
     setError(null);
     setInfo(null);
     try {
-      // Le chemin seul, comme pour la confirmation d'adresse : une invitation
-      // survit à l'aller-retour, un partage Jow non (dette n° 17).
-      const retour = window.location.pathname;
+      // L'URL entière, pour qu'un partage Jow reçu sans session survive à
+      // l'aller-retour. better-auth la garde en base le temps de celui-ci, et
+      // le texte partagé porte les jetons `key` et `userId` (I6) : ils partent
+      // avant. L'identifiant de recette, seul utile au serveur, reste.
+      const retour = redactRequestUrl(window.location.pathname + window.location.search);
       const { url } = await api.post<{ url: string }>('/api/auth/sign-in/social', {
         provider: 'google', callbackURL: retour, errorCallbackURL: retour,
       });
@@ -228,7 +232,7 @@ function messageLisible(error: ApiError, mode: Mode): string {
 function erreurGoogle(code: string | null): string | null {
   if (code === null || code === 'access_denied') return null;
   if (code === 'account_not_linked') {
-    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe.';
+    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe, puis liez Google depuis les réglages du foyer.';
   }
   return 'La connexion avec Google n’a pas abouti. Réessayez, ou entrez avec votre adresse.';
 }

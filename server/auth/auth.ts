@@ -205,8 +205,8 @@ export function buildAuth(options: AuthOptions) {
      * better-auth, laissé tel quel exprès. Sans lui, inscrire l'adresse de
      * quelqu'un avant lui suffirait à garder un mot de passe sur le compte
      * qu'il ouvrira ensuite par Google. Sans `TABLEE_MAIL`, aucune adresse
-     * n'est confirmée : la personne entre avec son mot de passe, et l'écran
-     * le lui dit.
+     * n'est confirmée : la personne entre avec son mot de passe, puis lie
+     * Google depuis les réglages du foyer — connectée, cette fois.
      */
     ...(options.google === null ? {} : {
       socialProviders: {
@@ -219,9 +219,17 @@ export function buildAuth(options: AuthOptions) {
       },
     }),
 
-    // Tablée n'appelle aucune API Google, mais better-auth garde les jetons
-    // dans `account` : chiffrés, un dump de la base ne les rend pas utilisables.
-    account: { encryptOAuthTokens: true },
+    account: {
+      // Tablée n'appelle aucune API Google, mais better-auth garde les jetons
+      // dans `account` : chiffrés, un dump de la base ne les rend pas utilisables.
+      encryptOAuthTokens: true,
+      // Lier Google depuis les réglages exige d'être connecté : la session
+      // prouve le compte, Google prouve le sien. Les deux adresses n'ont pas à
+      // coïncider — on s'inscrit souvent avec une autre que sa Gmail, et c'est
+      // justement ce cas qu'il faut rendre rapide. La liaison **implicite**, à
+      // la connexion, reste limitée à la même adresse, confirmée.
+      accountLinking: { allowDifferentEmails: true },
+    },
 
     emailAndPassword: {
       enabled: true,

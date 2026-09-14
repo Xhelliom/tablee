@@ -119,7 +119,7 @@ c'est nominal, pas un échec.
 | `RESEND_API_KEY` | Avec `TABLEE_MAIL=resend`. Passe par HTTPS : utile quand la sortie SMTP est fermée. |
 | `SMTP_URL` | Avec `TABLEE_MAIL=smtp` : `smtps://utilisateur:motdepasse@hôte:465`, ou `smtp://…:587` pour STARTTLS. Encoder `@`, `/`, `:`, `#` dans le mot de passe. |
 | `GOOGLE_CLIENT_ID` | Avec `GOOGLE_CLIENT_SECRET`, les deux ou aucun : l'écran de connexion propose « Continuer avec Google ». Client OAuth « Application Web » de la console Google Cloud, avec pour URI de redirection autorisée `TABLEE_BASE_URL` suivi de `/api/auth/callback/google`, au caractère près. À moitié rempli, le serveur refuse de démarrer. |
-| `GOOGLE_CLIENT_SECRET` | Le secret de ce client. Une adresse déjà inscrite par mot de passe n'est reliée à Google que si elle est confirmée — donc seulement avec `TABLEE_MAIL` ; sinon, la personne continue avec son mot de passe. |
+| `GOOGLE_CLIENT_SECRET` | Le secret de ce client. Une adresse déjà inscrite par mot de passe n'est reliée à Google que si elle est confirmée — donc seulement avec `TABLEE_MAIL` ; sinon, elle entre avec son mot de passe et lie Google depuis les réglages du foyer. |
 
 ⚠️ L'inscription est **ouverte**, et c'est voulu : des amis doivent pouvoir
 créer leur foyer sans passer par vous. Ça veut dire que quiconque trouve l'URL
