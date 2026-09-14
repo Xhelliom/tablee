@@ -82,9 +82,41 @@ export async function hasFoodReferential(db: UnscopedDb): Promise<boolean> {
 }
 
 export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Promise<FoodSummary[]> {
-  const trimmed = query.trim();
+  // Ciqual écrit « Oeuf », « Boeuf » : aucun nom du référentiel ne porte de
+  // ligature (vérifié). Celle d'un libellé Jow ou d'une saisie ne trouvait rien.
+  const trimmed = query.trim()
+    .replace(/œ/g, 'oe').replace(/Œ/g, 'Oe').replace(/æ/g, 'ae').replace(/Æ/g, 'Ae');
   if (trimmed.length < 2) return [];
 
+  // Tous les mots d'abord. À défaut, n'importe lequel, ceux qui en portent le
+  // plus en tête : Jow dit « Sauce soja salée » et « Haricot vert (frais) »,
+  // Ciqual « Sauce soja, préemballée » et « Haricot vert, cru » — exiger chaque
+  // mot ne ramenait rien.
+  const mots = words(trimmed);
+  // Le dernier mot est un préfixe, pour que « cour » remonte « courgette »
+  // pendant qu'on tape.
+  const termes = mots.map((mot, i) => (i === mots.length - 1 ? `${mot}:*` : mot));
+  const tous = await matchFoods(db, trimmed, termes.length === 0 ? null : termes.join(' & '), termes, limit);
+  if (tous.length > 0 || mots.length < 2) return tous;
+  // Élargie, et sans préfixe : « salée:* » y rapprocherait « salade », et une
+  // sauce crudités passerait devant la sauce soja.
+  return matchFoods(db, trimmed, mots.join(' | '), termes, limit);
+}
+
+/**
+ * L'ordre : le plus de termes de la recherche d'abord — le dernier compté comme
+ * un préfixe, sans quoi « cour » rangerait « courant » devant « courgette » —,
+ * puis le nom le plus court. Pas `ts_rank`, qui préfère un mot répété : « Oeuf,
+ * jaune (jaune d'oeuf), cru » passait devant « Oeuf, cru », alors que chez
+ * Ciqual le nom le plus court est l'aliment de base.
+ */
+async function matchFoods(
+  db: UnscopedDb,
+  raw: string,
+  tsquery: string | null,
+  termes: string[],
+  limit: number,
+): Promise<FoodSummary[]> {
   const { rows } = await db.query<{
     id: string; name: string; source: FoodSummary['source']; category: string | null;
     plant_based: boolean | null; kcal_100g: number | null; unit_weights: Record<string, number>;
@@ -96,10 +128,11 @@ export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Pr
      select f.id, f.name, f.source, f.category, f.plant_based, f.kcal_100g, f.unit_weights
      from food f, q
      where to_tsvector('french', f.name) @@ coalesce(q.prefix, q.exact)
-     order by ts_rank(to_tsvector('french', f.name), coalesce(q.prefix, q.exact)) desc,
+     order by (select count(*) from unnest($4::text[]) terme
+                where to_tsvector('french', f.name) @@ to_tsquery('french', terme)) desc,
               length(f.name) asc
      limit $3`,
-    [trimmed, prefixQuery(trimmed), limit],
+    [raw, tsquery, limit, termes],
   );
 
   return rows.map((r) => ({
@@ -110,19 +143,11 @@ export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Pr
 }
 
 /**
- * « pain complet » → `pain & complet:*`. Les caractères de syntaxe tsquery
- * sont retirés plutôt qu'échappés : une recherche n'a pas à interpréter ce que
- * l'utilisateur tape.
+ * Les mots d'une recherche. Les caractères de syntaxe tsquery sont retirés
+ * plutôt qu'échappés : une recherche n'a pas à interpréter ce qu'on tape.
  */
-function prefixQuery(raw: string): string | null {
-  const words = raw
-    .replace(/[&|!():*<>'"\\]/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length > 0);
-  if (words.length === 0) return null;
-  return words.map((word, i) => (i === words.length - 1 ? `${word}:*` : word)).join(' & ');
-}
-
+const words = (raw: string): string[] =>
+  raw.replace(/[&|!():*<>'"\\]/g, ' ').split(/\s+/).filter((w) => w.length > 0);
 /** Crée un aliment saisi à la main. Aucune valeur n'est déduite (I1). */
 export async function createManualFood(
   db: UnscopedDb,

@@ -16,7 +16,7 @@ describe('découpage par IA — ce qui revient', () => {
         ],
       }),
       [
-        { label: '2 œufs', search: 'oeuf', grams: 110 },
+        { label: '2 œufs', search: 'œuf', grams: 110 },
         { label: 'du sel', search: 'sel', grams: null },
       ],
     );

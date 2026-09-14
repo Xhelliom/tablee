@@ -104,9 +104,7 @@ export function readSplit(raw: unknown): ProposedItem[] {
     const mots = typeof search === 'string' && search.trim() !== '' ? search : label;
     return [{
       label: label.trim().slice(0, 200),
-      // Ciqual écrit « Oeuf » : la recherche plein texte ne rapproche pas la
-      // ligature du modèle de celle du référentiel.
-      search: mots.trim().replace(/œ/g, 'oe').replace(/Œ/g, 'Oe').slice(0, 100),
+      search: mots.trim().slice(0, 100),
       // Un poids nul, négatif ou délirant n'est pas une estimation : il reste
       // à préciser plutôt que d'être corrigé en silence.
       grams: typeof grams === 'number' && grams > 0 && grams <= 5000 ? Math.round(grams) : null,

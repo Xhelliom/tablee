@@ -53,12 +53,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
 
     const items: { label: string; grams: number | null; foods: FoodSummary[] }[] = [];
     for (const item of proposed) {
-      // La recherche exige tous les mots : à défaut, le premier seul, pour que
-      // « pain complet de campagne » propose au moins des pains.
-      const premier = item.search.split(/\s+/)[0] ?? '';
-      let foods = await searchFoods(ctx.pool, item.search, 5);
-      if (foods.length === 0 && premier !== item.search) foods = await searchFoods(ctx.pool, premier, 5);
-      items.push({ label: item.label, grams: item.grams, foods });
+      items.push({ label: item.label, grams: item.grams, foods: await searchFoods(ctx.pool, item.search, 5) });
     }
     return { items };
   });
