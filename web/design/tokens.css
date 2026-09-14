@@ -318,8 +318,11 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 13px; border: 0; border-radius: var(--radius);
   background: var(--coral); color: #fff; font-size: 15px; cursor: pointer;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
 }
 .btn:disabled { opacity: .5; cursor: default; }
+/* Pressé, il répond sous le doigt : l'interface a entendu. */
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn--ghost {
   /* Le liseré suit le texte, pas l'aplat : un contour #D85A30 sous un libellé
      éclairci se lit comme deux terracottas différents. */
@@ -398,6 +401,25 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .fab-space { height: 26px; }
+
+/* ── Mouvement ───────────────────────────────────────────────────────────── */
+/*
+ * Peu, et seulement quand il dit quelque chose : une ligne qui arrive dans une
+ * liste s'y pose au lieu d'y surgir, une réponse qu'on attend pulse. Rien sur
+ * ce qui change à chaque frappe — les résultats d'une recherche n'animent pas.
+ */
+.apparait { animation: apparait 220ms cubic-bezier(.23, 1, .32, 1) both; }
+@keyframes apparait { from { opacity: 0; transform: translateY(4px); } }
+@keyframes fondu { from { opacity: 0; } }
+
+.attente { animation: attente 900ms ease-in-out infinite alternate; }
+@keyframes attente { from { opacity: .4; } }
+
+/* Moins de mouvement, pas moins d'information : les fondus restent. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled) { transform: none; }
+  .apparait { animation-name: fondu; }
+}
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
