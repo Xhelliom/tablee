@@ -19,6 +19,7 @@ import { api, ApiError } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
+import { ConfirmButton } from '../components/ConfirmButton.tsx';
 import { InviteMembers } from './Invitation.tsx';
 import { Choix } from '../components/EaterForm.tsx';
 import { readTheme, setTheme, THEMES, type Theme } from '../design/theme.ts';
@@ -133,20 +134,15 @@ export function HouseholdSettingsScreen(): React.ReactElement {
                     </button>
 
                     {cestMoi ? null : (
-                      <button
-                        type="button" className="btn btn--quiet" style={{ width: 'auto', flex: 1 }}
+                      <ConfirmButton
+                        label="Retirer l’accès" style={{ width: 'auto', flex: 1 }}
                         disabled={busy}
-                        onClick={() => {
-                          if (!window.confirm(
-                            `Retirer l’accès de ${membre.user.name} ? Les repas qu’il a saisis restent.`,
-                          )) return;
+                        onConfirm={() => {
                           void agir(() => api.post('/api/auth/organization/remove-member', {
                             memberIdOrEmail: membre.id, organizationId: orgId,
                           }));
                         }}
-                      >
-                        Retirer l’accès
-                      </button>
+                      />
                     )}
                   </div>
                 ) : null}
@@ -222,22 +218,20 @@ export function HouseholdSettingsScreen(): React.ReactElement {
 
       <section className="sec">
         <h2 className="eyebrow">Quitter</h2>
-        <button
-          type="button" className="btn btn--quiet"
+        <p className="meta" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+          Vous perdrez l’accès à ses repas. Les données du foyer, elles, restent.
+        </p>
+        <ConfirmButton
+          label="Quitter ce foyer"
           disabled={busy}
-          onClick={() => {
-            if (!window.confirm(
-              'Quitter ce foyer ? Vous perdrez l’accès à ses repas. Les données du foyer, elles, restent.',
-            )) return;
+          onConfirm={() => {
             void agir(async () => {
               await api.post('/api/auth/organization/leave', { organizationId: orgId });
               await reload();
               navigate('/');
             });
           }}
-        >
-          Quitter ce foyer
-        </button>
+        />
 
         <button
           type="button" className="btn btn--quiet" style={{ marginTop: 10 }}

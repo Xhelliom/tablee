@@ -31,6 +31,7 @@ import { IconPlus } from '../icons.tsx';
 import { dietLabel, NUTRIENT_COLOR } from '../design/vocabulary.ts';
 import { navigate } from '../router.tsx';
 import { AddEaterForm, créerInvitation, LienÀTransmettre } from '../components/AddEater.tsx';
+import { ConfirmButton } from '../components/ConfirmButton.tsx';
 import {
   Choix, COEF_CHOICES, coefLabel, draftToBody, ProfileFields, type ProfileDraft,
 } from '../components/EaterForm.tsx';
@@ -269,15 +270,15 @@ function ÉditionFiche({
   onSaved: () => Promise<void>;
   onError: (message: string | null) => void;
 }): ReactElement {
+  const { role } = useSession();
   const [draft, setDraft] = useState<ProfileDraft>(draftFrom(eater));
   const [busy, setBusy] = useState(false);
 
-  const submit = async (event: React.FormEvent): Promise<void> => {
-    event.preventDefault();
+  const envoyer = async (corps: Record<string, unknown>): Promise<void> => {
     setBusy(true);
     onError(null);
     try {
-      await api.patch(`/api/eaters/${eater.id}`, draftToBody(draft));
+      await api.patch(`/api/eaters/${eater.id}`, corps);
       await onSaved();
     } catch (cause) {
       onError(cause instanceof ApiError ? cause.message : 'enregistrement impossible');
@@ -286,7 +287,7 @@ function ÉditionFiche({
   };
 
   return (
-    <form className="stack" style={{ marginTop: 14 }} onSubmit={(e) => { void submit(e); }}>
+    <form className="stack" style={{ marginTop: 14 }} onSubmit={(e) => { e.preventDefault(); void envoyer(draftToBody(draft)); }}>
       <ProfileFields value={draft} onChange={setDraft} idPrefix={`e-${eater.id}`} />
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="btn btn--quiet" style={{ width: 'auto', flex: 1 }}
@@ -297,6 +298,22 @@ function ÉditionFiche({
           {busy ? 'Un instant…' : 'Enregistrer'}
         </button>
       </div>
+
+      {/*
+        Retirer, et pas supprimer : les repas passés gardent la part figée de
+        cette personne (R2). La fiche quitte la table et les bilans à venir.
+      */}
+      {role === 'parent' ? (
+        <>
+          <ConfirmButton
+            label="Retirer du foyer" disabled={busy}
+            onConfirm={() => { void envoyer({ active: false }); }}
+          />
+          <p className="meta" style={{ lineHeight: 1.5 }}>
+            Les repas déjà enregistrés gardent sa part.
+          </p>
+        </>
+      ) : null}
     </form>
   );
 }
