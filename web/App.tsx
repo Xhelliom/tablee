@@ -10,7 +10,7 @@ import type { ReactElement } from 'react';
 import { useSegments } from './router.tsx';
 import { SessionProvider, useSession } from './session.tsx';
 import { Chrome } from './components/Chrome.tsx';
-import { LoginScreen } from './screens/Login.tsx';
+import { LoginScreen, ResetPasswordScreen } from './screens/Login.tsx';
 import { TodayScreen } from './screens/Today.tsx';
 import { ShareScreen } from './screens/Share.tsx';
 import { QuickAddScreen } from './screens/QuickAdd.tsx';
@@ -51,6 +51,8 @@ function Routes(): ReactElement {
    */
   const invitation = segments[0] === 'invitation' ? segments[1] : undefined;
 
+  // Le lien de réinitialisation arrive par mail, par définition sans session.
+  if (segments[0] === 'reinitialiser') return <ResetPasswordScreen />;
   if (state === 'anonyme') return <LoginScreen />;
   if (invitation !== undefined) return <AcceptInvitationScreen invitationId={invitation} />;
   if (state === 'sans_foyer') return <HouseholdScreen />;

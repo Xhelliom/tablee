@@ -174,6 +174,17 @@ better-auth.
 et `sendResetPassword`. Tant que ce n'est pas fait, un mot de passe oublié se
 règle en base, ce qui n'est acceptable que pour l'hébergeur lui-même.
 
+> **⚠️ Levée par configuration le 14/09/2026.** `TABLEE_MAIL=resend` ou
+> `smtp` (`server/auth/mail.ts`) allume les trois d'un coup : confirmation
+> d'adresse obligatoire, mot de passe oublié, invitation envoyée par mail. Sans
+> la variable, rien ne change et cette dette reste entière — c'est donc une
+> décision d'hébergeur, pas un état du code. Ce qu'il en coûte de l'allumer
+> sur une instance existante : **tous** les comptes déjà créés ont
+> `emailVerified = false`, et devront confirmer leur adresse à leur prochaine
+> connexion. Un lien leur part tout seul ; les sessions ouvertes, elles, ne
+> sont pas coupées. Aucune migration ne les marque « vérifiés » d'office :
+> ce serait affirmer une preuve qu'on n'a pas.
+
 ---
 
 ## 8. La RLS ne traverse pas les clés étrangères

@@ -428,6 +428,19 @@ est la principale façon de faire échouer la V1.
 >   droit de la modifier ;
 > - un `adulte` ne voit pas le poids des autres (voir l'encart du §9).
 
+> **Complété le 14/09/2026 — le mail, au choix de l'hébergeur.** « La
+> vérification d'adresse attend un SMTP » reste vrai pour une instance sans
+> `TABLEE_MAIL`. Avec `TABLEE_MAIL=resend` ou `smtp` (`server/auth/mail.ts`),
+> trois choses s'allument **ensemble**, parce qu'aucune ne tient seule : la
+> confirmation d'adresse devient obligatoire, le mot de passe oublié existe
+> (écran `/reinitialiser`), et l'invitation part par mail — le lien reste
+> rendu au parent dans tous les cas, un mail pouvant finir en indésirables.
+>
+> L'allumer sur une instance existante demande aux comptes déjà créés de
+> confirmer leur adresse à leur prochaine connexion ; un lien part tout seul.
+> Aucune migration ne les marque vérifiés d'office : ce serait affirmer une
+> preuve qu'on n'a pas. Détail dans la dette n° 7.
+
 
 **Un compte par foyer. Pas de compte individuel.**
 
@@ -1105,7 +1118,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `GET` | `/api/me` | Les trois états d'authentification. Voir l'encart du §7. |
 > | `GET` | `/api/household` | Le foyer courant, pour que l'écran de gestion se rafraîchisse sans recharger la session. |
 > | `PATCH` | `/api/household` | Nom et fuseau, réservé au rôle `parent`. Le fuseau n'est pas un réglage d'affichage : il découpe les journées et les mois de saisonnalité **dans le SQL**, d'où une validation stricte plutôt qu'un texte libre. |
-> | `GET` | `/api/invitations/:id/lien` | L'URL à transmettre. Sans SMTP, l'invitation est un lien qu'on copie. |
+> | `GET` | `/api/invitations/:id/lien` | L'URL à transmettre. Sans SMTP, l'invitation est un lien qu'on copie. *Depuis le 14/09/2026, la réponse porte aussi `mailed` : sur une instance qui envoie des mails (encart du §7), l'invitation part aussi par là, et le parent doit savoir s'il lui reste à transmettre le lien.* |
 >
 > Tout le reste de la gestion — comptes, rôles, invitations, suppression du
 > foyer — est servi par better-auth sous `/api/auth/organization/*` et n'a pas
@@ -1160,6 +1173,7 @@ depuis les `portion_coef` courants (R2).
 | **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. |
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
+| **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
 | **Synthèse** (V3) | Texte hebdomadaire + notes famille. |
 
 **Contraintes UI :**
@@ -1419,6 +1433,18 @@ diététicien branché sur trois repas mal saisis ne produit que des banalités.
 
 **Périmètre de données :** tout reste sur le réseau du foyer. Seuls des libellés
 d'aliments et des agrégats anonymisés sortent, vers le LLM (R5).
+
+> **Précisé le 14/09/2026 — ce qui sort avec le mail.** Sur une instance qui
+> envoie des mails (`TABLEE_MAIL`, encart du §7), le transporteur — Resend, ou
+> le relais SMTP choisi par l'hébergeur — reçoit à chaque envoi l'adresse du
+> destinataire et un lien qui porte un jeton ; pour une invitation, en plus, le
+> prénom du compte qui invite et le nom du foyer. **Aucune donnée de convive**
+> ne part : ni enfant, ni âge, ni allergène, ni repas.
+>
+> Le prénom et le nom du foyer sont gardés **exprès** : une invitation qui ne
+> dit pas qui invite ressemble à du hameçonnage et reste sans réponse. Sans
+> `TABLEE_MAIL`, rien de tout ça ne sort. Avec, le transporteur est un tiers de
+> plus à nommer dans « dire ce qui est stocké » (point 2 ci-dessus).
 
 **Si l'app sort un jour du foyer**, ce n'est pas un changement d'échelle mais de
 nature : données de santé de mineurs, hébergement adapté, consentement parental,

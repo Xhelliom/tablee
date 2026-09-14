@@ -9,19 +9,26 @@
  */
 import type pg from 'pg';
 import { buildAuth, type Auth } from '../auth/auth.ts';
+import type { SendMail } from '../auth/mail.ts';
 
 export const TEST_BASE_URL = 'http://localhost';
 
 /** Secret de test. Sans valeur, mais de la bonne longueur. */
 const TEST_SECRET = 'test'.repeat(10);
 
-export function buildTestAuth(pool: pg.Pool): Auth {
+/**
+ * Sans `mail`, l'instance n'en envoie pas : pas de confirmation d'adresse, et
+ * `signUp` rend un compte qui peut entrer tout de suite. `mail.test.ts` passe
+ * une boîte qui garde ce qu'elle reçoit.
+ */
+export function buildTestAuth(pool: pg.Pool, mail: SendMail | null = null): Auth {
   return buildAuth({
     pool,
     baseURL: TEST_BASE_URL,
     secret: TEST_SECRET,
     // `Secure` empêcherait le cookie de revenir en test, qui parle http.
     secureCookies: false,
+    mail,
   });
 }
 

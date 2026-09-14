@@ -396,6 +396,9 @@ test. C'est une exigence du §16, pas une commodité.
   aucun serveur SMTP. C'est la dette n° 7, et la plus gênante — un mot de passe
   oublié se règle en base, ce qui n'est acceptable que pour vous-même. À
   regarder avant d'inviter des familles qui ne sont pas la vôtre.
+  *Depuis le 14/09/2026, couvert si vous le voulez :* `TABLEE_MAIL` dans
+  `30-deployment.yaml`, et `RESEND_API_KEY` ou `SMTP_URL` dans le secret. Resend
+  passe par HTTPS, ce qui évite de demander au cluster une sortie SMTP.
 - **La supervision.** Pas de métriques, pas d'alertes. Les sondes de vie
   suffisent à redémarrer un pod mort, pas à savoir que la base se remplit.
 - **La haute disponibilité.** Une réplique, un Postgres à un nœud. C'est un

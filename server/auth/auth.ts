@@ -37,6 +37,7 @@ import type pg from 'pg';
 import { withHousehold } from '../db.ts';
 import { claimEatersForUser } from '../repo/eaters.ts';
 import { createHouseholdForOrganization, findHouseholdByOrganization } from '../repo/households.ts';
+import type { Mail, SendMail } from './mail.ts';
 
 /**
  * Ce qu'un rôle peut faire.
@@ -104,6 +105,26 @@ export const isRole = (value: string): value is Role => value === 'parent' || va
 /** Le rôle de celui qui crée le foyer. C'est le sien, il en est parent. */
 const CREATOR_ROLE = 'parent';
 
+/** Le lien que suit un invité : rendu au parent, et mis dans le mail s'il en part un. */
+export const invitationUrl = (baseURL: string, id: string): string =>
+  new URL(`/invitation/${encodeURIComponent(id)}`, baseURL).toString();
+
+/**
+ * Part en arrière-plan, et ne lève jamais.
+ *
+ * better-auth **attend** ces crochets, faute de file d'arrière-plan : un envoi
+ * lent ralentirait la réponse — et dirait, par sa durée, si un compte existe —
+ * et un envoi raté la ferait échouer. L'invitation serait pourtant créée, mais
+ * le parent verrait une erreur au lieu du lien à copier.
+ *
+ * Le journal dit l'objet et l'erreur, jamais le corps : il porte un jeton.
+ */
+function expédier(send: SendMail, mail: Mail): Promise<void> {
+  send(mail).catch((error: unknown) => {
+    console.error(`mail non envoyé (« ${mail.subject} ») : ${error instanceof Error ? error.message : String(error)}`);
+  });
+  return Promise.resolve();
+}
 
 /**
  * Rattache à son compte l'assiette que le foyer lui réservait.
@@ -148,11 +169,22 @@ export interface AuthOptions {
   secret: string;
   /** `false` en développement sur http://localhost, jamais en production. */
   secureCookies: boolean;
+  /**
+   * L'envoi de mail, ou `null` quand l'instance n'en envoie pas (`mail.ts`).
+   *
+   * Il allume trois choses d'un coup, parce qu'aucune ne tient sans les
+   * autres : un mot de passe oublié réinitialisé par mail ne vaut que si
+   * l'adresse a été confirmée, et la confirmation n'a de sens que si un mail
+   * peut partir (dette n° 7).
+   */
+  mail: SendMail | null;
 }
 
 export type Auth = ReturnType<typeof buildAuth>;
 
 export function buildAuth(options: AuthOptions) {
+  const { mail } = options;
+
   return betterAuth({
     database: options.pool,
     secret: options.secret,
@@ -167,9 +199,40 @@ export function buildAuth(options: AuthOptions) {
       //
       // ⚠️ La vérification d'adresse mail est désactivée faute de serveur SMTP
       // (dette n° 7). Tant qu'elle l'est, une adresse n'est pas une preuve.
-      requireEmailVerification: false,
+      //
+      // ⚠️ Nuancé le 14/09/2026 : elle est obligatoire dès que l'instance
+      // envoie des mails. Sans `TABLEE_MAIL`, la phrase au-dessus reste vraie.
+      requireEmailVerification: mail !== null,
       minPasswordLength: 12,
+      // Qui a oublié son mot de passe a peut-être aussi perdu un téléphone :
+      // les sessions ouvertes tombent avec l'ancien.
+      revokeSessionsOnPasswordReset: true,
+      ...(mail === null ? {} : {
+        sendResetPassword: ({ user, url }) => expédier(mail, {
+          to: user.email,
+          subject: 'Choisir un nouveau mot de passe Tablée',
+          text: `Pour choisir un nouveau mot de passe :\n\n${url}\n\n`
+            + 'Le lien vaut une heure. Si vous n’avez rien demandé, ignorez ce message : rien ne change.',
+        }),
+      }),
     },
+
+    ...(mail === null ? {} : {
+      emailVerification: {
+        sendOnSignUp: true,
+        // Un compte créé avant que l'instance envoie des mails n'a jamais
+        // confirmé son adresse : sa prochaine connexion lui renvoie un lien,
+        // plutôt qu'un refus sans issue.
+        sendOnSignIn: true,
+        autoSignInAfterVerification: true,
+        sendVerificationEmail: ({ user, url }) => expédier(mail, {
+          to: user.email,
+          subject: 'Confirmer votre adresse sur Tablée',
+          text: `Pour confirmer que cette adresse est bien la vôtre :\n\n${url}\n\n`
+            + 'Si vous n’avez pas créé de compte sur Tablée, ignorez ce message.',
+        }),
+      },
+    }),
 
     /**
      * 30 jours, et non les 7 par défaut de better-auth.
@@ -231,6 +294,20 @@ export function buildAuth(options: AuthOptions) {
         // un manque — installer un relais mail pour deux invitations par
         // décennie coûte plus cher que ça ne rapporte. L'identifiant de
         // l'invitation est rendu à l'appelant, qui construit le lien.
+        //
+        // ⚠️ Nuancé le 14/09/2026 : une instance qui envoie déjà des mails pour
+        // les mots de passe oubliés envoie aussi l'invitation — le relais est
+        // là, le coût est payé. Le lien reste rendu à l'appelant dans tous les
+        // cas : un mail peut finir en indésirables.
+        ...(mail === null ? {} : {
+          sendInvitationEmail: ({ id, email, organization: org, inviter }) => expédier(mail, {
+            to: email,
+            subject: `Invitation au foyer « ${org.name} » sur Tablée`,
+            text: `${inviter.user.name} vous invite à suivre les repas du foyer « ${org.name} » sur Tablée.\n\n`
+              + `Pour accepter :\n\n${invitationUrl(options.baseURL, id)}\n\n`
+              + 'Le lien vaut sept jours. Si vous n’attendiez pas cette invitation, ignorez ce message.',
+          }),
+        }),
         invitationExpiresIn: 60 * 60 * 24 * 7,
       }),
     ],

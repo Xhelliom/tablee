@@ -9,6 +9,7 @@
  */
 import { buildApp } from './app.ts';
 import { buildAuth } from './auth/auth.ts';
+import { buildMailer, MailConfigError, type SendMail } from './auth/mail.ts';
 import { closePool, getPool } from './db.ts';
 import { assertIsolation, IsolationError } from './db/guard.ts';
 
@@ -48,6 +49,23 @@ if (secret.length < 32) {
  */
 const secureCookies = process.env['TABLEE_INSECURE_COOKIE'] !== '1';
 
+/**
+ * L'envoi de mail, facultatif : `TABLEE_MAIL=resend|smtp`, voir
+ * `server/auth/mail.ts`. Une configuration à moitié remplie refuse de démarrer,
+ * pour la même raison que le secret — mieux vaut pas de mail qu'un mail qu'on
+ * croit parti.
+ */
+let mail: SendMail | null;
+try {
+  mail = buildMailer(process.env);
+} catch (error) {
+  if (error instanceof MailConfigError) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  throw error;
+}
+
 const pool = getPool();
 
 // Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
@@ -63,11 +81,14 @@ try {
   throw error;
 }
 
-const auth = buildAuth({ pool, baseURL, secret, secureCookies });
+const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail });
 
 const app = buildApp({ pool, auth, baseURL });
 await app.listen({ port, host });
-console.log(`Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL})`);
+console.log(
+  `Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL}, `
+    + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']})`,
+);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

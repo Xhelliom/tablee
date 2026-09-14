@@ -46,7 +46,8 @@ server/
   db.ts           pool, `transaction`, `withHousehold` / `acquireForHousehold`
   db/guard.ts     refuse de démarrer si la RLS n'est pas effective
   auth/           better-auth : rôles, permissions, crochets d'organisation
-                  (auth.ts) ; qui parle et pour quel foyer (identity.ts)
+                  (auth.ts) ; qui parle et pour quel foyer (identity.ts) ;
+                  l'envoi de mail, Resend ou SMTP, facultatif (mail.ts)
   http/           validation des corps, format d'erreur, fuseaux
   routes/         l'API du §12 — un fichier par ressource
   repo/           tout le SQL du domaine, scopé au foyer. Une route n'écrit

@@ -61,7 +61,8 @@ interface SessionValue {
   refreshEaters: () => Promise<void>;
   reload: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  /** `true` quand l'adresse doit d'abord être confirmée : pas de session alors. */
+  signUp: (email: string, password: string, name: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   createHousehold: (name: string) => Promise<void>;
   switchHousehold: (organizationId: string) => Promise<void>;
@@ -113,14 +114,27 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       refreshEaters,
       reload,
 
+      /**
+       * `callbackURL` : où ramène le lien de confirmation d'adresse, quand
+       * l'instance envoie des mails — une invitation ouverte avant d'avoir un
+       * compte y survit. Le chemin **seul** : sur `/share`, la query porte le
+       * texte de partage Jow et son jeton `key` (I6), qui finirait dans un mail.
+       */
       signIn: async (email, password) => {
-        await api.post('/api/auth/sign-in/email', { email, password });
+        await api.post('/api/auth/sign-in/email', { email, password, callbackURL: window.location.pathname });
         await reload();
       },
 
       signUp: async (email, password, name) => {
-        await api.post('/api/auth/sign-up/email', { email, password, name });
+        const { token } = await api.post<{ token: string | null }>(
+          '/api/auth/sign-up/email',
+          { email, password, name, callbackURL: window.location.pathname },
+        );
+        // Pas de session : l'adresse est à confirmer. Surtout pas de `reload`,
+        // qui démonterait l'écran de connexion et le message qui le dit.
+        if (token === null) return true;
         await reload();
+        return false;
       },
 
       signOut: async () => {
