@@ -116,6 +116,19 @@ export const IconInfo = (p: IconProps) => (
   <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5M12 7.5v.5" /></g></Base>
 );
 
+/** Les statuts d'une barre du bilan : à compléter, dans le repère, au-delà. */
+export const IconPlusCircle = (p: IconProps) => (
+  <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></g></Base>
+);
+
+export const IconCheckCircle = (p: IconProps) => (
+  <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="m8 12.5 3 3 5-6" /></g></Base>
+);
+
+export const IconUpCircle = (p: IconProps) => (
+  <Base {...p}><g><circle cx="12" cy="12" r="9" /><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5" /></g></Base>
+);
+
 export const IconPencil = (p: IconProps) => (
   <Base {...p}><g><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z" /><path d="m14 6 4 4" /></g></Base>
 );

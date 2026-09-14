@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablée — proposition d’accueil</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400&family=Inter:wght@400;500&display=swap">
+<style>
+/*
+ * Proposition de design, pas une référence. Page générée à partir du canvas
+ * de conception : les écrans sont du HTML statique, les chiffres des
+ * exemples, les prénoms fictifs. Rien ici ne modifie l'application.
+ */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 32px 20px 64px; background: #E8E4DC; color: #1B1B19;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+p { margin: 0; }
+a { color: #993C1D; }
+h1 { font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 30px; margin: 0 0 6px; }
+h2 { font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 24px; margin: 56px 0 8px; }
+.sub { color: #5F5E5A; font-size: 14px; line-height: 1.6; max-width: 760px; margin: 0 0 10px; }
+.gallery { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-top: 28px; }
+figure { margin: 0; }
+figcaption { font-size: 12px; color: #5F5E5A; margin-bottom: 10px; letter-spacing: .4px; text-transform: uppercase; }
+figcaption b { display: block; font-weight: 500; font-size: 14px; color: #1B1B19; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.frame { border: .5px solid rgba(0, 0, 0, .13); border-radius: 14px; overflow: hidden; width: max-content; }
+.note { width: 380px; font-size: 13px; line-height: 1.65; color: #5F5E5A; }
+.note b { color: #1B1B19; font-weight: 500; }
+.note ol, .note ul { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.table { overflow-x: auto; margin-top: 16px; }
+table { border-collapse: collapse; font-size: 13px; line-height: 1.5; min-width: 720px; max-width: 980px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 14px 9px 0; border-top: .5px solid rgba(0, 0, 0, .13); }
+th { font-weight: 500; color: #1B1B19; }
+td { color: #5F5E5A; }
+thead th { font-size: 11px; color: #8D8C85; letter-spacing: .4px; text-transform: uppercase; border-top: 0; }
+code { font-size: 12px; }
+.t {
+      --coral: #D85A30;
+      --coral-fg: light-dark(#D85A30, #F0997B);
+      --coral-600: light-dark(#993C1D, #F0997B);
+      --coral-line: light-dark(rgba(216, 90, 48, .30), rgba(240, 153, 123, .34));
+      --coral-track: light-dark(rgba(216, 90, 48, .18), rgba(240, 153, 123, .20));
+      --surface-2: light-dark(#FFFFFF, #221E19);
+      --surface-1: light-dark(#F4F2ED, #1C1915);
+      --surface-0: light-dark(#EDEAE3, #151310);
+      --warm: light-dark(rgba(216, 90, 48, .06), rgba(216, 90, 48, .07));
+      --border: light-dark(rgba(0, 0, 0, .13), rgba(255, 255, 255, .11));
+      --border-strong: light-dark(rgba(0, 0, 0, .26), rgba(255, 255, 255, .28));
+      --text-primary: light-dark(#1B1B19, #EDE9E1);
+      --text-secondary: light-dark(#5F5E5A, #ADA79C);
+      --text-muted: light-dark(#8D8C85, #918A7E);
+      --text-success: light-dark(#0F6E56, #7DD3B6);
+      --text-warning: light-dark(#854F0B, #F0C273);
+      --green-100: light-dark(#C0DD97, #24361A);
+      --green-600: light-dark(#3B6D11, #4F8F18);
+      --green-900: light-dark(#173404, #C0DD97);
+      --band: light-dark(rgba(0, 0, 0, .12), rgba(255, 255, 255, .14));
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+</style>
+</head>
+<body>
+
+<h1>Tablée — proposition d’accueil</h1>
+<p class="sub"><b>Proposition du 14/09/2026, validée et implémentée le jour même.</b> Elle répond à trois demandes : un meilleur tableau de bord, des graphes plus grands et plus clairs, des couleurs porteuses de sens sur les textes importants pour orienter vers les repères de nutriments. Elle fait foi sur la mise en page de l’accueil et de la semaine (§13 de la spec) ; le code est dans <code>web/components/Bilan.tsx</code>, <code>web/screens/Today.tsx</code> et <code>web/screens/Week.tsx</code>.</p>
+<p class="sub">Conçue avec les skills de design (canvas de conception et dataviz) sur les tokens de <code>web/design/tokens.css</code>. Canvas éditable d’origine : <a href="https://claude.ai/code/artifact/07eca236-4614-402e-ad8d-fd44021c654b">https://claude.ai/code/artifact/07eca236-4614-402e-ad8d-fd44021c654b</a>. Les chiffres sont des exemples — aucun n’est un repère réel — et les prénoms sont fictifs.</p>
+
+<h2>L’accueil</h2>
+<div class="gallery">
+<figure>
+<figcaption>Actuel<b>Aujourd’hui, anneau de Léa ouvert</b></figcaption>
+<div class="frame">
+<div class="t" style="color-scheme: light; width: 390px; background: var(--surface-0);">
+<div style="background: var(--warm); display: flex; flex-direction: column;">
+
+  <header style="background: #D85A30; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; color: #FAECE7;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+      <span style="width: 23px; height: 23px; border-radius: 7px; background: #FAECE7; color: #D85A30; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+      <span>Tablée</span>
+    </div>
+    <span style="padding: 4px; color: #F5C4B3; display: flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"></path><path d="M20 12H10m10 0-3-3m3 3-3 3"></path></svg></span>
+  </header>
+
+  <main style="flex: 1;">
+    <div style="padding: 20px 18px 0;">
+      <p style="font-size: 12px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase;">Dimanche 13 septembre</p>
+      <p style="font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-size: 32px; line-height: 1.05; margin-top: 6px;">Deux repas<br>à table</p>
+    </div>
+
+    <section style="margin-top: 20px; background: var(--surface-2); border-top: .5px solid var(--border); border-bottom: .5px solid var(--border); padding: 15px 0 16px;">
+      <p style="padding: 0 18px; font-size: 14px; margin-bottom: 13px;">De saison en septembre</p>
+      <div style="padding: 0 18px; display: flex; gap: 10px;">
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Courgette</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Tomate</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Potimarron</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Raisin</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Fenouil</p>
+        </div>
+      </div>
+      <p style="padding: 0 18px; margin-top: 13px; font-size: 12px; color: var(--text-secondary);">Raisin part fin octobre</p>
+    </section>
+
+    <div style="padding: 18px 18px 16px; display: flex; gap: 13px; flex-wrap: wrap;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: .45;">
+        <svg width="52" height="52" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="20.02 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="9.01 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">C</text></svg>
+        <p style="font-size: 11px; color: var(--text-secondary);">Claire</p>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: .45;">
+        <svg width="52" height="52" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="18.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="11.01 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="7.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">M</text></svg>
+        <p style="font-size: 11px; color: var(--text-secondary);">Marc</p>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <svg width="52" height="52" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="12.21 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="8.41 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="11.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">L</text></svg>
+        <p style="font-size: 11px; color: var(--text-secondary);">Léa</p>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: .45;">
+        <svg width="52" height="52" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="14.01 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="19.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="9.61 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="10.41 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">T</text></svg>
+        <p style="font-size: 11px; color: var(--text-secondary);">Tom</p>
+      </div>
+    </div>
+
+    <section style="padding: 0 18px 16px;">
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 14px 15px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div>
+            <p style="font-size: 15px;">Léa</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">2 repas aujourd’hui</p>
+          </div>
+          <div>
+            <div style="display: flex; gap: 7px; align-items: flex-end; justify-content: center; height: 58px;">
+              <div style="width: 17px; height: 58px; background: var(--surface-2); border-radius: 3px; display: flex; align-items: flex-end; position: relative; border: .5px solid var(--border);">
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 33px; border-top: 1px dashed var(--border-strong); opacity: .7;"></span>
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 53px; border-top: 1px solid var(--text-warning); opacity: .55;"></span>
+                <span style="width: 100%; height: 34.5px; border-radius: 3px; display: block; position: relative; background: #7F77DD;"></span>
+              </div>
+              <div style="width: 17px; height: 58px; background: var(--surface-2); border-radius: 3px; display: flex; align-items: flex-end; position: relative; border: .5px solid var(--border);">
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 37.4px; border-top: 1px dashed var(--border-strong); opacity: .7;"></span>
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 52.4px; border-top: 1px solid var(--text-warning); opacity: .55;"></span>
+                <span style="width: 100%; height: 22.8px; border-radius: 3px; display: block; position: relative; background: #EF9F27;"></span>
+              </div>
+              <div style="width: 17px; height: 58px; background: var(--surface-2); border-radius: 3px; display: flex; align-items: flex-end; position: relative; border: .5px solid var(--border);">
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 41.4px; border-top: 1px dashed var(--border-strong); opacity: .7;"></span>
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 51.8px; border-top: 1px solid var(--text-warning); opacity: .55;"></span>
+                <span style="width: 100%; height: 54.7px; border-radius: 3px; display: block; position: relative; background: #378ADD;"></span>
+              </div>
+              <div style="width: 17px; height: 58px; background: var(--surface-2); border-radius: 3px; display: flex; align-items: flex-end; position: relative; border: .5px solid var(--border);">
+                <span style="position: absolute; left: -1px; right: -1px; bottom: 44.6px; border-top: 1px dashed var(--border-strong); opacity: .7;"></span>
+                <span style="width: 100%; height: 18.7px; border-radius: 3px; display: block; position: relative; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 3px, transparent 3px 6px), #1D9E75;"></span>
+              </div>
+              <div style="width: 17px; height: 58px; background: var(--surface-2); border-radius: 3px; display: flex; align-items: flex-end; position: relative; border: .5px solid var(--border);">
+                <span style="width: 100%; height: 25.9px; border-radius: 3px; display: block; position: relative; background: #639922;"></span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 7px; justify-content: center; align-items: center; margin-top: 6px;">
+              <span style="width: 17px; font-size: 11px; color: var(--text-muted); text-align: center;">Pr</span>
+              <span style="width: 17px; font-size: 11px; color: var(--text-muted); text-align: center;">Gl</span>
+              <span style="width: 17px; font-size: 11px; color: var(--text-muted); text-align: center;">Li</span>
+              <span style="width: 17px; font-size: 11px; color: var(--text-muted); text-align: center;">Fi</span>
+              <span style="width: 17px; font-size: 11px; color: var(--text-muted); text-align: center;">Vé</span>
+              <span style="margin-left: 2px; color: var(--text-muted); display: flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg></span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+          <p>glucides : il manque 38&nbsp;g</p>
+          <p>lipides : 6&nbsp;g au-delà du repère</p>
+          <p>fibres : il manque 9&nbsp;g au plus</p>
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5;">fibres : au moins ce qui est affiché, un aliment n’est pas rattaché</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5;">Part végétale du jour : 58&nbsp;% — moyenne du foyer sur 7 jours : 50&nbsp;%.</p>
+      </div>
+    </section>
+
+    <div style="padding: 0 18px 14px; display: flex; flex-wrap: wrap; gap: 5px 12px; font-size: 11px; color: var(--text-secondary);">
+      <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #7F77DD;"></span>Protéines</span>
+      <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #EF9F27;"></span>Glucides</span>
+      <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #378ADD;"></span>Lipides</span>
+      <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #1D9E75;"></span>Fibres</span>
+      <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #639922;"></span>Végétal</span>
+    </div>
+
+    <div style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 14px; overflow: hidden;">
+        <div style="height: 118px; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg>
+          <span style="position: absolute; top: 10px; left: 10px; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--green-900); color: var(--green-100); display: flex; align-items: center; gap: 5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg><span>2 produits de saison</span></span>
+        </div>
+        <div style="padding: 13px 14px;">
+          <p style="font-size: 17px;">Gratin de courgettes</p>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Déjeuner · toute la famille</p>
+        </div>
+      </div>
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface-1); color: var(--text-secondary);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Tartines, fromage blanc, pomme</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Petit-déj · toute la famille</p>
+        </div>
+      </div>
+      <div style="border: .5px solid var(--coral-line); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #D85A30; color: #fff;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Ajouter un repas</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Ou partage depuis Jow</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav style="border-top: .5px solid var(--border); display: flex; background: var(--surface-2);">
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--coral-fg); box-shadow: inset 0 2px 0 #D85A30;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 4v4h4"></path><path d="M12 8v4l3 2"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M16 5.5a3 3 0 0 1 0 5M18 20a6 6 0 0 0-2-4.5"></path></svg></span>
+  </nav>
+</div>
+</div>
+</div>
+</figure>
+<figure>
+<figcaption>Proposé<b>Aujourd’hui — thème clair</b></figcaption>
+<div class="frame">
+<div class="t" style="color-scheme: light; width: 390px; background: var(--surface-0);">
+<div style="background: var(--warm); display: flex; flex-direction: column;">
+
+  <header style="background: #D85A30; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; color: #FAECE7;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+      <span style="width: 23px; height: 23px; border-radius: 7px; background: #FAECE7; color: #D85A30; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+      <span>Tablée</span>
+    </div>
+    <span style="padding: 4px; color: #F5C4B3; display: flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"></path><path d="M20 12H10m10 0-3-3m3 3-3 3"></path></svg></span>
+  </header>
+
+  <main style="flex: 1;">
+    <div style="padding: 20px 18px 0;">
+      <p style="font-size: 12px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase;">Dimanche 13 septembre</p>
+      <p style="font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-size: 32px; line-height: 1.05; margin-top: 6px;">Deux repas<br>à table</p>
+    </div>
+
+    <section style="margin-top: 20px; background: var(--surface-2); border-top: .5px solid var(--border); border-bottom: .5px solid var(--border); padding: 15px 0 16px;">
+      <p style="padding: 0 18px; font-size: 14px; margin-bottom: 13px;">De saison en septembre</p>
+      <div style="padding: 0 18px; display: flex; gap: 10px;">
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Courgette</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Tomate</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Potimarron</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Raisin</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Fenouil</p>
+        </div>
+      </div>
+      <p style="padding: 0 18px; margin-top: 13px; font-size: 12px; color: var(--text-secondary);">Raisin part fin octobre</p>
+    </section>
+
+    <section style="padding: 22px 18px 18px; display: flex; flex-direction: column; gap: 12px;">
+      <p style="font-size: 14px;">Où en est la tablée</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4;">
+          <span style="display: flex; padding-top: 2px; color: var(--coral-600);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg></span>
+          <p><span style="font-weight: 500;">Fibres</span> <span style="font-weight: 500; color: var(--coral-600);">à compléter</span> pour 3 assiettes sur 4</p>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4;">
+          <span style="display: flex; padding-top: 2px; color: var(--text-success);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg></span>
+          <p><span style="font-weight: 500;">Protéines</span> <span style="font-weight: 500; color: var(--text-success);">dans le repère</span> pour toute la tablée</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4px; border-bottom: .5px solid var(--border);">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="20.02 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="9.01 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">C</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Claire</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="18.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="11.01 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="7.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">M</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Marc</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; box-shadow: inset 0 -2px 0 #D85A30;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="12.21 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="8.41 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="11.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">L</text></svg>
+          <p style="font-size: 12px; font-weight: 500;">Léa</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="14.01 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="19.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="9.61 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="10.41 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">T</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Tom</p>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 16px 15px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+          <p style="font-size: 17px;">Léa</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">2 repas aujourd’hui</p>
+        </div>
+
+        <div style="position: relative; height: 14px; margin-top: 14px; font-size: 11px; color: var(--text-secondary);">
+          <span style="position: absolute; left: 0; top: 0;">% du repère du jour</span>
+          <span style="position: absolute; left: 170px; top: 0; transform: translateX(-50%);">repère</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7F77DD;"></span><span style="font-size: 14px;">Protéines</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-success);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg><span>Dans le repère</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 85px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 177px; background: #7F77DD; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 254px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">104&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #EF9F27;"></span><span style="font-size: 14px;">Glucides</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 68px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 104px; background: #EF9F27; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 237px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">61&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #378ADD;"></span><span style="font-size: 14px;">Lipides</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"></path></svg><span>6&nbsp;g au-delà</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 43px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 224px; background: #378ADD; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 212px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">132&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1D9E75;"></span><span style="font-size: 14px;">Fibres</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 9&nbsp;g au plus</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 102px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 71px; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 3px, transparent 3px 6px), #1D9E75; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">42&nbsp;%</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 14px; border-top: .5px solid var(--border); display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #639922;"></span><span style="font-size: 14px;">Part végétale</span></div>
+            <span style="font-size: 12px; color: var(--text-secondary);">de l’assiette, sans repère</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 158px; background: #639922; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 135px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-secondary);"></span>
+            </div>
+            <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">58&nbsp;%</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary);">Le trait : moyenne du foyer sur 7 jours, 50&nbsp;%</p>
+        </div>
+
+        <div style="margin-top: 14px; padding-top: 12px; border-top: .5px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.5; color: var(--text-secondary);">
+            <span style="display: flex; padding-top: 2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg></span>
+            <p>Fibres : au moins ce qui est affiché, un aliment n’est pas rattaché.</p>
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px;">D’où viennent ces repères</p>
+        </div>
+      </div>
+    </section>
+
+    <div style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 14px; overflow: hidden;">
+        <div style="height: 118px; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg>
+          <span style="position: absolute; top: 10px; left: 10px; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--green-900); color: var(--green-100); display: flex; align-items: center; gap: 5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg><span>2 produits de saison</span></span>
+        </div>
+        <div style="padding: 13px 14px;">
+          <p style="font-size: 17px;">Gratin de courgettes</p>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Déjeuner · toute la famille</p>
+        </div>
+      </div>
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface-1); color: var(--text-secondary);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Tartines, fromage blanc, pomme</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Petit-déj · toute la famille</p>
+        </div>
+      </div>
+      <div style="border: .5px solid var(--coral-line); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #D85A30; color: #fff;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Ajouter un repas</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Ou partage depuis Jow</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav style="border-top: .5px solid var(--border); display: flex; background: var(--surface-2);">
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--coral-fg); box-shadow: inset 0 2px 0 #D85A30;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 4v4h4"></path><path d="M12 8v4l3 2"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M16 5.5a3 3 0 0 1 0 5M18 20a6 6 0 0 0-2-4.5"></path></svg></span>
+  </nav>
+</div>
+</div>
+</div>
+</figure>
+<figure>
+<figcaption>Proposé<b>Aujourd’hui — thème sombre</b></figcaption>
+<div class="frame">
+<div class="t" style="color-scheme: dark; width: 390px; background: var(--surface-0);">
+<div style="background: var(--warm); display: flex; flex-direction: column;">
+
+  <header style="background: #D85A30; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; color: #FAECE7;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+      <span style="width: 23px; height: 23px; border-radius: 7px; background: #FAECE7; color: #D85A30; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+      <span>Tablée</span>
+    </div>
+    <span style="padding: 4px; color: #F5C4B3; display: flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"></path><path d="M20 12H10m10 0-3-3m3 3-3 3"></path></svg></span>
+  </header>
+
+  <main style="flex: 1;">
+    <div style="padding: 20px 18px 0;">
+      <p style="font-size: 12px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase;">Dimanche 13 septembre</p>
+      <p style="font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-size: 32px; line-height: 1.05; margin-top: 6px;">Deux repas<br>à table</p>
+    </div>
+
+    <section style="margin-top: 20px; background: var(--surface-2); border-top: .5px solid var(--border); border-bottom: .5px solid var(--border); padding: 15px 0 16px;">
+      <p style="padding: 0 18px; font-size: 14px; margin-bottom: 13px;">De saison en septembre</p>
+      <div style="padding: 0 18px; display: flex; gap: 10px;">
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Courgette</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+            <span style="position: absolute; bottom: -1px; right: -1px; width: 17px; height: 17px; border-radius: 50%; background: var(--green-600); border: 2px solid var(--surface-2); color: #fff; display: flex; align-items: center; justify-content: center;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"></path></svg></span>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center;">Tomate</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Potimarron</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Raisin</p>
+        </div>
+        <div style="width: 56px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+          <div style="width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-1); border: .5px dashed var(--border-strong); color: var(--text-muted);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg>
+          </div>
+          <p style="font-size: 11px; line-height: 1.25; text-align: center; color: var(--text-secondary);">Fenouil</p>
+        </div>
+      </div>
+      <p style="padding: 0 18px; margin-top: 13px; font-size: 12px; color: var(--text-secondary);">Raisin part fin octobre</p>
+    </section>
+
+    <section style="padding: 22px 18px 18px; display: flex; flex-direction: column; gap: 12px;">
+      <p style="font-size: 14px;">Où en est la tablée</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4;">
+          <span style="display: flex; padding-top: 2px; color: var(--coral-600);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg></span>
+          <p><span style="font-weight: 500;">Fibres</span> <span style="font-weight: 500; color: var(--coral-600);">à compléter</span> pour 3 assiettes sur 4</p>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4;">
+          <span style="display: flex; padding-top: 2px; color: var(--text-success);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg></span>
+          <p><span style="font-weight: 500;">Protéines</span> <span style="font-weight: 500; color: var(--text-success);">dans le repère</span> pour toute la tablée</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4px; border-bottom: .5px solid var(--border);">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="20.02 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="9.01 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">C</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Claire</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="20.02 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="18.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="11.01 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="7.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">M</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Marc</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; box-shadow: inset 0 -2px 0 #D85A30;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="12.21 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="20.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="8.41 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="11.61 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">L</text></svg>
+          <p style="font-size: 12px; font-weight: 500;">Léa</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 9px; opacity: .55;">
+          <svg width="40" height="40" viewBox="0 0 52 52"><g transform="rotate(-90 26 26)"><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" style="stroke: var(--coral-track);" stroke-dasharray="20.02 2.6"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#7F77DD" stroke-dasharray="20.02 113.1" stroke-dashoffset="0"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#EF9F27" stroke-dasharray="14.01 113.1" stroke-dashoffset="-22.62"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#378ADD" stroke-dasharray="19.02 113.1" stroke-dashoffset="-45.24"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#1D9E75" stroke-dasharray="9.61 113.1" stroke-dashoffset="-67.86"></circle><circle cx="26" cy="26" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke="#639922" stroke-dasharray="10.41 113.1" stroke-dashoffset="-90.48"></circle></g><text x="26" y="31" text-anchor="middle" font-size="14" style="fill: var(--text-primary); font-family: Inter, system-ui, sans-serif;">T</text></svg>
+          <p style="font-size: 12px; color: var(--text-secondary);">Tom</p>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 16px 15px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+          <p style="font-size: 17px;">Léa</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">2 repas aujourd’hui</p>
+        </div>
+
+        <div style="position: relative; height: 14px; margin-top: 14px; font-size: 11px; color: var(--text-secondary);">
+          <span style="position: absolute; left: 0; top: 0;">% du repère du jour</span>
+          <span style="position: absolute; left: 170px; top: 0; transform: translateX(-50%);">repère</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7F77DD;"></span><span style="font-size: 14px;">Protéines</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-success);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg><span>Dans le repère</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 85px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 177px; background: #7F77DD; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 254px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">104&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #EF9F27;"></span><span style="font-size: 14px;">Glucides</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 68px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 104px; background: #EF9F27; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 237px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">61&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #378ADD;"></span><span style="font-size: 14px;">Lipides</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"></path></svg><span>6&nbsp;g au-delà</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 43px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 224px; background: #378ADD; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+                <span style="position: absolute; left: 212px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">132&nbsp;%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1D9E75;"></span><span style="font-size: 14px;">Fibres</span></div>
+              <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 9&nbsp;g au plus</span></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+                <span style="position: absolute; left: 170px; width: 102px; top: 0; bottom: 0; background: var(--band);"></span>
+                <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 71px; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 3px, transparent 3px 6px), #1D9E75; border-radius: 0 4px 4px 0;"></span>
+                <span style="position: absolute; left: 169px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              </div>
+              <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">42&nbsp;%</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 14px; border-top: .5px solid var(--border); display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #639922;"></span><span style="font-size: 14px;">Part végétale</span></div>
+            <span style="font-size: 12px; color: var(--text-secondary);">de l’assiette, sans repère</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 272px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 158px; background: #639922; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 135px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-secondary);"></span>
+            </div>
+            <span style="width: 44px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">58&nbsp;%</span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary);">Le trait : moyenne du foyer sur 7 jours, 50&nbsp;%</p>
+        </div>
+
+        <div style="margin-top: 14px; padding-top: 12px; border-top: .5px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.5; color: var(--text-secondary);">
+            <span style="display: flex; padding-top: 2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg></span>
+            <p>Fibres : au moins ce qui est affiché, un aliment n’est pas rattaché.</p>
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary); text-decoration: underline; text-underline-offset: 2px;">D’où viennent ces repères</p>
+        </div>
+      </div>
+    </section>
+
+    <div style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 14px; overflow: hidden;">
+        <div style="height: 118px; position: relative; display: flex; align-items: center; justify-content: center; background: var(--green-100); color: var(--green-900);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg>
+          <span style="position: absolute; top: 10px; left: 10px; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--green-900); color: var(--green-100); display: flex; align-items: center; gap: 5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20C3 12 8 4 20 4c0 12-8 16-16 16Z"></path><path d="M10 14c2-3 5-5 8-6"></path></svg><span>2 produits de saison</span></span>
+        </div>
+        <div style="padding: 13px 14px;">
+          <p style="font-size: 17px;">Gratin de courgettes</p>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Déjeuner · toute la famille</p>
+        </div>
+      </div>
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface-1); color: var(--text-secondary);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Tartines, fromage blanc, pomme</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Petit-déj · toute la famille</p>
+        </div>
+      </div>
+      <div style="border: .5px solid var(--coral-line); border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 9px 12px 9px 9px;">
+        <span style="width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #D85A30; color: #fff;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+        <div>
+          <p style="font-size: 14px;">Ajouter un repas</p>
+          <p style="font-size: 12px; color: var(--text-secondary);">Ou partage depuis Jow</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav style="border-top: .5px solid var(--border); display: flex; background: var(--surface-2);">
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--coral-fg); box-shadow: inset 0 2px 0 #D85A30;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 4v4h4"></path><path d="M12 8v4l3 2"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M16 5.5a3 3 0 0 1 0 5M18 20a6 6 0 0 0-2-4.5"></path></svg></span>
+  </nav>
+</div>
+</div>
+</div>
+</figure>
+<div class="note">
+<p><b>Ce qui change.</b></p>
+<ol>
+<li><b>Le bilan s’ouvre sans tap.</b> Aujourd’hui il faut toucher un anneau pour voir les barres d’une personne.</li>
+<li><b>Les anneaux deviennent le sélecteur de personne</b>, soulignés de terracotta pour la personne affichée.</li>
+<li><b>Des barres horizontales sur une échelle commune</b>, de 0 à 160&nbsp;% du repère : le trait du repère tombe au même endroit sur chaque ligne.</li>
+<li><b>Chaque barre porte son nom et sa valeur en %.</b> La légende de cinq pastilles et les abréviations « Pr Gl Li Fi Vé » disparaissent.</li>
+<li><b>Un statut coloré par nutriment, aligné à droite</b> : on lit la colonne pour savoir ce qui reste à mettre dans l’assiette. Il remplace la liste grise.</li>
+<li><b>En tête, au plus deux phrases pour le foyer</b> : l’écart le plus partagé, ce que tout le monde a atteint. Aucun prénom, aucun décompte par personne (§14bis).</li>
+<li><b>La part végétale est à part</b>, sous un filet, sur sa propre échelle (0 à 100&nbsp;% de l’assiette) et sans statut : c’est une tendance (§8).</li>
+</ol>
+<p style="margin-top: 12px;"><b>Ce qui ne change pas.</b> La date et le titre, la bande de saison à sa place (§8bis), les cartes de repas, la navigation, le terracotta et les cinq couleurs de nutriments.</p>
+<p style="margin-top: 12px;"><b>Données.</b> Tout ce que l’écran affiche existe déjà dans <code>/api/dashboard</code> : <code>bars[].percent</code>, <code>percentMax</code>, <code>reference</code>, <code>referenceMax</code>, <code>remaining</code>, <code>excess</code>, <code>standing</code>, et <code>plant.householdAverage7d</code>.</p>
+</div>
+</div>
+
+<h2>Les graphes, avant et après</h2>
+<div class="table">
+<table>
+<thead><tr><th></th><th>Actuel</th><th>Proposé</th></tr></thead>
+<tbody>
+<tr><th>Taille</th><td>Colonnes de 17 × 58&nbsp;px, visibles après un tap ; anneaux de 52&nbsp;px où 100&nbsp;% vaut un arc de 20&nbsp;px</td><td>Barres de 272 × 12&nbsp;px, ouvertes d’office</td></tr>
+<tr><th>Échelle</th><td>Propre à chaque colonne, de 130 à 175&nbsp;% selon le plafond : deux hauteurs égales ne veulent pas dire la même chose</td><td>Commune à toutes les barres : 0 à 160&nbsp;% du repère</td></tr>
+<tr><th>Axe</th><td>Aucun ; le repère est un pointillé à hauteur variable</td><td>Axe nommé « % du repère du jour », trait du repère aligné d’une barre à l’autre</td></tr>
+<tr><th>Plafond</th><td>Trait ambre à 55&nbsp;% d’opacité</td><td>Zone grisée du repère au plafond, petit trait gris au plafond</td></tr>
+<tr><th>Légende</th><td>Cinq pastilles sous les anneaux, abréviations de deux lettres sous les colonnes</td><td>Plus de légende : chaque barre porte son nom en toutes lettres, avec une pastille de sa couleur</td></tr>
+<tr><th>Valeur</th><td>Dans l’infobulle seulement ; les grammes dans une liste grise</td><td>Le % écrit à droite de chaque barre ; les grammes dans le statut, en second</td></tr>
+<tr><th>Incertitude</th><td>Hachures et dégradé, expliqués en une phrase grise</td><td>Mêmes codes, conservés, et « au plus » dans le statut</td></tr>
+<tr><th>Semaine</th><td>Cases de 22 × 26&nbsp;px, sans valeur ni repère visuel</td><td>Un graphe par personne, colonnes de 24 × 96&nbsp;px, trait de la moyenne du foyer, dernière valeur écrite</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Les couleurs et les états</h2>
+<p class="sub">Quatre sens, chacun avec un mot et une icône, mesurés sur la carte blanche et sur la carte sombre. Il n’y a pas d’état « proche du repère » : il faudrait fixer un seuil que nulle source ne publie, et un seuil inventé est un repère inventé (I1).</p>
+<div class="gallery">
+<figure>
+<figcaption>Proposé<b>Couleurs et états des barres</b></figcaption>
+<div class="frame">
+<div class="t" style="color-scheme: light; width: 760px; background: var(--surface-0);">
+<div style="background: var(--warm); padding: 36px 32px 40px; display: flex; flex-direction: column; gap: 32px;">
+
+  <div>
+    <p style="font-size: 12px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase;">Proposition · accueil</p>
+    <p style="font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-size: 32px; line-height: 1.05; margin-top: 6px;">Des couleurs<br>qui orientent</p>
+    <p style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-top: 12px; max-width: 600px; text-wrap: pretty;">Quatre rôles, et pas un de plus. Chacun dit où en est une assiette par rapport à son repère du jour, avec un mot et une icône : en niveaux de gris, l’écran dit la même chose.</p>
+  </div>
+
+  <section style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 18px 22px 8px;">
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; font-size: 11px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase; padding-bottom: 10px;">
+      <span>Rôle</span><span>Fond clair</span><span>Fond sombre</span><span>Token · contraste</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: center; padding: 14px 0; border-top: .5px solid var(--border);">
+      <div>
+        <p style="font-size: 14px; font-weight: 500;">À compléter</p>
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 3px;">Ce qui reste à mettre dans l’assiette. Le terracotta du bouton « Ajouter un repas ».</p>
+      </div>
+      <div style="background: #FFFFFF; border: .5px solid rgba(0, 0, 0, .13); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #993C1D;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g</span></div>
+      <div style="background: #221E19; border: .5px solid rgba(255, 255, 255, .11); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #F0997B;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g</span></div>
+      <div>
+        <p style="font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;">--coral-600</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">6,96 : 1 · 7,53 : 1</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: center; padding: 14px 0; border-top: .5px solid var(--border);">
+      <div>
+        <p style="font-size: 14px; font-weight: 500;">Dans le repère</p>
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 3px;">Atteint. Un constat plus discret que ce qui reste à faire.</p>
+      </div>
+      <div style="background: #FFFFFF; border: .5px solid rgba(0, 0, 0, .13); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #0F6E56;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg><span>Dans le repère</span></div>
+      <div style="background: #221E19; border: .5px solid rgba(255, 255, 255, .11); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #7DD3B6;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg><span>Dans le repère</span></div>
+      <div>
+        <p style="font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;">--text-success</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">6,20 : 1 · 9,36 : 1</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: center; padding: 14px 0; border-top: .5px solid var(--border);">
+      <div>
+        <p style="font-size: 14px; font-weight: 500;">Au-delà du repère</p>
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 3px;">Au-dessus du plafond publié. Ambre, jamais rouge : rien n’est une faute.</p>
+      </div>
+      <div style="background: #FFFFFF; border: .5px solid rgba(0, 0, 0, .13); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #854F0B;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"></path></svg><span>6&nbsp;g au-delà</span></div>
+      <div style="background: #221E19; border: .5px solid rgba(255, 255, 255, .11); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #F0C273;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"></path></svg><span>6&nbsp;g au-delà</span></div>
+      <div>
+        <p style="font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;">--text-warning</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">6,73 : 1 · 9,99 : 1</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: center; padding: 14px 0; border-top: .5px solid var(--border);">
+      <div>
+        <p style="font-size: 14px; font-weight: 500;">Inconnu</p>
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 3px;">Pas de repère, ou une valeur incertaine. Ce qu’on ne sait pas ne se colore pas.</p>
+      </div>
+      <div style="background: #FFFFFF; border: .5px solid rgba(0, 0, 0, .13); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #5F5E5A;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg><span>Pas de repère</span></div>
+      <div style="background: #221E19; border: .5px solid rgba(255, 255, 255, .11); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: #ADA79C;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg><span>Pas de repère</span></div>
+      <div>
+        <p style="font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;">--text-secondary</p>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">6,49 : 1 · 6,93 : 1</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p style="font-size: 14px; font-weight: 500;">Cinq règles</p>
+    <ol style="margin: 10px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); max-width: 640px;">
+      <li><span style="color: var(--text-primary); font-weight: 500;">Jamais la couleur seule.</span> Un mot et une icône l’accompagnent toujours.</li>
+      <li><span style="color: var(--text-primary); font-weight: 500;">Pas de rouge.</span> « Au-delà » est un constat, « à compléter » une invitation : la même couleur que le geste qui y répond.</li>
+      <li><span style="color: var(--text-primary); font-weight: 500;">Le texte ne porte jamais la couleur d’un nutriment.</span> Les cinq couleurs restent sur les barres (§8ter) ; le nom du nutriment est à l’encre, une pastille à côté.</li>
+      <li><span style="color: var(--text-primary); font-weight: 500;">Pas de décompte par personne.</span> « 3 repères sur 4 » sous un prénom est un score (§14bis). La phrase du foyer compte des assiettes, sans nommer personne.</li>
+      <li><span style="color: var(--text-primary); font-weight: 500;">Végétal n’a pas de statut.</span> C’est une tendance sans cible (§8) : ni vert, ni terracotta, seulement le trait de la moyenne du foyer.</li>
+    </ol>
+  </section>
+
+  <section>
+    <p style="font-size: 14px; font-weight: 500;">La barre, dans tous ses états</p>
+    <p style="font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin-top: 4px; max-width: 640px;">Une échelle commune, de 0 à 160&nbsp;% du repère : le trait du repère tombe au même endroit sur chaque ligne. La zone grisée va du repère au plafond quand la source en publie un ; le petit trait gris marque le plafond.</p>
+
+    <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 4px 22px; margin-top: 12px;">
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0;">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Dans le repère</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">Entre le repère et le plafond.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #7F77DD;"></span><span style="font-size: 14px;">Protéines</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-success);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 3 3 5-6"></path></svg><span>Dans le repère</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 245px; width: 122px; top: 0; bottom: 0; background: var(--band);"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 255px; background: #7F77DD; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 244px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              <span style="position: absolute; left: 366px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">104&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">À compléter</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">Sous le repère. Les grammes en second, le % d’abord (R3).</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #EF9F27;"></span><span style="font-size: 14px;">Glucides</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 245px; width: 98px; top: 0; bottom: 0; background: var(--band);"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 150px; background: #EF9F27; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 244px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              <span style="position: absolute; left: 342px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">61&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Au-delà du repère</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">La barre franchit le plafond.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #378ADD;"></span><span style="font-size: 14px;">Lipides</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-warning);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"></path></svg><span>6&nbsp;g au-delà</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 245px; width: 61px; top: 0; bottom: 0; background: var(--band);"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 323px; background: #378ADD; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 244px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              <span style="position: absolute; left: 305px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">132&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Fourchette</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">La source ne donne qu’un intervalle : la partie pâle est possible, pas acquise.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #EF9F27;"></span><span style="font-size: 14px;">Glucides</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 38&nbsp;g au plus</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 245px; width: 98px; top: 0; bottom: 0; background: var(--band);"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 191px; background: #EF9F27; opacity: .28; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 150px; background: #EF9F27; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 244px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+              <span style="position: absolute; left: 342px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-muted);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">61–78&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Partielle</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">Un aliment n’est pas rattaché : le total ne peut que monter.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1D9E75;"></span><span style="font-size: 14px;">Fibres</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--coral-600);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg><span>Il manque 9&nbsp;g au plus</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 245px; width: 147px; top: 0; bottom: 0; background: var(--band);"></span>
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 103px; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, .55) 0 3px, transparent 3px 6px), #1D9E75; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 244px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-primary);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">42&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Indisponible</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">Aucune source pour cet âge. Pas une barre à zéro.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1D9E75;"></span><span style="font-size: 14px;">Fibres</span></div>
+            <div style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg><span>Repère indisponible pour cet âge</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 392px; height: 12px; border-radius: 2px; border: .5px dashed var(--border-strong);"></div>
+            <span style="width: 68px;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 24px; align-items: center; padding: 16px 0; border-top: .5px solid var(--border);">
+        <div style="width: 160px; flex-shrink: 0;">
+          <p style="font-size: 13px; font-weight: 500;">Part végétale</p>
+          <p style="font-size: 12px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px;">Sa propre échelle, de 0 à 100&nbsp;% de l’assiette. Une tendance, aucun statut.</p>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #639922;"></span><span style="font-size: 14px;">Part végétale</span></div>
+            <span style="font-size: 12px; color: var(--text-secondary);">le trait : moyenne du foyer sur 7 jours</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="position: relative; width: 392px; height: 12px; border-radius: 2px; background: var(--surface-1);">
+              <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 227px; background: #639922; border-radius: 0 4px 4px 0;"></span>
+              <span style="position: absolute; left: 195px; top: -3px; width: 2px; height: 18px; border-radius: 1px; background: var(--text-secondary);"></span>
+            </div>
+            <span style="width: 68px; text-align: right; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">58&nbsp;%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.55; color: var(--text-secondary); max-width: 660px;">
+    <span style="display: flex; padding-top: 2px; flex-shrink: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5.5M12 7.5v.5"></path></svg></span>
+    <p><span style="color: var(--text-primary); font-weight: 500;">Le glucide pâle, compensé plutôt que corrigé.</span> #EF9F27 ne fait que 2,17 : 1 sur la carte blanche (dette n° 13). Chaque barre porte donc son nom en toutes lettres et sa valeur en % : la couleur n’est jamais la seule façon de lire. Assombrir le glucide en mode clair reste une décision à prendre, que cette proposition ne prend pas.</p>
+  </section>
+</div>
+</div>
+</div>
+</figure>
+<figure>
+<figcaption>Proposé<b>La semaine</b></figcaption>
+<div class="frame">
+<div class="t" style="color-scheme: light; width: 390px; background: var(--surface-0);">
+<div style="background: var(--warm); display: flex; flex-direction: column;">
+
+  <header style="background: #D85A30; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; color: #FAECE7;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+      <span style="width: 23px; height: 23px; border-radius: 7px; background: #FAECE7; color: #D85A30; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9Z"></path><path d="M17 4v5"></path></svg></span>
+      <span>Tablée</span>
+    </div>
+    <span style="padding: 4px; color: #F5C4B3; display: flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"></path><path d="M20 12H10m10 0-3-3m3 3-3 3"></path></svg></span>
+  </header>
+
+  <main style="flex: 1;">
+    <div style="padding: 20px 18px 0;">
+      <p style="font-size: 12px; color: var(--text-muted); letter-spacing: .4px; text-transform: uppercase;">La semaine</p>
+      <p style="font-family: 'Fraunces', Georgia, 'Times New Roman', serif; font-size: 32px; line-height: 1.05; margin-top: 6px;">Du 7<br>au 13 septembre</p>
+    </div>
+
+    <div style="padding: 14px 18px 0; display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 12px; padding: 4px 9px; border-radius: 8px; background: var(--surface-1); color: var(--text-secondary);">Semaine précédente</span>
+    </div>
+
+    <section style="padding: 22px 18px 18px; display: flex; flex-direction: column; gap: 10px;">
+      <p style="font-size: 14px;">Part végétale, jour par jour</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--text-secondary);">
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #639922;"></span>Part végétale de l’assiette</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 14px; height: 1px; background: var(--text-secondary);"></span>Moyenne du foyer, 50&nbsp;%</span>
+        <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 2px; border: .5px dashed var(--border-strong);"></span>Rien de saisi</span>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 14px 15px; margin-top: 2px;">
+        <p style="font-size: 15px;">Claire</p>
+        <div style="position: relative; margin-top: 10px; height: 96px; border-bottom: 1px solid var(--border);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 50px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 59px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 20px; border: .5px dashed var(--border-strong); border-radius: 4px;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 45px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 53px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 38px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums;">45&nbsp;%</span><span style="width: 24px; height: 43px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+          </div>
+          <span style="position: absolute; left: 0; right: 0; bottom: 48px; height: 1px; background: var(--text-secondary);"></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 6px; font-size: 11px; color: var(--text-muted); text-align: center;">
+          <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span style="color: var(--text-primary); font-weight: 500;">di</span>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 14px 15px;">
+        <p style="font-size: 15px;">Marc</p>
+        <div style="position: relative; margin-top: 10px; height: 96px; border-bottom: 1px solid var(--border);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 36px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 42px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 48px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 3px; background: var(--border-strong);"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 35px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 39px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums;">38&nbsp;%</span><span style="width: 24px; height: 36px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+          </div>
+          <span style="position: absolute; left: 0; right: 0; bottom: 48px; height: 1px; background: var(--text-secondary);"></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 6px; font-size: 11px; color: var(--text-muted); text-align: center;">
+          <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span style="color: var(--text-primary); font-weight: 500;">di</span>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 14px 15px;">
+        <p style="font-size: 15px;">Léa</p>
+        <div style="position: relative; margin-top: 10px; height: 96px; border-bottom: 1px solid var(--border);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 58px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 53px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 46px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 60px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 20px; border: .5px dashed var(--border-strong); border-radius: 4px;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 49px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums;">58&nbsp;%</span><span style="width: 24px; height: 56px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+          </div>
+          <span style="position: absolute; left: 0; right: 0; bottom: 48px; height: 1px; background: var(--text-secondary);"></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 6px; font-size: 11px; color: var(--text-muted); text-align: center;">
+          <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span style="color: var(--text-primary); font-weight: 500;">di</span>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-2); border: .5px solid var(--border); border-radius: 12px; padding: 14px 15px;">
+        <p style="font-size: 15px;">Tom</p>
+        <div style="position: relative; margin-top: 10px; height: 96px; border-bottom: 1px solid var(--border);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 47px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 55px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 43px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 56px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 50px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="width: 24px; height: 20px; border: .5px dashed var(--border-strong); border-radius: 4px;"></span></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;"><span style="font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums;">52&nbsp;%</span><span style="width: 24px; height: 50px; background: #639922; border-radius: 4px 4px 0 0;"></span></div>
+          </div>
+          <span style="position: absolute; left: 0; right: 0; bottom: 48px; height: 1px; background: var(--text-secondary);"></span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 6px; font-size: 11px; color: var(--text-muted); text-align: center;">
+          <span>lu</span><span>ma</span><span>me</span><span>je</span><span>ve</span><span>sa</span><span style="color: var(--text-primary); font-weight: 500;">di</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav style="border-top: .5px solid var(--border); display: flex; background: var(--surface-2);">
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--coral-fg); box-shadow: inset 0 2px 0 #D85A30;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 4v4h4"></path><path d="M12 8v4l3 2"></path></svg></span>
+    <span style="flex: 1; padding: 10px 0 11px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0 1 12 0"></path><path d="M16 5.5a3 3 0 0 1 0 5M18 20a6 6 0 0 0-2-4.5"></path></svg></span>
+  </nav>
+</div>
+</div>
+</div>
+</figure>
+</div>
+
+</body>
+</html>

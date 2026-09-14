@@ -1231,11 +1231,11 @@ depuis les `portion_coef` courants (R2).
 
 | Écran | Contenu |
 |---|---|
-| **Aujourd'hui** (accueil) | Une carte par membre, les 5 barres en %, les repas du jour. Bouton d'ajout flottant. |
+| **Aujourd'hui** (accueil) | Une carte par membre, les 5 barres en %, les repas du jour. Bouton d'ajout flottant. *Précisé le 14/09/2026 :* le bilan est ouvert d'office, pour une personne à la fois — les anneaux servent à la choisir. Barres horizontales sur une échelle commune (0 à 160 % du repère), statut en mots et en icône (à compléter, dans le repère, au-delà), et au plus deux phrases pour le foyer, qui ne nomment personne. Mise en page et sens des couleurs : `docs/proposition-accueil.html`. |
 | **/share** | Intercepte le partage Jow. Affiche la recette, le nombre de parts, les cases « qui a mangé ». Deux taps pour valider. |
 | **Ajout rapide** | Templates en premier (gros boutons), puis **« Restes de… »** (repas des 3 derniers jours avec recette), puis recherche texte, puis photo. |
 | **Détail repas** | Composition, nutrition, participants, badge de confiance. Éditable. |
-| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. |
+| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. *Précisé le 14/09/2026 :* seule la part végétale est tracée, un petit graphe par personne avec la moyenne des jours saisis. `/api/week` ne renvoie pas les quatre autres barres, et « dans le repère 5 jours sur 7 » serait un score (§14bis). |
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
