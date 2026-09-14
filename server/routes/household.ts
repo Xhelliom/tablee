@@ -18,6 +18,7 @@
  * qu'un texte libre.
  */
 import type { FastifyInstance } from 'fastify';
+import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
 import { body, optionalStr, timezone } from '../http/validate.ts';
 import { updateHousehold } from '../repo/households.ts';
@@ -46,9 +47,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
     const identity = request.identity();
     // Un `adulte` saisit et lit ; il ne redéfinit pas ce qu'est une journée
     // pour tout le foyer.
-    if (identity.role !== 'parent') {
-      throw new ApiError(403, 'droits_insuffisants', 'seul un parent modifie le foyer');
-    }
+    assertParent(identity, 'seul un parent modifie le foyer');
 
     const input = body(request.body);
     const patch: { name?: string; timezone?: string } = {};

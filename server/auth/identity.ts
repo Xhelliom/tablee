@@ -17,6 +17,7 @@
  * actif frauduleux ne donne rien.
  */
 import type pg from 'pg';
+import { ApiError } from '../http/errors.ts';
 import type { Auth } from './auth.ts';
 import { isRole, type Role } from './auth.ts';
 
@@ -133,4 +134,25 @@ export async function readAuthState(
       role,
     },
   };
+}
+
+/**
+ * Exige le rôle `parent`, ou refuse en 403.
+ *
+ * ── Pourquoi une fonction plutôt qu'un `if` recopié ─────────────────────────
+ *
+ * Les rôles sont déclarés une fois dans `server/auth/auth.ts` : `parent` peut
+ * `eater: ['create','update','delete']`, `adulte` ne le peut pas. better-auth
+ * s'en sert pour garder **ses** routes — les invitations, les rôles, la
+ * suppression du foyer. Il ne sait rien des nôtres : sur `/api/eaters`, c'est
+ * à Tablée de vérifier, et ça ne s'était pas fait.
+ *
+ * Toutes les vérifications de rôle du domaine passent donc par ici. Chercher
+ * les appels de cette fonction donne la liste complète de ce qui est réservé
+ * aux parents — un `if` recopié dans trois fichiers ne se compte pas.
+ */
+export function assertParent(identity: Identity, message: string): void {
+  if (identity.role !== 'parent') {
+    throw new ApiError(403, 'droits_insuffisants', message);
+  }
 }

@@ -19,6 +19,7 @@ import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
 import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
+import { SECURITY_HEADERS } from './http/headers.ts';
 import { authRoutes } from './routes/auth.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
@@ -167,6 +168,17 @@ export function buildApp(
   app.decorateRequest('householdId', function (this: { auth: AuthState | null }): string {
     if (this.auth === null || this.auth.kind !== 'actif') throw ApiError.unauthorized();
     return this.auth.identity.householdId;
+  });
+
+  /**
+   * Les en-têtes de sécurité, sur toute réponse — page, fichier, API, erreur,
+   * 404. Posés en `onSend` justement pour que les chemins d'erreur, qui sont
+   * ceux qu'on oublie, ne soient pas l'exception. Voir `http/headers.ts` pour
+   * ce que chacun empêche.
+   */
+  app.addHook('onSend', (_request, reply, payload, done) => {
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) reply.header(name, value);
+    done(null, payload);
   });
 
   app.register(cookie);

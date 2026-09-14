@@ -23,7 +23,7 @@ import {
 import {
   createEater, findMembers, listEaters, updateEater, type Eater,
 } from '../repo/eaters.ts';
-import type { Identity } from '../auth/identity.ts';
+import { assertParent, type Identity } from '../auth/identity.ts';
 import type { HouseholdDb } from '../db.ts';
 import type { AppContext } from '../app.ts';
 
@@ -65,11 +65,13 @@ function present(
   };
 }
 
-const parentSeul = (identity: Identity, geste: string): void => {
-  if (identity.role !== 'parent') {
-    throw new ApiError(403, 'droits_insuffisants', `seul un parent peut ${geste}`);
-  }
-};
+/**
+ * La formulation locale du geste, par-dessus la vérification commune.
+ * `assertParent` vit dans `server/auth/identity.ts` : en chercher les appels
+ * donne la liste complète de ce qui est réservé aux parents.
+ */
+const parentSeul = (identity: Identity, geste: string): void =>
+  assertParent(identity, `seul un parent peut ${geste}`);
 
 /**
  * Traduit les deux collisions que la 009 rend possibles, plutôt que de les
