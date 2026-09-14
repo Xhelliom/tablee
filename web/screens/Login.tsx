@@ -232,7 +232,7 @@ function messageLisible(error: ApiError, mode: Mode): string {
 function erreurGoogle(code: string | null): string | null {
   if (code === null || code === 'access_denied') return null;
   if (code === 'account_not_linked') {
-    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe, puis liez Google depuis les réglages du foyer.';
+    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe, puis liez Google depuis votre profil.';
   }
   return 'La connexion avec Google n’a pas abouti. Réessayez, ou entrez avec votre adresse.';
 }
