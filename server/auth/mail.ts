@@ -125,7 +125,7 @@ const échapper = (s: string): string => s.replace(/[&<>"']/g, (c) => ENTITÉS[c
  * étroit renvoie le « » » seul à la ligne — vu sur un rendu à 400 px.
  */
 const typographier = (s: string): string =>
-  s.replace(/« /g, '« ').replace(/ (»|:)/g, ' $1');
+  s.replace(/« /g, '«\u00A0').replace(/ (»|:)/g, '\u00A0$1');
 
 export function composeMail(content: MailContent): Mail {
   const to = content.to;
@@ -135,7 +135,7 @@ export function composeMail(content: MailContent): Mail {
   const action = { label: typographier(content.action.label), url: content.action.url };
   const footer = typographier(content.footer);
 
-  const text = [...paragraphs, `${action.label} :\n${action.url}`, footer].join('\n\n');
+  const text = [...paragraphs, `${action.label}\u00A0:\n${action.url}`, footer].join('\n\n');
 
   const lien = échapper(action.url);
   const corps = paragraphs
@@ -165,7 +165,7 @@ ${corps}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td bgcolor="${CORAL}" style="border-radius:8px;"><a href="${lien}" style="display:inline-block;padding:13px 22px;${police(SANS, 15, 1, 600)}color:${ON_CORAL};text-decoration:none;border-radius:8px;">${échapper(action.label)}</a></td>
 </tr></table>
-<p style="margin:18px 0 0;${police(SANS, 12, 1.5)}color:${SECONDAIRE};">Si le bouton ne répond pas, copiez ce lien :<br><a href="${lien}" style="color:${SECONDAIRE};word-break:break-all;">${lien}</a></p>
+<p style="margin:18px 0 0;${police(SANS, 12, 1.5)}color:${SECONDAIRE};">Si le bouton ne répond pas, copiez ce lien\u00A0:<br><a href="${lien}" style="color:${SECONDAIRE};word-break:break-all;">${lien}</a></p>
 </td></tr>
 <tr><td style="padding:16px 24px 22px;border-top:1px solid ${FILET};${police(SANS, 12, 1.5)}color:${SECONDAIRE};">${échapper(footer)}</td></tr>
 </table>
