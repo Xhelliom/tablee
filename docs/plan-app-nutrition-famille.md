@@ -502,6 +502,9 @@ est la principale façon de faire échouer la V1.
 >   sien : les deux adresses peuvent différer (`allowDifferentEmails`), à la
 >   différence de la liaison implicite à la connexion. C'est la porte des
 >   comptes jamais confirmés.
+>   ⚠️ Déplacé le 14/09/2026 : la liaison vit sur « Votre profil » (`/profil`),
+>   plus dans les réglages du foyer — c'est le compte qu'on lie, pas le foyer.
+>   La page dit aussi si un compte Google est déjà lié.
 
 
 **Un compte par foyer. Pas de compte individuel.**

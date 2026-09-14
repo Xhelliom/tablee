@@ -33,7 +33,7 @@ import { formatGrams, formatPercentRange } from '../design/quantities.ts';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
 
 /** Le haut de l'échelle, en % du repère. */
-const SCALE = 160;
+export const SCALE = 160;
 
 /** La colonne des valeurs est fixe : sinon les pistes n'ont plus la même largeur. */
 const VALUE_WIDTH = 58;
@@ -246,7 +246,7 @@ function PlantRow({ plant }: { plant: PlantBar }): React.ReactElement {
  * borne haute quand la source ne donne qu'un intervalle ; sans borne haute, la
  * hachure dit que ça peut monter sans dire jusqu'où.
  */
-function Track({
+export function Track({
   color, percent, percentMax, state, scale, reference, ceiling, marker, label,
 }: {
   color: string;
@@ -302,7 +302,7 @@ function Tick({ left, color }: { left: string; color: string }): React.ReactElem
 }
 
 /** Rien de connu : pas de barre. Surtout pas une barre à zéro. */
-function EmptyTrack(): React.ReactElement {
+export function EmptyTrack(): React.ReactElement {
   return (
     <span style={{ flex: 1, height: 12, borderRadius: 2, border: '.5px dashed var(--border-strong)' }} />
   );

@@ -56,14 +56,9 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
           </div>
           <button
             type="button" className="row"
-            onClick={() => {
-              menu.current?.hidePopover();
-              navigate('/membres');
-              // `navigate` remonte en haut ; la section « Votre compte » est en pied d'écran.
-              requestAnimationFrame(() => document.getElementById('compte')?.scrollIntoView());
-            }}
+            onClick={() => { menu.current?.hidePopover(); navigate('/profil'); }}
           >
-            Votre compte
+            Votre profil
           </button>
           <button type="button" className="row" onClick={() => { void signOut(); }}>
             Se déconnecter
