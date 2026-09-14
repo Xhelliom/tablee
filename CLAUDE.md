@@ -33,6 +33,63 @@ les interdits ci-dessous, qui ne se négocient pas.
 
 ---
 
+## Carte du code
+
+```
+db/migrations/    SQL numéroté, jamais modifié après application
+db/seeds/         CSV versionnés, colonne `source` obligatoire sur chaque ligne
+scripts/          migrate, seed Ciqual, seed des repères, capture Jow, icônes
+server/
+  index.ts        démarrage : variables d'environnement, garde-fou RLS, écoute
+  app.ts          assemblage Fastify — le hook qui authentifie et scope, puis
+                  l'enregistrement des routes. Le meilleur point d'entrée.
+  db.ts           pool, `transaction`, `withHousehold` / `acquireForHousehold`
+  db/guard.ts     refuse de démarrer si la RLS n'est pas effective
+  auth/           better-auth : rôles, permissions, crochets d'organisation
+                  (auth.ts) ; qui parle et pour quel foyer (identity.ts)
+  http/           validation des corps, format d'erreur, fuseaux
+  routes/         l'API du §12 — un fichier par ressource
+  repo/           tout le SQL du domaine, scopé au foyer. Une route n'écrit
+                  jamais de SQL elle-même.
+  nutrition/      les trois algorithmes du §11, en applicatif
+  food/           lecture de l'export Ciqual, mapping des groupes
+  jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
+  test-support/   fabriques de comptes/foyers, base de test, migrations
+  *.test.ts       les suites d'intégration vivent à la racine de server/
+web/
+  App.tsx         le routeur et ses gardes (anonyme / sans foyer / accueil)
+  router.tsx      routage sur l'API History — pas de hash, `/share` en dépend
+  session.tsx     état partagé : compte, foyer actif, convives
+  api.ts          client HTTP **et** types partagés, recopiés du serveur exprès
+  screens/        un fichier par écran
+  components/     ce que plusieurs écrans partagent
+  design/         tokens.css (couleurs, typo), vocabulary.ts (les mots)
+deploy/k8s/       manifestes ; Dockerfile à la racine
+```
+
+Où chercher, selon la question :
+
+| Je cherche… | Fichier |
+|---|---|
+| comment une requête est authentifiée et rattachée à un foyer | `server/app.ts` (hook `onRequest`), puis `server/auth/identity.ts` |
+| la liste des routes, ou où en brancher une | bas de `buildApp` dans `server/app.ts` |
+| le SQL d'une table du domaine | `server/repo/<table>.ts` — **jamais** dans une route |
+| les trois algorithmes du §11 | `server/nutrition/{compute,shares,daily}.ts` |
+| comment un repère par âge est choisi | `server/nutrition/references.ts`, données dans `db/seeds/` |
+| les rôles, et ce qu'ils autorisent | `server/auth/auth.ts` (`ROLES`) |
+| valider un champ entrant | `server/http/validate.ts` |
+| ce que la RLS protège, et ce qu'elle **ne** protège pas | en-tête de `db/migrations/008_rls.sql` |
+| poser le foyer courant hors d'une requête (crochet, script) | `withHousehold` dans `server/db.ts` |
+| quel écran s'affiche quand | `web/App.tsx` |
+| fabriquer un compte, un foyer, une invitation dans un test | `server/test-support/auth.ts` |
+
+Le sens de circulation ne varie pas : **route → repo → base**. Une route valide,
+autorise et présente ; un repo écrit le SQL ; le calcul se fait en applicatif,
+entre les deux. Ce qui traverse cette pile sans passer par `request.db` n'est
+pas filtré par la RLS.
+
+---
+
 ## Règles absolues
 
 ### Ne jamais faire
@@ -209,6 +266,46 @@ l'invérifiable.
 
 ---
 
+## Faire tourner, et vérifier
+
+L'installation de zéro est dans le `README.md` — base, migrations, seed Ciqual,
+front, serveur. Ce qui suit est ce qu'on refait à chaque tour, et les pièges qui
+coûtent du temps parce qu'ils ne se voient pas.
+
+```bash
+npm run typecheck                       # DEUX projets : serveur, puis web/
+npm test                                # unitaires seuls
+TEST_DATABASE_URL=postgres://…/tablee_test npm test    # + intégration
+npm run build:web && npm start          # dans cet ordre, voir ci-dessous
+```
+
+- **Sans `TEST_DATABASE_URL`, les suites Postgres sont sautées.** Avec un
+  message, jamais silencieusement vertes — mais un « tout passe » qui ne prouve
+  rien reste un « tout passe ». Un `npm test` nu en passe 149 sur 216, et
+  laisse de côté tout ce qui touche aux comptes, aux foyers, à l'étanchéité et
+  au contrat d'API : exactement ce qui casse mal.
+- **Le rôle Postgres ne doit pas être superutilisateur.** Il contournerait la
+  RLS *en silence* : le serveur refuse alors de démarrer (`server/db/guard.ts`),
+  et les tests d'isolation passeraient au vert pour rien. `create role tablee
+  login nosuperuser` — c'est déjà arrivé, voir l'en-tête de la 008.
+- **`psql` ne montre rien.** Une table sous RLS interrogée avec le rôle
+  applicatif rend zéro ligne tant que `app.household_id` n'est pas posé. Ce
+  n'est pas une base vide, c'est la RLS qui fait son travail : passer par le
+  rôle propriétaire, ou poser `set_config('app.household_id', …, false)`.
+- **Le serveur lit `web/dist/index.html` une seule fois, au démarrage.** Après
+  un `npm run build:web`, il sert une coquille qui pointe vers un bundle
+  renommé, et la page reste blanche sur une erreur de type MIME. Redémarrer.
+  (`npm run dev:web` n'a pas ce problème : Vite sert la coquille lui-même.)
+- **`exactOptionalPropertyTypes` est actif** dans les deux projets. Une prop
+  facultative se passe par spread conditionnel — `{...(x ? { onCancel } : {})}` —
+  et non en lui donnant `undefined`.
+- **Il n'y a pas de linter**, et il n'y a **aucun test de bout en bout**. Le
+  typecheck et les tests d'intégration sont tout le filet automatique ; un
+  parcours d'écrans se vérifie en pilotant un navigateur, et la séquence de
+  référence sur un vrai téléphone est dans `docs/mise-en-service.md`.
+
+---
+
 ## Stack et conventions
 
 | Couche | Choix |
@@ -220,29 +317,10 @@ l'invérifiable.
 | Proxy | Caddy (HTTPS obligatoire pour le share target) |
 | Hébergement | Proxmox local |
 
-```
-/
-├── CLAUDE.md
-├── docs/
-│   ├── plan-app-nutrition-famille.md
-│   ├── mockups-tablee.html
-│   └── jow-contract.md
-├── .github/workflows/  image publiée sur ghcr.io, tests d'abord
-├── deploy/k8s/       manifestes de déploiement
-├── Dockerfile
-├── db/migrations/
-├── scripts/          seed-food.ts, seed-seasonal.ts
-├── server/
-│   ├── routes/
-│   ├── auth/         better-auth, rôles, résolution du foyer actif
-│   ├── jow/          parseur + contrat
-│   └── nutrition/    calcul, shares, repères
-└── web/
-    ├── screens/
-    └── design/       tokens couleur et typo
-```
+L'arborescence est dans « Carte du code », plus haut. Le CI publie l'image sur
+ghcr.io depuis `.github/workflows/`, tests d'abord.
 
-Conventions :
+Conventions de code :
 - Le calcul nutritionnel se fait **en applicatif**, pas en SQL. Voir §11 de la
   spec pour les trois algorithmes (`calculerNutrition`, `calculerShares`,
   `bilanJournalier`).
@@ -255,6 +333,29 @@ Conventions :
   de l'environnement, le second d'un seed joué une fois. Et `tsx` est une
   dépendance de service, pas de développement — le serveur exécute du
   TypeScript directement.
+
+Conventions d'écriture — elles se voient dans tous les fichiers, autant les
+dire :
+
+- **Les commentaires et tout ce qui atteint l'écran sont en français.** Sans
+  exception, guillemets « » compris.
+- **Les identifiants sont en anglais par défaut** — `createEater`,
+  `findReference`, `withHousehold`. Le français apparaît à deux endroits, et
+  c'est cohérent : quand la spec nomme le concept (`calculerNutrition`,
+  `calculerShares`, `bilanJournalier`) et sur les aides locales et les
+  composants d'écran (`traduire`, `lisible`, `FicheConvive`). Dans le doute,
+  suivre le fichier dans lequel on écrit plutôt qu'imposer une langue.
+- **Un en-tête de fichier dit pourquoi le fichier existe et ce qu'il refuse de
+  faire**, pas ce qu'il fait — le code le dit déjà. Un commentaire qui paraphrase
+  la ligne d'en dessous n'a pas sa place ; un commentaire qui explique pourquoi
+  la ligne d'en dessous n'est pas ce qu'on attendait, si.
+- **Une décision renversée se conserve et se date**, elle ne se supprime pas.
+  Les encarts `⚠️ Renversé le …` de la spec, l'en-tête des migrations, les
+  « Levées » de `docs/dette-technique.md` : le raisonnement d'origine explique
+  la forme du code, et l'effacer condamne à refaire l'erreur.
+- **Ce qui est approximatif se dit** dans `docs/dette-technique.md`, avec ce que
+  ça coûte et ce qui le lèverait. Une approximation consignée est une décision ;
+  une approximation tue est un piège.
 
 ---
 

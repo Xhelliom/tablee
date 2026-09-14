@@ -26,13 +26,19 @@ npm run migrate
 #    https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip
 npm run seed:food
 
-# 3. Le compte du foyer (§7 — un seul compte, pas d'inscription dans l'app)
-npm run household -- --login=maison --name="Chez nous"
-
-# 4. Le front, puis le serveur
+# 3. Le front, puis le serveur
 npm run build:web
+export TABLEE_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))")
 npm start                      # http://localhost:3000
 ```
+
+Il n'y a **pas** de commande pour créer le foyer : depuis la migration 007, le
+premier compte se crée dans l'app, et le foyer avec. L'inscription est ouverte
+— c'est ce qui permet à des amis de créer le leur (§16).
+
+`npm run build:web` **avant** `npm start`, et à nouveau à chaque changement du
+front : le serveur lit `web/dist/index.html` une seule fois, au démarrage. Le
+rebâtir sans redémarrer sert une coquille qui pointe vers un bundle renommé.
 
 En développement : `npm run dev` (serveur, rechargé à chaud) et
 `npm run dev:web` (Vite sur le port 5173, qui proxie `/api`). Sur
@@ -53,7 +59,22 @@ TEST_DATABASE_URL=postgres://…/tablee_test npm test   # + tests d'intégration
 ```
 
 Sans `TEST_DATABASE_URL`, les suites qui touchent à Postgres sont **sautées
-avec un message**, jamais silencieusement vertes.
+avec un message**, jamais silencieusement vertes. Un `npm test` nu en passe 149
+sur 216, et laisse de côté **tout** ce qui touche aux comptes, aux foyers, à
+l'étanchéité entre eux et au contrat d'API — c'est-à-dire ce qui casse mal.
+
+Le rôle Postgres de cette base **ne doit pas être superutilisateur** — il
+contournerait la RLS en silence, et les tests d'isolation passeraient au vert
+pour rien. Le serveur refuse d'ailleurs de démarrer dans cet état :
+
+```bash
+psql -c "create role tablee login password '…' nosuperuser"
+psql -c "create database tablee_test owner tablee"
+```
+
+Corollaire à connaître avant de croire une base vide : un `psql` avec ce rôle ne
+rend **aucune ligne** sur `eater`, `meal` ou `meal_template` tant que
+`app.household_id` n'est pas posé. C'est la RLS, pas une base vide.
 
 ---
 
@@ -138,17 +159,31 @@ pas 35 g. Ces deux-là passent par `food.unit_weights`, au cas par cas.
 
 ```
 db/migrations/      SQL numéroté, jamais modifié après application
-scripts/            seed Ciqual, création du foyer, icônes, migrations
+db/seeds/           CSV versionnés, colonne `source` obligatoire par ligne
+scripts/            migrations, seed Ciqual, seed des repères, capture Jow
 server/
-  jow/              parseur des pages publiques Jow (Tâche 0, verrouillée)
-  food/             lecture de l'export Ciqual + mapping des groupes
-  nutrition/        les trois algorithmes du §11, en applicatif
-  repo/             accès aux données, scopé au foyer de la session
+  app.ts            assemblage Fastify : le hook qui authentifie et scope au
+                    foyer, puis les routes. Le point d'entrée pour lire le reste.
+  db.ts             pool, transactions, `withHousehold` (le foyer courant)
+  auth/             better-auth : rôles et crochets, résolution du foyer actif
+  http/             validation des corps, format d'erreur, fuseaux
   routes/           l'API du §12
+  repo/             tout le SQL du domaine, scopé au foyer de la session
+  nutrition/        les trois algorithmes du §11, en applicatif
+  food/             lecture de l'export Ciqual + mapping des groupes
+  jow/              parseur des pages publiques Jow (Tâche 0, verrouillée)
+  test-support/     fabriques de comptes et de foyers pour les tests
 web/
+  App.tsx           le routeur et ses gardes
+  session.tsx       compte, foyer actif, convives
+  api.ts            client HTTP et types partagés (recopiés du serveur exprès)
   screens/          un fichier par écran
+  components/       ce que plusieurs écrans partagent
   design/           tokens.css (couleurs, typo) et vocabulary.ts (les mots)
 ```
+
+Le sens de circulation ne varie pas : **route → repo → base**, le calcul en
+applicatif entre les deux.
 
 ## Deux ou trois choses à savoir avant de toucher au code
 
