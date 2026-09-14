@@ -8,6 +8,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { AppContext } from '../app.ts';
+import { invitationUrl } from '../auth/auth.ts';
 import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
 import { listHouseholdsForUser } from '../repo/households.ts';
@@ -110,12 +111,21 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
    * (`POST /api/auth/organization/invite-member`) — cette route ne fait que
    * rendre l'URL correspondante, pour que le front n'ait pas à la fabriquer et
    * que sa forme reste décidée au même endroit que la route qui la reçoit.
+   *
+   * ⚠️ Nuancé le 14/09/2026 : une instance peut envoyer des mails
+   * (`TABLEE_MAIL`), et l'invitation part alors aussi par là. Le lien reste
+   * rendu, et `mailed` dit au parent s'il a encore à le transmettre.
    */
   app.get('/api/invitations/:id/lien', (request) => {
     const state = request.auth;
     if (state.kind !== 'actif') throw ApiError.unauthorized();
     assertParent(state.identity, 'seul un parent peut inviter');
     const { id } = request.params as { id: string };
-    return { url: new URL(`/invitation/${encodeURIComponent(id)}`, ctx.baseURL).toString() };
+    return {
+      url: invitationUrl(ctx.baseURL, id),
+      // Lu dans la configuration de better-auth, qui fait l'envoi : pas de
+      // second drapeau à tenir d'accord avec le premier.
+      mailed: ctx.auth.options.emailVerification?.sendVerificationEmail !== undefined,
+    };
   });
 }

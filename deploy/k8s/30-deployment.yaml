@@ -106,6 +106,24 @@ spec:
             - name: TABLEE_BASE_URL
               value: https://tablee.example.net
 
+            # L'envoi de mail : `resend` ou `smtp`, vide pour n'en envoyer
+            # aucun (dette n° 7). La clé du transport choisi vient du secret ;
+            # l'autre peut manquer. Voir `server/auth/mail.ts`.
+            #
+            # ⚠️ L'allumer sur une instance qui a déjà des comptes leur demande
+            # de confirmer leur adresse à la prochaine connexion — un lien
+            # part tout seul, mais prévenez-les.
+            - name: TABLEE_MAIL
+              value: ''
+            - name: TABLEE_MAIL_FROM
+              value: 'Tablée <tablee@example.net>'
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef: { name: tablee, key: RESEND_API_KEY, optional: true }
+            - name: SMTP_URL
+              valueFrom:
+                secretKeyRef: { name: tablee, key: SMTP_URL, optional: true }
+
             # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
             - name: TABLEE_LOG
               value: '0'

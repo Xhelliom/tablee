@@ -114,12 +114,22 @@ c'est nominal, pas un échec.
 | `TABLEE_BASE_URL` | L'origine publique telle que le navigateur la voit — `https://tablee.example.net`, pas `localhost`. better-auth valide l'origine des requêtes avec, et les liens d'invitation en sortent. |
 | `TABLEE_INSECURE_COOKIE` | `1` retire l'attribut `Secure` du cookie. Développement sur `http://localhost` uniquement. |
 | `TABLEE_LOG` | `1` rallume le journal de requêtes, expurgé des jetons Jow (I6). |
+| `TABLEE_MAIL` | `resend` ou `smtp` ; absent, aucun mail ne part. Allume d'un coup la confirmation d'adresse, le mot de passe oublié et l'invitation par mail. Une configuration incomplète refuse de démarrer. |
+| `TABLEE_MAIL_FROM` | L'expéditeur, `Tablée <tablee@example.net>`. Requis avec `TABLEE_MAIL`. Chez Resend, le domaine doit y être vérifié. |
+| `RESEND_API_KEY` | Avec `TABLEE_MAIL=resend`. Passe par HTTPS : utile quand la sortie SMTP est fermée. |
+| `SMTP_URL` | Avec `TABLEE_MAIL=smtp` : `smtps://utilisateur:motdepasse@hôte:465`, ou `smtp://…:587` pour STARTTLS. Encoder `@`, `/`, `:`, `#` dans le mot de passe. |
 
 ⚠️ L'inscription est **ouverte**, et c'est voulu : des amis doivent pouvoir
 créer leur foyer sans passer par vous. Ça veut dire que quiconque trouve l'URL
 peut créer un compte. Un compte seul ne donne accès à **aucun** foyer — il faut
 une invitation acceptée — mais les adresses ne sont pas vérifiées faute de SMTP
 (dette n° 7).
+
+> **Précisé le 14/09/2026.** Avec `TABLEE_MAIL`, elles le sont : on n'entre
+> qu'après avoir suivi le lien reçu. L'allumer sur une instance qui a déjà des
+> comptes leur demande de confirmer leur adresse à la prochaine connexion — le
+> lien part tout seul, mais prévenez-les. Le transporteur (Resend, ou votre
+> relais) voit les adresses, le prénom de qui invite et le nom du foyer.
 
 ### Caddy
 

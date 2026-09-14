@@ -10,6 +10,10 @@
  * `InviteMembers` — le panneau côté parent. Pas de serveur SMTP ici, et c'est
  * un choix assumé (§16) : l'invitation est un lien qu'on copie et qu'on envoie
  * comme on veut.
+ *
+ * ⚠️ Nuancé le 14/09/2026 : une instance peut désormais envoyer des mails
+ * (`TABLEE_MAIL`, Resend ou SMTP). Le lien reste affiché dans tous les cas —
+ * un mail peut finir en indésirables, un lien copié dans un message, non.
  */
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../api.ts';
@@ -96,6 +100,8 @@ interface Invitation {
   email: string;
   role: Role;
   lien: string;
+  /** Un mail est parti vers l'invité, en plus du lien. */
+  mailed: boolean;
 }
 
 export function InviteMembers({ onInvited }: { onInvited?: () => void } = {}): React.ReactElement | null {
@@ -119,10 +125,10 @@ export function InviteMembers({ onInvited }: { onInvited?: () => void } = {}): R
         '/api/auth/organization/invite-member',
         { email: email.trim(), role: rôle, organizationId: household?.organizationId },
       );
-      const { url } = await api.get<{ url: string }>(
+      const { url, mailed } = await api.get<{ url: string; mailed: boolean }>(
         `/api/invitations/${encodeURIComponent(invitation.id)}/lien`,
       );
-      setCréées((liste) => [{ id: invitation.id, email: email.trim(), role: rôle, lien: url }, ...liste]);
+      setCréées((liste) => [{ id: invitation.id, email: email.trim(), role: rôle, lien: url, mailed }, ...liste]);
       setEmail('');
       onInvited?.();
     } catch (cause) {
@@ -169,8 +175,9 @@ export function InviteMembers({ onInvited }: { onInvited?: () => void } = {}): R
       {créées.length > 0 ? (
         <div style={{ marginTop: 20 }}>
           <p className="meta" style={{ marginBottom: 10 }}>
-            Il n’y a pas d’envoi automatique : copiez le lien et transmettez-le
-            comme vous voulez. Il vaut sept jours.
+            {créées[0]?.mailed === true
+              ? 'Un mail vient de partir. Si rien n’arrive, copiez le lien et transmettez-le vous-même. Il vaut sept jours.'
+              : 'Il n’y a pas d’envoi automatique : copiez le lien et transmettez-le comme vous voulez. Il vaut sept jours.'}
           </p>
           {créées.map((invitation) => (
             <LienInvitation key={invitation.id} invitation={invitation} />
