@@ -158,10 +158,12 @@ barres affichent « repère indisponible ».
 
 Les cuillères et le litre ont un repli dans `unit_default` (« approximatif »), et
 une quarantaine d'aliments courants leur conversion propre, sourcée, dans
-`db/seeds/food-unit-weight.csv`. Ce qui reste sans aucune valeur, c'est ce
-qu'aucune publication ne mesure : une poignée de salade, un bouquet de persil,
-une tranche de pain. L'œuf (50 g) et la gousse d'ail (5 g) ont une valeur
-retenue d'office, faute de mieux, qu'une pesée remplace. Un bol sur la
+`db/seeds/food-unit-weight.csv`. Les pièces, poignées, bouquets et tranches
+courants — légumes, fruits, escalopes, saumon, knacks, pâtes à tarte, salades,
+herbes, pain, jambon — y ont une valeur **retenue d'office** d'après des pages
+web lues, poids brut compris. Un aliment qui n'y figure pas reste « non
+converti » jusqu'à ce qu'on l'ajoute (dette n° 19). Une pesée maison remplace
+volontiers une valeur retenue d'office. Un bol sur la
 balance, tare, et on pèse, trois fois ; on garde la moyenne et on l'écrit par
 aliment dans `food-unit-weight.csv`. « Pesée maison, 09/2026 » est une source
 valable — c'est même la meilleure, parce que c'est votre poignée.

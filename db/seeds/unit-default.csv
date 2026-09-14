@@ -30,9 +30,9 @@
 # ── Ce qui reste volontairement vide ────────────────────────────────────────
 #   Pièce               une pièce de poulet et une pièce de radis n'ont rien en
 #                       commun : cette conversion appartient à l'aliment.
-#   Poignée, Gousse,    aucune publication ne les mesure (recherche du
-#   Bouquet, Tranche    14/09/2026). Une pesée maison, par aliment, dans
-#                       `food-unit-weight.csv`, les convertit.
+#   Poignée, Gousse,    pas de valeur commune : une poignée de roquette n'est
+#   Bouquet, Tranche    pas une poignée d'épinards. Leurs valeurs vont par
+#                       aliment dans `food-unit-weight.csv`.
 #
 # ── Colonnes ────────────────────────────────────────────────────────────────
 #   unit    libellé tel que Jow le publie (la comparaison ignore casse/accents)

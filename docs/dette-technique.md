@@ -486,11 +486,20 @@ demanderait une table sous RLS et un geste « corriger le poids » — pas faite
 et à ne jamais écrire dans `food.unit_weights`, où la cuillère d'une famille
 changerait celle des autres.
 
+**Des poids bruts.** Les pièces, poignées, bouquets et tranches retenus d'office
+le 14/09/2026 viennent de fiches Aprifel et d'étiquettes produit : épluchure,
+os, noyau compris. Ciqual, lui, compte la partie comestible. Un avocat, une
+banane, un citron — et surtout un poulet entier, 1,5 kg prêt à cuire — pèsent
+donc plus que ce qu'on en mange, et la part végétale d'un repas en est faussée.
+Aucune page lisible ne donnait la part comestible de chaque produit ; un
+rendement par famille (peau fine, noyau, os) le lèverait, s'il se trouve sourcé.
+
 **Ce que ça coûte.** La forme ne se lit que sur la catégorie `epice`. Une
-poudre rangée ailleurs prend le repli commun : levure chimique, fécule, cacao
-soluble, sucre glace sortent à 15 g la cuillère pour 6 à 8 g réels, le double.
-Le miel, à 21 g, est sous-estimé d'un quart. Un litre d'huile est surestimé de
-quelques pour cent. Rien de cela ne touche les valeurs nutritionnelles d'un
+poudre légère rangée ailleurs et sans ligne propre prend le repli commun, à 15 g
+la cuillère : la fécule de maïs, avant d'avoir sa ligne, en pèse 8 (USDA), le
+cacao 5,4. Toutes les poudres ne sont pas légères — la levure chimique fait
+13,8 g, le sel 18. Le miel, à 21 g, est sous-estimé d'un quart. Un litre d'huile
+sans ligne propre est surestimé d'environ 10 %. Rien de cela ne touche les valeurs nutritionnelles d'un
 repas Jow, qui viennent de sa fiche : seulement la part végétale, et un repas
 saisi en cuillères.
 
@@ -498,6 +507,43 @@ saisi en cuillères.
 les poudres qu'on emploie vraiment — c'est ce qui a été fait pour la farine et
 le sucre —, ou une forme déclarée par sous-groupe Ciqual plutôt que par
 catégorie.
+
+---
+
+## 19. Un trou de conversion se voit en déploiement, et se comble dans le dépôt
+
+**Où** — `db/seeds/food-unit-weight.csv` et `db/seeds/unit-default.csv` d'un
+côté ; `recipe_ingredient`, `jow_food_link` et `food` de l'autre, dans la base
+de chaque instance.
+
+Les conversions d'unités sont du référentiel versionné : une ligne s'ajoute par
+un commit, et `seed:refs` la charge au déploiement suivant. Les recettes Jow,
+elles, arrivent dans la base d'une instance. C'est là qu'un nouvel ingrédient à
+la pièce — une côte de bœuf — apparaît et reste « non converti », que quelqu'un
+l'ait rattaché à Ciqual ou non. **Rien ne remonte de la base vers le dépôt.**
+
+**Ce que ça coûte.** Un trou dure jusqu'à ce que quelqu'un le remarque à
+l'écran, retrouve le code Ciqual, écrive la ligne et fasse redéployer. Sur une
+instance qui sert plusieurs familles, l'hébergeur ne voit pas leurs recettes :
+le trou peut durer indéfiniment. La part végétale des repas concernés reste
+incomplète — elle le dit, mais personne n'agit dessus.
+
+**Ce qui le lèverait.** La liste des couples (aliment Ciqual, unité) employés
+sans conversion, triés par nombre de recettes. Elle se calcule sur les recettes
+**Jow** seulement — globales, sans rien d'une famille — et jamais sur les
+recettes manuelles ni sur `meal_item`, qui sont au foyer. Reste à choisir où
+elle sort, et chaque option a son prix :
+
+- une commande à lancer sur le déploiement : il faut penser à aller la lire ;
+- une ligne dans le journal du seed à chaque démarrage : même chose, en moins
+  oubliable ;
+- une issue ouverte sur le dépôt : le trou arrive là où il se comble, mais des
+  libellés d'ingrédients sortent de l'instance vers un tiers, et l'instance
+  doit détenir un jeton d'écriture sur le dépôt.
+
+Décidé le 14/09/2026 de consigner plutôt que de construire : la commande a été
+proposée, puis écartée faute de résoudre le vrai problème — le trajet de la
+base au dépôt.
 
 ---
 
