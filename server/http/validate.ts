@@ -30,7 +30,12 @@ export function optionalStr(value: unknown, field: string, opts?: { max?: number
 }
 
 export function num(value: unknown, field: string, { min = -Infinity, max = Infinity } = {}): number {
-  const parsed = typeof value === 'string' ? Number(value) : value;
+  // Une chaîne vide n'est pas un zéro. `Number('')` vaut 0, et un champ laissé
+  // vide se serait donc enregistré comme « 0 g » au lieu de « on ne sait pas »
+  // — exactement ce que la règle « une valeur inconnue est NULL, jamais 0 »
+  // interdit. Le client envoie `null` pour l'inconnu ; le reste est refusé.
+  const blanc = typeof value === 'string' && value.trim().length === 0;
+  const parsed = typeof value === 'string' ? (blanc ? NaN : Number(value)) : value;
   if (typeof parsed !== 'number' || !Number.isFinite(parsed)) {
     throw ApiError.badRequest(`« ${field} » doit être un nombre`);
   }
@@ -102,6 +107,32 @@ export function isoDateTime(value: unknown, field: string): string {
     throw ApiError.badRequest(`« ${field} » doit être une date et une heure`);
   }
   return date.toISOString();
+}
+
+/**
+ * Un identifiant de fuseau IANA, et rien d'autre.
+ *
+ * Ce n'est pas un réglage d'affichage : `household.timezone` découpe les
+ * journées et les mois de saisonnalité **dans le SQL** (`at time zone`).
+ * Une valeur fantaisiste acceptée déplacerait la frontière entre hier et
+ * aujourd'hui, et fausserait tous les bilans sans rien dire.
+ *
+ * `Intl.DateTimeFormat` lève sur une valeur inconnue : c'est la même base que
+ * celle de Postgres pour les noms courants, et s'appuyer dessus évite de
+ * maintenir une liste qui vieillirait mal — les fuseaux changent, les pays en
+ * créent et en suppriment.
+ */
+export function timezone(value: unknown, field: string): string {
+  const raw = optionalStr(value, field, { max: 64 });
+  if (raw === null) {
+    throw ApiError.badRequest(`${field} est requis`);
+  }
+  try {
+    new Intl.DateTimeFormat('fr-FR', { timeZone: raw });
+  } catch {
+    throw ApiError.badRequest(`« ${raw} » n’est pas un fuseau horaire connu`, 'fuseau_inconnu');
+  }
+  return raw;
 }
 
 export function uuid(value: unknown, field: string): string {
