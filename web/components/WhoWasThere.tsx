@@ -37,7 +37,7 @@ export function WhoWasThere({
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '9px 10px', borderRadius: 'var(--radius)',
                 border: `.5px solid ${on ? 'var(--coral)' : 'var(--border)'}`,
-                background: on ? 'rgba(216,90,48,.08)' : 'var(--surface-2)',
+                background: on ? 'var(--coral-wash)' : 'var(--surface-2)',
                 color: on ? 'var(--text-primary)' : 'var(--text-secondary)',
                 cursor: 'pointer', textAlign: 'left',
               }}

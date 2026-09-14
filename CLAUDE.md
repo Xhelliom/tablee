@@ -370,6 +370,16 @@ dire :
   pour l'affichage, sans-serif 11-17 px pour le reste.
 - Les aplats colorés des maquettes sont des placeholders pour les photos Jow
   (`recipe.image_url`).
+- **Un mode sombre existe** (14/09/2026). Trois choses à ne pas défaire :
+  - **Le terracotta et les cinq couleurs de nutriments ne basculent pas.** Ce
+    sont les valeurs du §8ter. Vérifié plutôt que supposé : les cinq contrastent
+    entre 4,4 et 7,6 pour 1 sur le fond sombre — mieux que sur le crème.
+  - **Les deux valeurs de chaque token vivent sur la même ligne**, dans
+    `light-dark()`. Ne pas les scinder en un bloc `@media` : il se
+    désynchronise, et c'est précisément ce que cette forme empêche.
+  - **`--on-coral` ne bascule jamais.** C'est ce qui se pose *sur* l'aplat
+    terracotta, lequel est identique de jour comme de nuit. Y remettre
+    `--coral-50` fait disparaître le titre la nuit.
 
 ---
 

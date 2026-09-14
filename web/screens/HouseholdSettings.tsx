@@ -20,6 +20,8 @@ import { navigate } from '../router.tsx';
 import { useSession, type Role } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { InviteMembers } from './Invitation.tsx';
+import { Choix } from '../components/EaterForm.tsx';
+import { readTheme, setTheme, THEMES, type Theme } from '../design/theme.ts';
 
 interface Membre {
   id: string;
@@ -210,6 +212,8 @@ export function HouseholdSettingsScreen(): React.ReactElement {
 
       {parent ? <HouseholdForm onSaved={reload} /> : null}
 
+      <Apparence />
+
       {error !== null ? (
         <section className="sec">
           <p style={{ fontSize: 13, color: 'var(--text-warning)' }}>{error}</p>
@@ -262,6 +266,43 @@ function traduire(error: ApiError): string {
   if (error.status === 403) return 'Vous n’avez pas les droits pour cette action.';
   if (error.status === 404) return 'Introuvable — la page est peut-être périmée.';
   return m;
+}
+
+// ── Apparence ───────────────────────────────────────────────────────────────
+
+/**
+ * Clair, sombre, ou comme le téléphone.
+ *
+ * Sur cet écran faute d'un meilleur endroit — c'est le seul écran de réglages —
+ * mais ce n'est **pas** un réglage de foyer : il vit dans le navigateur de cet
+ * appareil, et l'écran le dit. Deux personnes partagent un foyer et pas leurs
+ * yeux, et la même personne peut vouloir du sombre sur son téléphone le soir et
+ * du clair sur la tablette de la cuisine.
+ *
+ * Il n'est donc ni réservé au `parent`, ni envoyé au serveur.
+ */
+function Apparence(): React.ReactElement {
+  const [theme, setChoisi] = useState<Theme>(readTheme);
+
+  return (
+    <section className="sec">
+      <h2 className="eyebrow">Apparence</h2>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {THEMES.map(({ value, label }) => (
+          <Choix
+            key={value}
+            actif={theme === value}
+            libellé={label}
+            onClick={() => { setTheme(value); setChoisi(value); }}
+          />
+        ))}
+      </div>
+      <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
+        Réglage de cet appareil, gardé dans ce navigateur. Il ne suit pas votre
+        compte et ne change rien pour les autres membres du foyer.
+      </p>
+    </section>
+  );
 }
 
 // ── Nom et fuseau ───────────────────────────────────────────────────────────

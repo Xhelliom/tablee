@@ -513,6 +513,24 @@ Ce sont cinq catégories distinctes, pas une échelle : elles ne doivent pas cod
 un état (bon/mauvais). Un anneau où le segment vert manque se lit d'un coup —
 c'est tout l'intérêt.
 
+> **Mode sombre — ajouté le 14/09/2026.** Le §8ter ne décrivait qu'un fond
+> crème. L'app se consulte à table, le soir, sur un téléphone : le sombre suit
+> désormais le réglage du système, avec un choix manuel *par appareil* —
+> localStorage, pas la base. Deux personnes partagent un foyer et pas leurs yeux.
+>
+> Ce qui ne change pas, et qui est le point : **le terracotta et les cinq
+> couleurs de nutriments sont identiques dans les deux modes**. Elles portent
+> l'identité, elles ne se « corrigent » pas pour un fond — et la mesure leur
+> donne raison, entre 4,4 et 7,6 pour 1 sur le fond sombre contre 2,2 à 3,8 sur
+> le crème. Ce qui bascule, ce sont les surfaces, les textes, les bordures et
+> les rampes, qui s'inversent.
+>
+> Le fond sombre suit la même règle que le crème : **pas de noir pur**, un brun
+> très sombre, et le même ordre de hauteur — la carte reste au-dessus du fond.
+>
+> Détail technique dans l'en-tête de `web/design/tokens.css` ; la contrainte de
+> navigateur qu'il impose est en dette n° 12.
+
 ### Fond
 
 Pas de blanc pur. Un crème très légèrement teinté de la couleur de marque

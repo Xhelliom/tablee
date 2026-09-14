@@ -69,7 +69,7 @@ export function ModalHeader({
     <header className="appbar">
       <div className="appbar__brand">
         <button type="button" className="appbar__action" onClick={onClose}
-                aria-label="Fermer" style={{ color: 'var(--coral-50)' }}>
+                aria-label="Fermer" style={{ color: 'var(--on-coral)' }}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
             <path d="M6 6l12 12M18 6 6 18" />

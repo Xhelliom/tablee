@@ -37,7 +37,7 @@ export function ReferenceSheet({ balance, firstName, onClose }: Props): React.Re
         <header style={header}>
           <p style={{ fontSize: 15 }}>D’où viennent ces barres</p>
           <button type="button" onClick={onClose} aria-label="Fermer"
-                  style={{ background: 'none', border: 0, padding: 4, cursor: 'pointer', color: 'var(--coral-50)', display: 'flex' }}>
+                  style={{ background: 'none', border: 0, padding: 4, cursor: 'pointer', color: 'var(--on-coral)', display: 'flex' }}>
             <IconClose size={18} />
           </button>
         </header>
@@ -147,7 +147,7 @@ function Explanation({ bar }: { bar: NutrientBar }): React.ReactElement {
 
 const overlay: React.CSSProperties = {
   position: 'fixed', inset: 0, zIndex: 50,
-  background: 'rgba(27,27,25,.45)',
+  background: 'var(--scrim)',
   display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
 };
 
@@ -162,7 +162,7 @@ const sheet: React.CSSProperties = {
 const header: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '14px 16px',
-  background: 'var(--coral)', color: 'var(--coral-50)',
+  background: 'var(--coral)', color: 'var(--on-coral)',
   flexShrink: 0,
 };
 

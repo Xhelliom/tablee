@@ -148,7 +148,7 @@ export function TodayScreen(): React.ReactElement {
           type="button"
           className="row"
           onClick={() => navigate('/ajouter')}
-          style={{ border: '.5px solid rgba(216,90,48,.3)', borderRadius: 12 }}
+          style={{ border: '.5px solid var(--coral-line)', borderRadius: 12 }}
         >
           <span className="thumb" style={{ background: 'var(--coral)', color: '#fff' }}>
             <IconPlus size={20} />

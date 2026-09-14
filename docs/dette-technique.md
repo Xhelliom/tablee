@@ -288,6 +288,65 @@ corrigé.
 
 ---
 
+## 12. Le thème sombre exige un navigateur de 2024
+
+**Où** — `web/design/tokens.css`, tous les tokens en `light-dark()`.
+
+Les deux valeurs de chaque couleur sont déclarées sur la même ligne. C'est ce
+qui rend impossible d'en mettre à jour une et d'oublier l'autre — le défaut
+classique d'un second bloc `@media (prefers-color-scheme: dark)`, qui se
+désynchronise sans que rien ne le signale.
+
+**Ce que ça coûte.** `light-dark()` date de Chrome 123 / Safari 17.5 /
+Firefox 120, début 2024. En deçà, ce n'est pas « pas de mode sombre » : les
+propriétés personnalisées se parsent (elles acceptent presque n'importe quels
+jetons) mais ne résolvent pas, donc `background: var(--surface-2)` devient
+invalide et l'interface perd ses couleurs. Sur Android à jour — la cible, et la
+seule qui permette le share target — c'est acquis depuis deux ans. Sur la
+vieille tablette d'un grand-parent, non. Et le grand-parent est un utilisateur
+prévu par la spec (rôle `adulte`).
+
+⚠️ Le repli par déclaration adjacente (`--x: #FFF; --x: light-dark(…);`) **ne
+marche pas ici** : les deux déclarations se parsent dans un navigateur sans
+support, la seconde gagne, et le résultat est le même. Seul `@supports` ferait
+l'affaire.
+
+**Ce qui le lèverait.** Un bloc `@supports (color: light-dark(#000, #fff))`
+portant les tokens sombres, le `:root` de base ne gardant que les valeurs
+claires. Ça rétablit la duplication, et il faudrait alors un test qui compare
+les deux jeux plutôt qu'une bonne intention.
+
+---
+
+## 13. L'orange des glucides est faiblement contrasté en mode clair
+
+**Où** — `--n-gluc: #EF9F27` sur une carte blanche.
+
+Mesuré en vérifiant le mode sombre, pas en le cherchant. Les cinq couleurs de
+nutriments sur fond de carte :
+
+| | sur la carte sombre | sur la carte blanche |
+|---|---|---|
+| protéines | 4,41 | 3,76 |
+| glucides | 7,62 | **2,17** |
+| lipides | 4,61 | 3,59 |
+| fibres | 4,89 | 3,39 |
+| végétal | 4,82 | 3,44 |
+
+Le seuil WCAG pour un élément graphique porteur de sens est 3 pour 1. L'orange
+des glucides passe à 2,17 en clair — c'est la seule des dix mesures en dessous,
+et le mode sombre le corrige par accident.
+
+**Ce que ça coûte.** Une barre de glucides peu lisible en plein soleil, sur
+l'écran où l'app sert le plus. Pas faux, juste pâle.
+
+**Ce qui le lèverait.** Assombrir `--n-gluc` d'un ou deux crans en mode clair
+uniquement. **Ce n'est pas une décision à prendre seul** : les cinq valeurs sont
+celles du §8ter et des maquettes, et les changer désaccorde l'app de sa
+référence visuelle. Rien n'a donc été touché.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

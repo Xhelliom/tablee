@@ -39,7 +39,7 @@ export function NutrientRing({ balance, firstName, size = 52 }: Props): React.Re
         {/* La piste pointillée montre les cinq emplacements, pleins ou non. */}
         <circle
           cx="26" cy="26" r={RADIUS} fill="none" strokeWidth="4"
-          stroke="rgba(216,90,48,.18)"
+          stroke="var(--coral-track)"
           strokeDasharray={`${SLOT - GAP} ${GAP}`}
         />
         {segments.map((segment, index) =>
