@@ -152,7 +152,7 @@ function corps(
   };
 }
 
-export function eaterRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function eaterRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.get('/api/eaters', async (request) => {
     const identity = request.identity();
     const eaters = await listEaters(request.db, identity.householdId);

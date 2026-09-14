@@ -22,7 +22,7 @@ import {
 import { currentMonth } from '../repo/dashboard.ts';
 import type { AppContext } from '../app.ts';
 
-export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function recipeRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.post('/api/recipes/resolve', async (request) => {
     const input = body(request.body);
     const text = str(input['text'], 'text', { max: 4000 });
@@ -81,7 +81,7 @@ export function recipeRoutes(app: FastifyInstance, ctx: AppContext): void {
    * l'écran `/share` pour afficher quelque chose immédiatement pendant que la
    * résolution complète se fait.
    */
-  app.post('/api/recipes/peek', async (request) => {
+  app.post('/api/recipes/peek', (request) => {
     const input = body(request.body);
     const text = str(input['text'], 'text', { max: 4000 });
     const share = parseShareText(text);

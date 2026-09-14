@@ -16,7 +16,7 @@ import { householdTimezone } from '../repo/dashboard.ts';
 import { nextDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
-export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function mealRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.post('/api/meals', async (request, reply) => {
     const input = body(request.body);
     const householdId = request.householdId();

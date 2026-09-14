@@ -211,7 +211,7 @@ function position(
 
   return {
     remaining,
-    excess: over ? round(consumed - (referenceMax as NutrientReference).value) : null,
+    excess: over ? round(consumed - referenceMax.value) : null,
     standing: over ? 'au_dela' : remaining > 0 ? 'sous' : 'dans',
   };
 }

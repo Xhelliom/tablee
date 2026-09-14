@@ -63,6 +63,11 @@ jobs:
             create database tablee_test owner tablee;
           SQL
 
+      # ESLint avant le typecheck : ses règles typées disent des choses que
+      # `tsc` ne dit pas — une promesse jamais attendue, un `async` passé là où
+      # Fastify attend un gestionnaire. Voir `eslint.config.js`.
+      - run: npm run lint
+
       - run: npm run typecheck
 
       - name: Tests

@@ -19,7 +19,7 @@ import { listMeals } from '../repo/meals.ts';
 import { mondayOf, nextDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
-export function dashboardRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.get<{ Querystring: { date?: string } }>('/api/dashboard', async (request) => {
     const householdId = request.householdId();
     const timezone = await householdTimezone(request.db, householdId);

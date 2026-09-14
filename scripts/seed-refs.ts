@@ -221,7 +221,11 @@ async function loadSeasonal(db: pg.Pool): Promise<void> {
   for (const row of rows) {
     if ((row.values['months'] ?? '').trim().length === 0) { skipped += 1; continue; }
 
-    const source = requireSource(file, row);
+    // Appelée pour sa vérification, pas pour sa valeur : `seasonal_produce`
+    // n'a pas de colonne `source`, contrairement à `nutrient_reference` et
+    // `unit_default`. Le CSV l'exige quand même — une ligne sans provenance ne
+    // se charge pas — mais l'app ne peut pas la citer. Dette n° 14.
+    requireSource(file, row);
     const name = requiredText(file, row, 'name');
     const kind = requiredText(file, row, 'kind');
     if (kind !== 'legume' && kind !== 'fruit') {

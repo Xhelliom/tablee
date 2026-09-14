@@ -52,7 +52,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
    * que l'écran de gestion puisse se rafraîchir sans recharger la session
    * entière.
    */
-  app.get('/api/household', async (request) => {
+  app.get('/api/household', (request) => {
     const identity = request.identity();
     return {
       household: {

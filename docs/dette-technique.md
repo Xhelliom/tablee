@@ -323,6 +323,29 @@ uniquement. **Ce n'est pas une décision à prendre seul** : les cinq valeurs so
 celles du §8ter et des maquettes, et les changer désaccorde l'app de sa
 référence visuelle. Rien n'a donc été touché.
 
+## 14. La source d'une ligne de saisonnalité est exigée, puis jetée
+
+**Où** — `scripts/seed-refs.ts`, `loadSeasonal` ; table `seasonal_produce`
+(migration 001).
+
+Le chargeur appelle `requireSource()` sur chaque ligne du CSV et refuse un
+fichier qui en manque une — comme pour les deux autres tables de référence.
+Mais `seasonal_produce` n'a pas de colonne `source`, contrairement à
+`nutrient_reference` et `unit_default` : la provenance est **vérifiée à
+l'entrée, puis perdue**.
+
+**Ce que ça coûte.** Rien de faux ne s'écrit — la vérification, elle, a bien
+lieu. Ce qui manque, c'est la traçabilité : l'app peut dire d'où vient un
+repère nutritionnel, pas d'où vient « la courgette est de saison en juillet ».
+Sur un jeu, c'est moins grave que sur un repère ; ça reste une règle du projet
+à moitié tenue.
+
+**Ce qui le lèverait.** Une migration ajoutant `source text not null`, et
+trois caractères dans l'`insert`. À faire quand la table se remplira — elle
+est vide aujourd'hui, et sa saisie manuelle est justement l'un des points du
+« ne pas décider seul ».
+
+
 ---
 
 ## Levées

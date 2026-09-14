@@ -110,7 +110,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
    * rendre l'URL correspondante, pour que le front n'ait pas à la fabriquer et
    * que sa forme reste décidée au même endroit que la route qui la reçoit.
    */
-  app.get('/api/invitations/:id/lien', async (request) => {
+  app.get('/api/invitations/:id/lien', (request) => {
     const state = request.auth;
     if (state.kind !== 'actif') throw ApiError.unauthorized();
     if (state.identity.role !== 'parent') {

@@ -12,7 +12,7 @@
  *   valeur partielle   un repas de la journée n'a pas cette valeur — minorant
  *   rien de connu      pas de barre. Surtout pas une barre à zéro.
  */
-import type { DailyBalance } from '../api.ts';
+import type { DailyBalance, Nutrient } from '../api.ts';
 import { useState } from 'react';
 import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, NUTRIENT_SHORT } from '../design/vocabulary.ts';
 import { formatPercentRange } from '../design/quantities.ts';
@@ -20,6 +20,26 @@ import { IconInfo } from '../icons.tsx';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
 
 const HEIGHT = 58;
+
+/**
+ * Une colonne de l'histogramme. Déclarée plutôt qu'inférée : « Végétal »
+ * s'ajoute après les quatre nutriments et n'en est pas un — sans ce type,
+ * `key` s'infère à `Nutrient` et la cinquième colonne ne rentre plus.
+ */
+interface Colonne {
+  key: Nutrient | 'plant';
+  short: string;
+  label: string;
+  color: string;
+  percent: number | null;
+  percentMax: number | null;
+  state: string;
+  hasReference: boolean;
+  /** Position du plafond sur l'échelle de la barre, en % de la cible. */
+  ceiling: number | null;
+  standing: string | null;
+  hasTarget: boolean;
+}
 
 export function NutrientBars({
   balance,
@@ -30,10 +50,10 @@ export function NutrientBars({
   firstName?: string;
 }): React.ReactElement {
   const [explaining, setExplaining] = useState(false);
-  const columns = BAR_NUTRIENTS.map((nutrient) => {
+  const columns = BAR_NUTRIENTS.map((nutrient): Colonne => {
     const bar = balance.bars.find((b) => b.nutrient === nutrient);
     return {
-      key: nutrient as string,
+      key: nutrient,
       short: NUTRIENT_SHORT[nutrient],
       label: NUTRIENT_LABELS[nutrient],
       color: NUTRIENT_COLOR[nutrient],
@@ -41,7 +61,6 @@ export function NutrientBars({
       percentMax: bar?.percentMax ?? null,
       state: bar?.state ?? 'indisponible',
       hasReference: bar?.reference != null,
-      /** Position du plafond sur l'échelle de la barre, en % de la cible. */
       ceiling:
         bar?.reference != null && bar.referenceMax != null
           ? (bar.referenceMax.value / bar.reference.value) * 100

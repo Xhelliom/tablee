@@ -9,7 +9,7 @@ import { linkIngredientToFood, listLinks } from '../repo/recipes.ts';
 import { recomputeMealsUsingIngredient } from '../repo/meals.ts';
 import type { AppContext } from '../app.ts';
 
-export function foodRoutes(app: FastifyInstance, ctx: AppContext): void {
+export function foodRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.get<{ Querystring: { q?: string; limit?: string } }>(
     '/api/foods/search',
     async (request) => {
