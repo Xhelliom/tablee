@@ -150,14 +150,14 @@ describe('connexion Google', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     assert.equal(rows.length, 0);
   });
 
-  it('un compte connecté lie Google depuis les réglages, puis entre par Google', async (t) => {
+  it('un compte connecté lie Google depuis son profil, puis entre par Google', async (t) => {
     // Une autre adresse que celle du compte Google : le cas courant, et celui
     // que la liaison implicite refuse.
     const compte = await signUp(auth, 'camille@yahoo.fr');
 
-    const liaison = await parGoogle(t, '/api/auth/link-social', '/foyer', compte.cookie);
+    const liaison = await parGoogle(t, '/api/auth/link-social', '/profil', compte.cookie);
     assert.equal(liaison.statusCode, 302);
-    assert.equal(liaison.headers.location, '/foyer');
+    assert.equal(liaison.headers.location, '/profil');
 
     const connexion = await parGoogle(t, '/api/auth/sign-in/social', '/');
     const session = cookieDeSession(connexion);
@@ -166,5 +166,7 @@ describe('connexion Google', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       .json<{ user: { id: string; email: string } }>();
     assert.equal(me.user.id, compte.userId, 'dans le compte auquel il a été lié');
     assert.equal(me.user.email, 'camille@yahoo.fr', 'dont l’adresse ne change pas');
+    const { rows } = await pool.query(`select 1 from "user"`);
+    assert.equal(rows.length, 1, 'sans ouvrir un second compte');
   });
 });

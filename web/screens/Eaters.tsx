@@ -245,7 +245,7 @@ function FicheConvive({
  * état permanent. Rien ne s'affiche sur un profil mineur : le serveur ne rend
  * même pas la valeur (I5).
  */
-function Mesures({ eater }: { eater: Eater }): ReactElement | null {
+export function Mesures({ eater }: { eater: Eater }): ReactElement | null {
   if (eater.weightKg === null && eater.heightCm === null) return null;
   const morceaux = [
     eater.weightKg === null ? null : `${eater.weightKg.toString().replace('.', ',')} kg`,
@@ -482,53 +482,19 @@ function SectionCompte({
  * Le détail de la gestion — qui a accès, les rôles, le fuseau, la suppression —
  * vit sur son propre écran. Ici on rappelle seulement où l'on est, et on y
  * mène : c'est un geste rare, il n'a pas à encombrer l'écran quotidien.
+ *
+ * Le compte, sa fiche et le changement de foyer sont partis le 14/09/2026 sur
+ * « Votre profil » : ils disent qui vous êtes, pas qui mange ici.
  */
 function AccessSection(): ReactElement {
-  const { user, household, role, households, switchHousehold, eaters } = useSession();
-  const monAssiette = eaters.find((eater) => eater.isMe) ?? null;
+  const { household, role } = useSession();
 
   return (
-    <section className="sec" id="compte" style={{ scrollMarginTop: 72 }}>
-      <h2 className="eyebrow">Votre compte</h2>
+    <section className="sec">
+      <h2 className="eyebrow">Le foyer</h2>
       <p className="meta" style={{ lineHeight: 1.6 }}>
-        {user?.name} · {user?.email}
-        <br />
-        Foyer : <b>{household?.name}</b> — vous y êtes{' '}
-        {role === 'parent' ? 'parent' : 'adulte'}.
-        <br />
-        {monAssiette === null
-          ? 'Vous n’avez pas de fiche à table.'
-          : <>Votre fiche à table : <b>{monAssiette.firstName}</b>.</>}
+        <b>{household?.name}</b> — vous y êtes {role === 'parent' ? 'parent' : 'adulte'}.
       </p>
-
-      {monAssiette === null ? (
-        <button
-          type="button" className="btn btn--ghost" style={{ marginTop: 12 }}
-          onClick={() => navigate('/bienvenue')}
-        >
-          Créer ma fiche
-        </button>
-      ) : null}
-
-      {households.length > 1 ? (
-        <div style={{ marginTop: 14 }}>
-          <p className="label">Changer de foyer</p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {households.map((foyer) => (
-              <Choix
-                key={foyer.id}
-                actif={foyer.id === household?.id}
-                libellé={foyer.name}
-                onClick={() => {
-                  if (foyer.id !== household?.id) {
-                    void switchHousehold(foyer.organizationId ?? '');
-                  }
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       <button
         type="button" className="btn btn--ghost" style={{ marginTop: 16 }}
