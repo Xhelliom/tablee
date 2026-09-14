@@ -293,6 +293,28 @@ export interface RecipeSummary {
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
   timesEaten: number;
+  url: string | null;
+}
+
+/**
+ * Une recette choisie par l'assistant. Tout vient de la base, sauf `reason` :
+ * le modèle choisit et justifie, il ne donne aucune valeur (R1).
+ */
+export interface RecipeProposal {
+  recipe: RecipeSummary;
+  /** `null` quand le modèle n'a rien donné de lisible, ou a glissé un chiffre. */
+  reason: string | null;
+}
+
+export interface AssistantRecipesResponse {
+  proposals: RecipeProposal[];
+  /**
+   * Des plats hors de la liste, inventés par le modèle : un nom et une phrase,
+   * **aucune valeur**. L'écran les marque « à vérifier ».
+   */
+  ideas: { title: string; reason: string }[];
+  /** Le texte exact envoyé au modèle — ce qui est sorti du foyer. */
+  facts: string;
 }
 
 export interface ResolveResponse {

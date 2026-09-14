@@ -136,11 +136,14 @@ spec:
               valueFrom:
                 secretKeyRef: { name: tablee, key: GOOGLE_CLIENT_SECRET, optional: true }
 
-            # « Découper avec l'IA » dans la saisie libre, et l'onglet
-            # « Conseils » (V3). Absente, ni l'un ni l'autre. Voir `server/llm/`.
+            # « Découper avec l'IA » dans la saisie libre, l'onglet « Conseils »
+            # et les recettes de l'accueil (V3). Absente, rien de tout ça. Voir
+            # `server/llm/`. Le modèle se change ici, sans reconstruire l'image.
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef: { name: tablee, key: ANTHROPIC_API_KEY, optional: true }
+            - name: TABLEE_LLM_MODEL
+              value: claude-sonnet-5
 
             # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
             - name: TABLEE_LOG

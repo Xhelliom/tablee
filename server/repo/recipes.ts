@@ -66,6 +66,13 @@ export interface RecipeSummary {
   /** `null` = importée, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
   timesEaten: number;
+  source: 'jow' | 'manuel';
+  url: string | null;
+  /**
+   * Le snapshot publié par Jow. L'assistant de recettes choisit sur ces
+   * valeurs-là, et ne les réécrit jamais (R1).
+   */
+  perServing: RecipeSnapshot['perServing'];
 }
 
 /**
@@ -108,8 +115,13 @@ export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeS
     id: string; title: string; image_url: string | null; base_servings: number;
     nutri_score: string | null; confidence: Confidence;
     last_eaten_at: Date | null; times_eaten: string;
+    source: 'jow' | 'manuel'; url: string | null;
+    kcal_serving: number | null; protein_serving: number | null; carb_serving: number | null;
+    fat_serving: number | null; fiber_serving: number | null;
   }>(
     `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.confidence,
+            r.source, r.url, r.kcal_serving, r.protein_serving, r.carb_serving,
+            r.fat_serving, r.fiber_serving,
             max(m.eaten_at) as last_eaten_at,
             count(m.id)     as times_eaten
      from household_recipe hr
@@ -133,6 +145,12 @@ export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeS
     confidence: row.confidence,
     lastEatenAt: row.last_eaten_at === null ? null : row.last_eaten_at.toISOString(),
     timesEaten: Number(row.times_eaten),
+    source: row.source,
+    url: row.url,
+    perServing: {
+      kcal: row.kcal_serving, proteinG: row.protein_serving, carbG: row.carb_serving,
+      fatG: row.fat_serving, fiberG: row.fiber_serving,
+    },
   }));
 }
 

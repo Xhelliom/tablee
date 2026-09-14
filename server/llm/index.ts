@@ -1,18 +1,18 @@
 /**
  * La seule porte vers Anthropic (V3).
  *
- * Deux usages passent par ici — le découpage d'un texte libre (`decoupage.ts`)
- * et l'assistant (`conseil.ts`) — et un troisième devra en faire autant. Ce
- * que ce module garantit à tous :
+ * Trois usages passent par ici — le découpage d'un texte libre (`decoupage.ts`),
+ * l'assistant (`conseil.ts`) et les recettes de l'accueil (`recettes.ts`) — et
+ * un quatrième devra en faire autant. Ce que ce module garantit à tous :
  *
- * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal` et `Advise`
- *   n'acceptent que des `Anonymized`, une marque que seul `anonymize` pose —
- *   la même idée que `HouseholdDb` pour la RLS : un oubli ne compile pas (I3,
- *   I6). La marque dit que le filtre est passé, pas qu'il est complet (dette
- *   n° 17).
- * - **Un client, un modèle, un repli.** La clé est lue une fois ; le modèle,
- *   le repli côté serveur et la lecture d'un refus ne divergent pas d'un usage
- *   à l'autre.
+ * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`, `Advise` et
+ *   `SuggestRecipes` n'acceptent que des `Anonymized`, une marque que seul
+ *   `anonymize` pose — la même idée que `HouseholdDb` pour la RLS : un oubli ne
+ *   compile pas (I3, I6). La marque dit que le filtre est passé, pas qu'il est
+ *   complet (dette n° 17).
+ * - **Un client, un modèle, un repli.** La clé est lue une fois ; le modèle
+ *   (`TABLEE_LLM_MODEL`), le repli côté serveur et la lecture d'un refus ne
+ *   divergent pas d'un usage à l'autre.
  * - **Sans clé, pas d'IA, et rien ne casse.** `buildLlm` rend `null`, le
  *   serveur démarre, et les routes IA répondent 503 — contrairement au mail,
  *   il n'y a pas de configuration à moitié remplie qui ferait croire à un
@@ -23,6 +23,7 @@ import { ApiError } from '../http/errors.ts';
 import { redactShareText } from '../jow/share.ts';
 import { advisor, type Advise } from './conseil.ts';
 import { mealSplitter, type SplitMeal } from './decoupage.ts';
+import { recipeSuggester, type SuggestRecipes } from './recettes.ts';
 
 /** Un texte dont les prénoms du foyer et les jetons Jow ont été retirés. */
 export type Anonymized = string & { readonly __anonymized: true };
@@ -30,6 +31,7 @@ export type Anonymized = string & { readonly __anonymized: true };
 export interface Llm {
   splitMeal: SplitMeal;
   advise: Advise;
+  suggestRecipes: SuggestRecipes;
 }
 
 /** Un appel au modèle : le texte de la réponse, ou `null` s'il a décliné. */
@@ -46,7 +48,7 @@ export type Ask = (request: {
 /**
  * Chaque appel se paie, et l'inscription est ouverte (§16) : les 300 requêtes
  * par minute du reste de l'API seraient une facture, pas un plafond. Posé sur
- * chaque route IA, et compté **par route** — deux routes, deux compteurs.
+ * chaque route IA, et compté **par route** : chaque route IA a le sien.
  */
 export const LLM_RATE_LIMIT = { max: 10, timeWindow: 60_000 };
 
@@ -54,12 +56,18 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
   const apiKey = env['ANTHROPIC_API_KEY'] ?? '';
   if (apiKey === '') return null;
 
+  // ⚠️ Changé le 14/09/2026 : `claude-opus-5` était écrit ici. Le propriétaire
+  // a demandé Sonnet 5, et un modèle qui se change sans toucher au code. Celui
+  // qu'on pose doit accepter `effort`, la sortie structurée et le repli
+  // `default` ci-dessous — vérifié par un appel réel pour Sonnet 5.
+  const model = env['TABLEE_LLM_MODEL'] || 'claude-sonnet-5';
+
   // Un seul nouvel essai : au-delà, la personne a déjà renoncé.
   const client = new Anthropic({ apiKey, maxRetries: 1 });
 
   const ask: Ask = async ({ system, messages, effort, timeout, schema }) => {
     const response = await client.beta.messages.create({
-      model: 'claude-opus-5',
+      model,
       max_tokens: 16000,
       // Une demande déclinée est rejouée côté serveur sur le modèle de repli
       // recommandé, plutôt que de rendre un refus à quelqu'un qui décrit son
@@ -81,7 +89,7 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
       .trim();
   };
 
-  return { splitMeal: mealSplitter(ask), advise: advisor(ask) };
+  return { splitMeal: mealSplitter(ask), advise: advisor(ask), suggestRecipes: recipeSuggester(ask) };
 }
 
 /** Le refus commun aux routes IA d'une instance sans clé. */

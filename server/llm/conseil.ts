@@ -41,11 +41,14 @@ export type Advise = (
   conversation: { role: Turn['role']; content: Anonymized }[],
 ) => Promise<string>;
 
-/** Les nutriments dont le modèle reçoit la moyenne. L'énergie n'en est pas. */
-const ADVICE_NUTRIENTS = ['proteinG', 'carbG', 'fatG', 'fiberG'] as const;
+/**
+ * Les nutriments dont le modèle reçoit la moyenne. L'énergie n'en est pas.
+ * Exportés pour les recettes de l'accueil, qui visent les mêmes (`recettes.ts`).
+ */
+export const ADVICE_NUTRIENTS = ['proteinG', 'carbG', 'fatG', 'fiberG'] as const;
 type AdviceNutrient = (typeof ADVICE_NUTRIENTS)[number];
 
-const NUTRIENT_WORDS: Record<AdviceNutrient, string> = {
+export const NUTRIENT_WORDS: Record<AdviceNutrient, string> = {
   proteinG: 'protéines', carbG: 'glucides', fatG: 'lipides', fiberG: 'fibres',
 };
 

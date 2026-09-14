@@ -1,6 +1,6 @@
 /**
- * V3 — l'IA de bout en bout, avec de faux modèles : le découpage d'un repas et
- * l'assistant.
+ * V3 — l'IA de bout en bout, avec de faux modèles : le découpage d'un repas,
+ * l'assistant, et les recettes de l'accueil.
  *
  * Aucun appel réseau : ce qui se vérifie ici est ce que Tablée fait **autour**
  * du modèle — ce qui part (sans prénom ni date de naissance, I3), ce qui
@@ -12,6 +12,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import type pg from 'pg';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.ts';
+import { withHousehold } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import type { Turn } from './llm/conseil.ts';
 import type { ProposedItem } from './llm/decoupage.ts';
@@ -39,6 +40,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   /** Ce que les faux modèles ont reçu : exactement ce qui serait parti chez Anthropic. */
   let découpés: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
+  let recettes: string[] = [];
 
   const call = async (
     app: FastifyInstance, method: string, url: string, payload?: unknown,
@@ -74,6 +76,16 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         conseillé = { facts, conversation };
         return Promise.resolve('Une soupe de légumes ?');
       },
+      suggestRecipes: (facts: string): Promise<unknown> => {
+        recettes.push(facts);
+        return Promise.resolve({
+          propositions: [
+            { numero: 1, raison: 'Des haricots rouges, pour les fibres.' },
+            { numero: 9, raison: 'une recette inventée' },
+          ],
+          idees: [{ titre: 'Dahl de lentilles corail', raison: 'Des légumineuses, pour les fibres.' }],
+        });
+      },
     };
     avecIA = buildApp({ pool, auth, baseURL: TEST_BASE_URL, llm }, { webDir: '/dev/null/absent' });
     sansIA = buildApp({ pool, auth, baseURL: TEST_BASE_URL }, { webDir: '/dev/null/absent' });
@@ -92,6 +104,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     foyer = await signUpWithHousehold(auth, pool, 'papa@exemple.test');
     découpés = [];
     conseillé = null;
+    recettes = [];
     await pool.query(
       `insert into food (source, external_id, name, plant_based,
                          kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g,
@@ -106,6 +119,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     assert.equal((await call(sansIA, 'POST', '/api/meals/decoupage', { text: '2 œufs' })).status, 503);
     const question = { messages: [{ role: 'user', content: 'Une idée ?' }] };
     assert.equal((await call(sansIA, 'POST', '/api/assistant', question)).status, 503);
+    assert.equal((await call(sansIA, 'POST', '/api/assistant/recipes')).status, 503);
   });
 
   describe('le découpage d’un repas', () => {
@@ -173,6 +187,63 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
       assert.equal(status, 400);
       assert.equal(conseillé, null, 'rien ne part');
+    });
+  });
+
+  describe('l’assistant de recettes', () => {
+    it('ne demande rien au modèle sur une semaine vide', async () => {
+      const { status, body } = await call(avecIA, 'POST', '/api/assistant/recipes');
+      assert.equal(status, 409);
+      assert.equal(body.error.code, 'semaine_vide');
+      assert.deepEqual(recettes, [], 'rien ne part');
+    });
+
+    it('choisit parmi les recettes du foyer, sans prénom ni date de naissance (I3)', async () => {
+      const léa = await créerLéa();
+      await pool.query(
+        `insert into nutrient_reference (sex, age_min, age_max, nutrient, kind, basis,
+                                         value, unit, derived, source)
+         values ('ALL', 4, 120, 'fiber_g', 'AS', 'absolu', 20, 'g', false, 'repère de test')`,
+      );
+      const chili = await withHousehold(pool, foyer.householdId, async (db) => {
+        const { rows } = await db.query<{ id: string }>(
+          `insert into recipe (source, jow_recipe_id, title, base_servings,
+                               protein_serving, carb_serving, fat_serving, fiber_serving)
+           values ('jow', '650b16ade7cc8d0013ce4a70', 'Chili sin carne', 4, 18, 40, 10, 10)
+           returning id`,
+        );
+        await db.query(
+          'insert into household_recipe (household_id, recipe_id) values ($1, $2)',
+          [foyer.householdId, rows[0]!.id],
+        );
+        return rows[0]!.id;
+      });
+      // Hier : la journée en cours ne compte pas dans les moyennes.
+      await call(avecIA, 'POST', '/api/meals', {
+        eatenAt: new Date(Date.now() - 86_400_000).toISOString(), slot: 'diner', source: 'jow',
+        recipeId: chili, servings: 1, participants: [{ eaterId: léa, present: true }],
+      });
+
+      const { status, body } = await call(avecIA, 'POST', '/api/assistant/recipes');
+      assert.equal(status, 200);
+      assert.deepEqual(
+        body.proposals.map((p: any) => [p.recipe.title, p.reason]),
+        [['Chili sin carne', 'Des haricots rouges, pour les fibres.']],
+        'la recette inventée est jetée',
+      );
+      assert.deepEqual(body.ideas, [
+        { title: 'Dahl de lentilles corail', reason: 'Des légumineuses, pour les fibres.' },
+      ], 'une idée, elle, passe — sans aucune valeur');
+
+      const [envoyé] = recettes;
+      assert.ok(envoyé !== undefined);
+      // 10 g de fibres sur un repère de 20 g.
+      assert.match(envoyé, /- fibres : 50 % du repère du jour/);
+      assert.match(envoyé, /Repères du moins atteint au plus atteint : fibres\./);
+      assert.match(envoyé, /1\. Chili sin carne — /);
+      assert.ok(!envoyé.includes('Léa'), envoyé);
+      assert.ok(!envoyé.includes(NAISSANCE), envoyé);
+      assert.equal(body.facts, envoyé, 'l’écran montre exactement ce qui est parti');
     });
   });
 });

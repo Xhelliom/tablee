@@ -425,13 +425,15 @@ dit pas — « cette modification-là change les lignes déjà en base ».
 ## 17. Le découpage par IA : un filet pour les prénoms, et une clé ouverte à l'inscription
 
 **Où** — `server/llm/index.ts` (`anonymize`, et la marque `Anonymized` sans
-laquelle rien ne part), `POST /api/meals/decoupage`, `POST /api/assistant`.
+laquelle rien ne part), `POST /api/meals/decoupage`, `POST /api/assistant`,
+`POST /api/assistant/recipes`.
 
 **Ce qui est fait.** Avant l'envoi, les prénoms des fiches du foyer — retirées
 comprises — et les mots du nom du compte sont retirés du texte, mot entier et
 sans égard à la casse ; un lien Jow collé perd son jeton. Chaque route IA est
-limitée à dix appels par minute par compte — **par route** : le découpage et
-l'assistant ont chacun leur compteur, vingt appels en tout.
+limitée à dix appels par minute par compte — **par route** : le découpage,
+l'assistant et les recettes de l'accueil ont chacun leur compteur, trente
+appels en tout.
 
 **Ce qui passe quand même.** Tout ce qui n'est pas un prénom enregistré :
 « mon fils », un surnom, le prénom d'un invité, un prénom tapé sans son accent
@@ -439,7 +441,7 @@ l'assistant ont chacun leur compteur, vingt appels en tout.
 « une olive » du texte : la ligne manque, et la personne la rajoute.
 
 Et l'inscription est ouverte (§16) : n'importe qui peut créer un compte et un
-foyer, puis faire vingt appels par minute sur la clé de l'hébergeur. Le plafond
+foyer, puis faire trente appels par minute sur la clé de l'hébergeur. Le plafond
 borne la vitesse, pas le total.
 
 **Ce que ça coûte** — un prénom d'enfant qui part chez Anthropic quand
@@ -544,6 +546,44 @@ elle sort, et chaque option a son prix :
 Décidé le 14/09/2026 de consigner plutôt que de construire : la commande a été
 proposée, puis écartée faute de résoudre le vrai problème — le trajet de la
 base au dépôt.
+
+---
+
+## 20. L'assistant de recettes vise des moyennes saisies, et ses idées n'ont pas de source
+
+**Où** — `server/llm/recettes.ts`, `POST /api/assistant/recipes`, le bouton
+« Demander à l'assistant des recettes » de l'accueil.
+
+**Des moyennes de ce qui a été saisi.** Le modèle vise le repère le moins
+atteint sur les sept jours précédents. Une journée dont seul le dîner a été
+saisi y compte comme une journée entière : le pourcentage est un minorant, et
+le modèle peut viser un manque qui n'existe pas. La route refuse une semaine
+vide, pas une semaine lacunaire ; le résumé dit que la saisie peut être
+incomplète, il ne sait pas laquelle.
+
+**Des idées sans source.** Au-delà des recettes Jow du foyer, qu'il désigne
+par numéro et dont les valeurs viennent de Jow, le modèle avance une ou deux
+idées de plats — élargi le 14/09/2026, à la demande du propriétaire. Une idée
+n'a ni valeur ni photo, et un chiffre l'écarte entière ; mais son « pourquoi »
+(« les légumineuses apportent des fibres ») vient de ce que le modèle sait des
+aliments, pas d'une source. R1 est tenu dans sa lettre — aucune valeur ne vient
+du modèle —, pas tout à fait dans son esprit. Le badge « à vérifier » le dit,
+et rien n'est gardé.
+
+**Ni allergènes ni régimes contrôlés.** Les allergies ne sont saisies nulle
+part et ne partiraient pas (I3). Les régimes partent, et la consigne demande de
+les respecter, sans que rien ne le vérifie. Les recettes proposées sont celles
+que le foyer a lui-même partagées ; une idée n'est qu'un nom de plat, que
+personne ne cuisine sans en lire la recette.
+
+**Ce que ça coûte.** Une proposition qui vise le mauvais repère, ou une idée
+qui ne convient pas au foyer : une suggestion de trop, jamais une valeur fausse
+affichée.
+
+**Ce qui le lèverait.** Écarter les journées manifestement incomplètes demande
+un seuil qu'aucune source ne donne : il se décide avec le foyer. Rapprocher une
+idée d'une vraie recette demanderait de chercher dans Jow, ce que l'app ne fait
+pas (I7 : pages publiques seulement).
 
 ---
 
