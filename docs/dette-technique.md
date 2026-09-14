@@ -348,6 +348,32 @@ est vide aujourd'hui, et sa saisie manuelle est justement l'un des points du
 
 ---
 
+## 15. Ce que la passe de sécurité du 14/09/2026 laisse ouvert
+
+Trois angles morts connus, tous assumés, aucun bloquant.
+
+**La CSP autorise les styles en ligne.** `style-src 'self' 'unsafe-inline'`,
+parce que le front pose ses styles en attribut `style=…` sur presque chaque
+élément. Une injection HTML pourrait donc encore repeindre la page — mais pas
+exécuter de script (`script-src 'self'`), ni appeler un tiers
+(`connect-src 'self'`). Le lever demande de sortir les styles des composants
+vers des feuilles, ce qui est une passe à soi seule.
+
+**Les requêtes anonymes partagent un compteur de débit.** `trustProxy` n'est
+pas activé — un `x-forwarded-for` cru sur parole se falsifie, et le plafond se
+contournerait d'une ligne — donc `request.ip` est celle de Caddy. Conséquence :
+un scanner qui martèle `/api/auth` peut faire attendre une minute devant
+l'écran de connexion. Les requêtes authentifiées sont comptées par compte et ne
+sont pas concernées. Le lever suppose de décider quel proxy est de confiance,
+ce qui dépend de l'installation.
+
+**HSTS n'est pas posé par l'app.** L'app ne sert qu'en HTTP derrière Caddy, qui
+porte le TLS : `Strict-Transport-Security` se pose là, une ligne de Caddyfile
+(`docs/mise-en-service.md`). Tant qu'elle n'y est pas, une toute première
+visite en `http://` reste interceptable.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
