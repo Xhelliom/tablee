@@ -65,7 +65,48 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return payload as T;
 }
 
+/**
+ * Une réponse en Server-Sent Events (`POST /api/assistant`) : chaque `texte`
+ * part dans `onText` dès qu'il arrive, et la promesse rend la donnée de `fin`.
+ *
+ * Lue à la main, parce qu'`EventSource` ne sait faire que des GET. Un flux qui
+ * se termine sans `fin` — réseau coupé, serveur tombé — est une erreur et non
+ * une réponse courte. Et le serveur plafonne une réponse à une minute : un flux
+ * encore muet au-delà est un réseau mort, pas un modèle lent.
+ */
+async function events<T>(path: string, body: unknown, onText: (delta: string) => void): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(90_000),
+  });
+  if (!response.ok || response.body === null) {
+    throw toApiError(response.status, await response.json().catch(() => undefined));
+  }
+
+  const coupé = new ApiError(response.status, 'flux_coupe', 'la réponse a été coupée en route — réessayez');
+  const lecteur = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let tampon = '';
+  for (;;) {
+    const { done, value } = await lecteur.read().catch(() => { throw coupé; });
+    if (done) throw coupé;
+    tampon += value;
+    for (let limite = tampon.indexOf('\n\n'); limite !== -1; limite = tampon.indexOf('\n\n')) {
+      const bloc = tampon.slice(0, limite);
+      tampon = tampon.slice(limite + 2);
+      const event = /^event: (.*)$/m.exec(bloc)?.[1];
+      const data: unknown = JSON.parse(/^data: (.*)$/m.exec(bloc)?.[1] ?? 'null');
+      if (event === 'texte') onText(data as string);
+      else if (event === 'fin') return data as T;
+      else if (event === 'erreur') throw toApiError(502, data);
+    }
+  }
+}
+
 export const api = {
+  events,
   get: <T,>(path: string): Promise<T> => request<T>('GET', path),
   post: <T,>(path: string, body?: unknown): Promise<T> => request<T>('POST', path, body ?? {}),
   put: <T,>(path: string, body: unknown): Promise<T> => request<T>('PUT', path, body),

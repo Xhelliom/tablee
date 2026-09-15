@@ -41,6 +41,8 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   let découpés: string[] = [];
   let choisis: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
+  /** Le faux assistant lâche après son premier morceau. */
+  let enPanne = false;
   let recettes: string[] = [];
 
   const call = async (
@@ -77,8 +79,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         choisis.push(lines);
         return Promise.resolve({ choix: [{ ligne: 1, numero: 2 }, { ligne: 2, numero: 1 }] });
       },
-      advise: (facts: string, conversation: Turn[]): Promise<string> => {
+      advise: (facts: string, conversation: Turn[], { onText }: { onText: (delta: string) => void }): Promise<string> => {
         conseillé = { facts, conversation };
+        onText('Une soupe ');
+        if (enPanne) return Promise.reject(new Error('le modèle a lâché en route'));
+        onText('de légumes ?');
         return Promise.resolve('Une soupe de légumes ?');
       },
       suggestRecipes: (facts: string): Promise<unknown> => {
@@ -110,6 +115,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     découpés = [];
     choisis = [];
     conseillé = null;
+    enPanne = false;
     recettes = [];
     await pool.query(
       `insert into food (source, external_id, name, plant_based,
@@ -185,12 +191,48 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
     });
 
-    it('résume le foyer en tranches d’âge, sans prénom ni date de naissance (I3)', async () => {
-      const { status, body } = await call(avecIA, 'POST', '/api/assistant', {
-        messages: [{ role: 'user', content: 'Léa aime les pâtes, une idée ?' }],
+    /** Une question, et les événements de la réponse dans l'ordre. */
+    const poser = async (content: string): Promise<{ status: number; type: unknown; events: [string, unknown][] }> => {
+      const response = await avecIA.inject({
+        method: 'POST',
+        url: '/api/assistant',
+        headers: { cookie: foyer.cookie },
+        payload: { messages: [{ role: 'user', content }] },
       });
+      return {
+        status: response.statusCode,
+        type: response.headers['content-type'],
+        events: response.payload.trim().split('\n\n').map((bloc): [string, unknown] => {
+          const [event = '', data = ''] = bloc.split('\n');
+          return [event.replace('event: ', ''), JSON.parse(data.replace('data: ', ''))];
+        }),
+      };
+    };
+
+    it('envoie la réponse par morceaux pendant la génération, puis celle qui fait foi', async () => {
+      const { status, type, events } = await poser('Une idée ?');
       assert.equal(status, 200);
-      assert.equal(body.reply, 'Une soupe de légumes ?');
+      assert.match(String(type), /^text\/event-stream/);
+      assert.deepEqual(events, [
+        ['texte', 'Une soupe '],
+        ['texte', 'de légumes ?'],
+        ['fin', { reply: 'Une soupe de légumes ?' }],
+      ]);
+    });
+
+    it('dit qu’un flux a cassé en route, et répond encore à la question suivante', async () => {
+      enPanne = true;
+      assert.deepEqual((await poser('Une idée ?')).events, [
+        ['texte', 'Une soupe '],
+        ['erreur', { error: { code: 'ia_injoignable', message: 'l’assistant n’a pas répondu — réessayez dans un instant' } }],
+      ]);
+      enPanne = false;
+      assert.deepEqual((await poser('Une idée ?')).events.at(-1), ['fin', { reply: 'Une soupe de légumes ?' }]);
+    });
+
+    it('résume le foyer en tranches d’âge, sans prénom ni date de naissance (I3)', async () => {
+      const { status } = await poser('Léa aime les pâtes, une idée ?');
+      assert.equal(status, 200);
       assert.ok(conseillé !== null);
       const { facts, conversation } = conseillé;
       assert.match(facts, /1 enfant de 6-9 ans/);
