@@ -366,7 +366,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               <li key={food.id}>
                 <button type="button" onClick={() => add(food)} style={resultRow}>
                   <span style={{ fontSize: 14 }}>{food.name}</span>
-                  {food.kcal100g === null ? (
+                  {!food.nutrientsKnown ? (
                     <span className="meta">valeur inconnue</span>
                   ) : null}
                 </button>

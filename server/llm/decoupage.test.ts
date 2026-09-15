@@ -43,7 +43,7 @@ describe('découpage par IA — ce qui revient', () => {
 
 describe('découpage par IA — le choix dans Ciqual', () => {
   const food = (name: string): FoodSummary => ({
-    id: name, name, source: 'ciqual', category: null, plantBased: null, kcal100g: null, units: [],
+    id: name, name, source: 'ciqual', category: null, plantBased: null, nutrientsKnown: true, units: [],
   });
   // Les deux cas relevés sur la vraie table le 14/09/2026.
   const pâtes: MatchedItem = {

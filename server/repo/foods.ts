@@ -10,7 +10,12 @@ export interface FoodSummary {
   source: 'ciqual' | 'off' | 'jow' | 'manuel';
   category: string | null;
   plantBased: boolean | null;
-  kcal100g: number | null;
+  /**
+   * Au moins une teneur des barres est connue. Pas l'énergie : l'ANSES ne la
+   * publie pas pour des centaines d'aliments dont elle donne les macros, et
+   * « valeur inconnue » les faisait écarter à tort (15/09/2026).
+   */
+  nutrientsKnown: boolean;
   /** Les unités que cet aliment sait convertir lui-même (§6, étape 2). */
   units: string[];
 }
@@ -120,13 +125,14 @@ async function matchFoods(
 ): Promise<FoodSummary[]> {
   const { rows } = await db.query<{
     id: string; name: string; source: FoodSummary['source']; category: string | null;
-    plant_based: boolean | null; kcal_100g: number | null; unit_weights: Record<string, number>;
+    plant_based: boolean | null; nutrients_known: boolean; unit_weights: Record<string, number>;
   }>(
     `with q as (
        select websearch_to_tsquery('french', $1) as exact,
               to_tsquery('french', $2) as prefix
      )
-     select f.id, f.name, f.source, f.category, f.plant_based, f.kcal_100g, f.unit_weights
+     select f.id, f.name, f.source, f.category, f.plant_based, f.unit_weights,
+            coalesce(f.protein_100g, f.carb_100g, f.fat_100g, f.fiber_100g) is not null as nutrients_known
      from food f, q
      where to_tsvector('french', f.name) @@ coalesce(q.prefix, q.exact)
      order by (select count(*) from unnest($4::text[]) terme
@@ -138,7 +144,7 @@ async function matchFoods(
 
   return rows.map((r) => ({
     id: r.id, name: r.name, source: r.source, category: r.category,
-    plantBased: r.plant_based, kcal100g: r.kcal_100g,
+    plantBased: r.plant_based, nutrientsKnown: r.nutrients_known,
     units: Object.keys(r.unit_weights ?? {}),
   }));
 }

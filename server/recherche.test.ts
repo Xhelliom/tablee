@@ -54,4 +54,17 @@ describe('recherche d’aliments', { skip: enabled ? false : SKIP_MESSAGE }, () 
   it('n’élargit pas quand tous les mots trouvent déjà', async () => {
     assert.deepEqual(await noms('Sauce tomate'), ['Sauce tomate']);
   });
+
+  it('ne dit « valeur inconnue » que sans aucune teneur : l’énergie absente n’y suffit pas', async () => {
+    // Le muffin de Ciqual : protéines, glucides, lipides publiés, énergie « - ».
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based, kcal_100g, protein_100g)
+       values ('manuel', 'muffin', 'Muffin, aux myrtilles', null, null, 5.59),
+              ('manuel', 'mystere', 'Muffin mystère', null, null, null)`,
+    );
+    assert.deepEqual(
+      (await searchFoods(pool, 'Muffin', 5)).map((food) => [food.name, food.nutrientsKnown]),
+      [['Muffin mystère', false], ['Muffin, aux myrtilles', true]],
+    );
+  });
 });

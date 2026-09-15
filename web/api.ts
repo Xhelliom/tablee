@@ -356,7 +356,8 @@ export interface FoodSummary {
   source: string;
   category: string | null;
   plantBased: boolean | null;
-  kcal100g: number | null;
+  /** Au moins une teneur des barres connue — l'énergie n'y compte pas. */
+  nutrientsKnown: boolean;
   units: string[];
 }
 
