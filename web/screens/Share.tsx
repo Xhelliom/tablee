@@ -22,7 +22,7 @@
  * reproduire nous-mêmes.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, type Meal, type ResolveResponse, type Slot } from '../api.ts';
+import { api, type ResolveResponse, type Slot } from '../api.ts';
 import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
@@ -130,7 +130,7 @@ export function SharedRecipe(
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
-      const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
+      await api.post('/api/meals', {
         eatenAt: new Date().toISOString(),
         slot,
         source: 'jow',
@@ -143,7 +143,9 @@ export function SharedRecipe(
         // a rien à stocker, et surtout rien à réinventer.
         ...(source.kind === 'partage' ? { rawInput: source.text } : {}),
       });
-      navigate(`/repas/${meal.id}`, { replace: true });
+      // L'accueil, pas le détail : il reprend les blocs du formulaire, et
+      // l'enregistrement paraissait resté sans effet.
+      navigate('/', { replace: true });
     } catch {
       setError('Le repas n’a pas pu être enregistré.');
       setSaving(false);
