@@ -64,6 +64,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     return body.eater.id;
   };
 
+  const oeuf = async (label: string): Promise<Record<string, unknown>> => {
+    const { rows } = await pool.query<{ id: string }>(`select id from food where name = 'Oeuf, cru'`);
+    return { foodId: rows[0]!.id, label, quantity: 110, unit: 'g', quantityG: 110 };
+  };
+
   before(async () => {
     pool = await testPool();
     auth = buildTestAuth(pool);
@@ -173,11 +178,10 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { body: fiche } = await call(avecIA, 'POST', '/api/eaters', {
         firstName: 'Sam', birthDate: '1988-01-01', sex: 'M', self: true,
       });
-      const { rows } = await pool.query<{ id: string }>(`select id from food where name = 'Oeuf, cru'`);
       const { status, body } = await call(avecIA, 'POST', '/api/meals', {
         eatenAt: new Date().toISOString(), slot: 'petit_dej', source: 'ia',
         participants: [{ eaterId: fiche.eater.id, present: true }],
-        items: [{ foodId: rows[0]!.id, label: '2 œufs', quantity: 110, unit: 'g', quantityG: 110 }],
+        items: [await oeuf('2 œufs')],
       });
       assert.equal(status, 201);
       assert.equal(body.meal.nutrition.confidence, 'moyenne');
@@ -192,15 +196,12 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
       return body.meal;
     };
-    const oeuf = async (label: string): Promise<Record<string, unknown>> => {
-      const { rows } = await pool.query<{ id: string }>(`select id from food where name = 'Oeuf, cru'`);
-      return { foodId: rows[0]!.id, label, quantity: 110, unit: 'g', quantityG: 110 };
-    };
     const truffe = (label: string): Record<string, unknown> => ({ foodId: null, label });
 
     it('dessine le plat une fois, sans prénom, et reprend l’image pour les mêmes ingrédients', async () => {
       const léa = await créerLéa();
-      const premier = await repas(léa, { items: [await oeuf('2 œufs'), truffe('truffe de Léa')], remainingServings: 1 });
+      const items = [await oeuf('2 œufs'), truffe('truffe de Léa')];
+      const premier = await repas(léa, { items, remainingServings: 1 });
       assert.equal(premier.imageUrl, null, 'rien avant qu’on la demande');
 
       const { status, body } = await call(avecIA, 'POST', `/api/meals/${premier.id}/image`, {
@@ -219,7 +220,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(image.headers['content-type'], 'image/png');
       assert.equal(image.body, 'png');
 
-      const second = await repas(léa, { items: [truffe('Truffe de Léa '), await oeuf('3 œufs')] });
+      const second = await repas(léa, { items });
       const reprise = await call(avecIA, 'POST', `/api/meals/${second.id}/image`, {});
       assert.equal(reprise.body.imageUrl, body.imageUrl, 'mêmes ingrédients, même image');
       assert.equal(dessinés.length, 1, 'rien n’est redessiné');

@@ -81,10 +81,13 @@ export function readImage(response: unknown): DishImage | null {
  * Ciqual quand il est rattaché — « 2 œufs » et « 3 œufs » sont le même œuf —,
  * le libellé sinon. La description n'y entre pas : les mêmes ingrédients
  * reprennent l'image déjà payée.
+ *
+ * C'est la signature d'un repas habituel (`suggestTemplates`, en SQL) : un
+ * « même plat » qui changerait de définition ici doit en changer là-bas.
  */
 // ponytail: égalité stricte des ensembles ; rapprocher des ensembles voisins (Jaccard) le jour où les images se répètent trop peu.
 export function dishTag(items: { foodId: string | null; label: string }[]): string {
-  const keys = [...new Set(items.map((item) => item.foodId ?? item.label.trim().toLowerCase()))].sort();
+  const keys = [...new Set(items.map((item) => item.foodId ?? item.label.toLowerCase()))].sort();
   return createHash('sha256').update(keys.join('\n')).digest('hex');
 }
 

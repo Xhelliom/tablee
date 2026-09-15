@@ -15,9 +15,7 @@ import { dishPrompt, dishTag } from '../llm/image.ts';
 import { anonymize, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { searchFoods } from '../repo/foods.ts';
-import {
-  dishImageUrl, findDishImage, loadDishImage, saveDishImage, setMealImage,
-} from '../repo/images.ts';
+import { dishImageUrl, loadDishImage, reuseDishImage, saveDishImage } from '../repo/images.ts';
 import {
   createMeal, deleteMeal, getMeal, listMeals, openLeftovers, updateMeal,
 } from '../repo/meals.ts';
@@ -147,11 +145,8 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
       if (meal.imageUrl !== null) return { imageUrl: meal.imageUrl };
 
       const tag = dishTag(meal.items);
-      const known = await findDishImage(request.db, householdId, tag);
-      if (known !== null) {
-        await setMealImage(request.db, householdId, id, known);
-        return { imageUrl: dishImageUrl(known) };
-      }
+      const reused = await reuseDishImage(request.db, householdId, id, tag);
+      if (reused !== null) return { imageUrl: dishImageUrl(reused) };
 
       const eaters = await listEaters(request.db, householdId, { includeInactive: true });
       const noms = namesToHide(eaters, identity.name);
@@ -170,12 +165,8 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
       });
       if (image === null) return { imageUrl: null };
 
-      const imageId = await withHousehold(ctx.pool, householdId, async (db) => {
-        const saved = await saveDishImage(db, householdId, tag, image);
-        await setMealImage(db, householdId, id, saved);
-        return saved;
-      });
-      return { imageUrl: dishImageUrl(imageId) };
+      const saved = await withHousehold(ctx.pool, householdId, (db) => saveDishImage(db, householdId, id, tag, image));
+      return { imageUrl: saved === null ? null : dishImageUrl(saved) };
     },
   );
 

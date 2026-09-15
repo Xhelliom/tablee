@@ -184,8 +184,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           quantityG: item.grams,
         })),
       });
-      // L'image du plat se dessine en quelques secondes, sans qu'on l'attende :
-      // le repas est enregistré, et une image manquée ne coûte qu'une vignette.
+      // Sans l'attendre : voir `POST /api/meals/:id/image`.
       if (meal.source === 'ia') {
         void api.post(`/api/meals/${meal.id}/image`, { description: décrits.join('\n') })
           .catch(() => undefined);

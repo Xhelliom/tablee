@@ -11,7 +11,7 @@ describe('l’image d’un plat', () => {
     const oeuf = (label: string): { foodId: string; label: string } => ({ foodId: 'oeuf', label });
     assert.equal(
       dishTag([oeuf('2 œufs'), { foodId: null, label: 'Truffe' }]),
-      dishTag([{ foodId: null, label: ' truffe ' }, oeuf('3 œufs'), oeuf('un œuf')]),
+      dishTag([{ foodId: null, label: 'truffe' }, oeuf('3 œufs'), oeuf('un œuf')]),
     );
     assert.notEqual(dishTag([oeuf('2 œufs')]), dishTag([oeuf('2 œufs'), { foodId: null, label: 'truffe' }]));
   });

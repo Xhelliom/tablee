@@ -78,7 +78,7 @@ export interface Meal {
   guestCount: number;
   leftoverOf: string | null;
   note: string | null;
-  recipe: { id: string; title: string; imageUrl: string | null; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA (015). */
   imageUrl: string | null;
   items: MealItem[];
@@ -637,7 +637,6 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
         : {
             id: row.recipe_id,
             title: row.recipe_title ?? '',
-            imageUrl: row.image_url,
             nutriScore: row.nutri_score,
           },
     imageUrl: row.image_url ?? (row.image_id === null ? null : dishImageUrl(row.image_id)),
