@@ -15,6 +15,14 @@
  *
  * « Si tu dois arbitrer entre un calcul plus fin et un tap de moins, prends le
  * tap de moins. »
+ *
+ * ⚠️ Redessiné le 15/09/2026 — l'ordre ci-dessus n'a pas bougé, la forme si.
+ * Quatre titres gris de 12 px se ressemblaient tous ; les états vides des
+ * raccourcis passaient devant les vraies portes d'entrée, dessinées comme des
+ * champs de saisie grisés ; et « Manuel » ouvrait le même écran que « Décrire
+ * son plat ». Désormais : un titre d'affichage, comme sur l'accueil ; les
+ * raccourcis d'un tap seulement quand ils existent ; et chaque façon d'ajouter
+ * dans une liste groupée, avec une ligne qui dit où elle mène.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -26,7 +34,7 @@ import { ModalHeader } from '../components/Chrome.tsx';
 import {
   IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
 } from '../icons.tsx';
-import { SLOT_LABELS, currentSlot, relativeDay } from '../design/vocabulary.ts';
+import { SLOT_LABELS, SLOT_WHEN, currentSlot, relativeDay } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
 import { JowLink } from './JowLink.tsx';
 import { Recipes } from './Recipes.tsx';
@@ -36,6 +44,11 @@ export function QuickAddScreen(): React.ReactElement {
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
+  /**
+   * Rien sous le titre avant la réponse : les raccourcis arrivent au-dessus des
+   * portes d'entrée, et les pousseraient sous le doigt au moment du tap.
+   */
+  const [loaded, setLoaded] = useState(false);
   const [mode, setMode] = useState<'menu' | 'manuel' | 'lien' | 'recettes'>('menu');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +64,9 @@ export function QuickAddScreen(): React.ReactElement {
     setSuggestions(s.suggestions);
   }, []);
 
-  useEffect(() => { void load().catch(() => setError('chargement impossible')); }, [load]);
+  useEffect(() => {
+    void load().catch(() => setError('chargement impossible')).finally(() => setLoaded(true));
+  }, [load]);
 
   /** Deux taps depuis l'accueil : ouvrir cet écran, appuyer sur le template. */
   const applyTemplate = async (template: MealTemplate): Promise<void> => {
@@ -108,155 +123,191 @@ export function QuickAddScreen(): React.ReactElement {
     <div className="app">
       <ModalHeader title="Ajouter un repas" onClose={() => navigate('/')} />
 
-      {error !== null ? <p className="empty">{error}</p> : null}
+      {/* Le sur-titre dit le créneau que prendront les raccourcis d'un tap. */}
+      <div className="sec" style={{ paddingTop: 20 }}>
+        <p className="eyebrow">{SLOT_WHEN[currentSlot()]}</p>
+        <p className="display" style={{ marginTop: 6, fontSize: 28 }}>
+          {'Qu’y avait-il\nau menu ?'}
+        </p>
+      </div>
 
-      {/* V2 — « ce repas revient souvent, en faire un bouton ? » */}
-      {suggestions.length > 0 ? (
+      {error !== null ? (
         <div className="sec" style={{ paddingTop: 14 }}>
-          {suggestions.map((suggestion) => (
-            <div key={suggestion.mealId} className="card"
-                 style={{ display: 'flex', gap: 11, padding: '12px 13px', marginBottom: 8 }}>
-              <span style={{
-                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                background: 'var(--coral-50)', color: 'var(--coral-600)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <IconStar size={18} />
-              </span>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 13 }}>
-                  {suggestion.labels.slice(0, 3).join(', ') || SLOT_LABELS[suggestion.slot]}
-                </p>
-                <p className="meta">Enregistré {suggestion.occurrences} fois ce mois-ci</p>
-              </div>
-              <button type="button" className="chip"
-                      style={{ alignSelf: 'center', cursor: 'pointer' }}
-                      onClick={() => { void makeTemplate(suggestion); }}>
-                En faire un bouton
-              </button>
-            </div>
-          ))}
+          <p style={{
+            fontSize: 13, lineHeight: 1.5, padding: '10px 12px', borderRadius: 'var(--radius)',
+            background: 'var(--bg-warning)', color: 'var(--text-warning)',
+          }}>
+            {error}
+          </p>
         </div>
       ) : null}
 
-      <Section title="Habituels">
-        {templates.length === 0 ? (
-          <p className="meta" style={{ lineHeight: 1.5 }}>
-            Aucun pour l’instant. Depuis le détail d’un repas, « En faire un
-            habituel » le place ici — un tap suffira ensuite.
-          </p>
-        ) : (
-          <div className="grid2">
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className="card"
-                onClick={() => { void applyTemplate(template); }}
-                disabled={busy}
-                style={{ padding: '12px 11px', textAlign: 'left', cursor: 'pointer' }}
-              >
-                <p style={{ fontSize: 13, fontWeight: 500 }}>{template.name}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {template.useCount === 0
-                    ? 'Jamais utilisé'
-                    : `Utilisé ${template.useCount} fois`}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </Section>
+      {loaded ? (
+        <>
+          {templates.length > 0 || suggestions.length > 0 ? (
+            <Section title="Habituels">
+              {templates.length > 0 ? (
+                <div className="grid2">
+                  {templates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      className="card tuile"
+                      onClick={() => { void applyTemplate(template); }}
+                      disabled={busy}
+                      style={{ padding: 12, textAlign: 'left', cursor: 'pointer', width: '100%' }}
+                    >
+                      <span style={{ ...pastille, width: 30, height: 30, borderRadius: 8 }}>
+                        <IconStar size={16} />
+                      </span>
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 500, lineHeight: 1.3, marginTop: 10 }}>
+                        {template.name}
+                      </span>
+                      <span className="meta" style={{ display: 'block', marginTop: 2 }}>
+                        {template.useCount === 0 ? 'Jamais utilisé' : `Utilisé ${template.useCount} fois`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
-      <Section title="Restes de…">
-        {leftovers.length === 0 ? (
-          <p className="meta" style={{ lineHeight: 1.5 }}>
-            Rien à resservir : aucun plat avec recette ces trois derniers jours.
-          </p>
-        ) : (
-          <div className="stack">
-            {leftovers.map((meal) => (
-              <button key={meal.id} type="button" className="card row" disabled={busy}
-                      onClick={() => { void logLeftover(meal); }}>
-                <IconFridge size={18} style={{ color: 'var(--text-secondary)', marginLeft: 4 }} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, display: 'block' }}>
-                    {meal.recipe?.title ?? 'Plat'}
+              {/* V2 — « ce repas revient souvent, en faire un habituel ? » Le
+                  pointillé dessine la place de la tuile qu'il deviendrait. */}
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.mealId} style={{
+                  display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px',
+                  marginTop: templates.length > 0 ? 8 : 0,
+                  border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-card)',
+                }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, lineHeight: 1.3 }}>
+                      {suggestion.labels.slice(0, 3).join(', ') || SLOT_LABELS[suggestion.slot]}
+                    </span>
+                    <span className="meta" style={{ display: 'block', marginTop: 2 }}>
+                      Enregistré {suggestion.occurrences} fois ce mois-ci
+                    </span>
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {capitalize(relativeDay(meal.eatenAt))} · {trim(meal.servings)} part
-                    {meal.servings > 1 ? 's' : ''} mangée{meal.servings > 1 ? 's' : ''}
-                  </span>
-                </span>
-                <IconChevron size={17} style={{ color: 'var(--text-muted)' }} />
-              </button>
-            ))}
-          </div>
-        )}
-      </Section>
+                  <button type="button" className="chip"
+                          style={{
+                            flexShrink: 0, cursor: 'pointer',
+                            background: 'var(--coral-50)', color: 'var(--coral-600)',
+                          }}
+                          onClick={() => { void makeTemplate(suggestion); }}>
+                    En faire un habituel
+                  </button>
+                </div>
+              ))}
+            </Section>
+          ) : null}
 
-      <Section title="Recettes">
-        {/* Devant le collage : ce qui est déjà connu se rejoue sans réseau, et
-            c'est le cas le plus fréquent une fois quelques plats enregistrés. */}
-        <button type="button" onClick={() => setMode('recettes')} style={entry}>
-          <IconBowl size={17} />
-          <span style={{ fontSize: 14 }}>Mes recettes</span>
-        </button>
-        <button type="button" onClick={() => setMode('lien')} style={entry}>
-          <IconLink size={17} />
-          <span style={{ fontSize: 14 }}>Coller un lien Jow</span>
-        </button>
-        <p className="meta" style={{ lineHeight: 1.5 }}>
-          Depuis l’app Jow, « Partager » puis Tablée fait la même chose sans
-          copier-coller.
-        </p>
-      </Section>
+          {leftovers.length > 0 ? (
+            <Section title="Restes de…">
+              <div className="card groupe">
+                {leftovers.map((meal) => (
+                  <Porte
+                    key={meal.id}
+                    icon={meal.recipe?.imageUrl ? (
+                      <img src={meal.recipe.imageUrl} alt="" style={{ ...pastille, objectFit: 'cover' }} />
+                    ) : <span style={pastille}><IconFridge size={18} /></span>}
+                    title={meal.recipe?.title ?? 'Plat'}
+                    detail={`${capitalize(relativeDay(meal.eatenAt))} · ${trim(meal.servings)} part${
+                      meal.servings > 1 ? 's' : ''} mangée${meal.servings > 1 ? 's' : ''}`}
+                    disabled={busy}
+                    onClick={() => { void logLeftover(meal); }}
+                  />
+                ))}
+              </div>
+            </Section>
+          ) : null}
 
-      <Section title="Autre">
-        <button type="button" onClick={() => setMode('manuel')} style={entry}>
-          {ia ? <IconPencil size={17} /> : <IconSearch size={17} />}
-          <span style={{ fontSize: 14 }}>{ia ? 'Décrire son plat' : 'Chercher un aliment'}</span>
-        </button>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="card"
-                  style={{ ...secondary, opacity: .55, cursor: 'not-allowed' }}
-                  disabled
-                  title="La saisie par photo arrive en V3">
-            <IconCamera size={17} />
-            Photo
-          </button>
-          <button type="button" className="card" style={secondary} onClick={() => setMode('manuel')}>
-            <IconPencil size={17} />
-            Manuel
-          </button>
-        </div>
-      </Section>
+          <Section title="Recettes">
+            {/* Devant le collage : ce qui est déjà connu se rejoue sans réseau, et
+                c'est le cas le plus fréquent une fois quelques plats enregistrés. */}
+            <div className="card groupe">
+              <Porte
+                icon={<span style={pastille}><IconBowl size={18} /></span>}
+                title="Mes recettes"
+                detail="Celles que le foyer connaît déjà"
+                onClick={() => setMode('recettes')}
+              />
+              <Porte
+                icon={<span style={pastille}><IconLink size={18} /></span>}
+                title="Coller un lien Jow"
+                detail="Ou, depuis Jow : « Partager », puis Tablée"
+                onClick={() => setMode('lien')}
+              />
+            </div>
+          </Section>
+
+          <Section title="Sans recette">
+            {/* « Manuel » n'a plus sa ligne : il ouvrait ce même écran, où la
+                saisie à la main se trouve sous la description. */}
+            <div className="card groupe">
+              <Porte
+                icon={<span style={pastille}>{ia ? <IconPencil size={18} /> : <IconSearch size={18} />}</span>}
+                title={ia ? 'Décrire son plat' : 'Chercher un aliment'}
+                detail={ia
+                  ? 'L’IA le découpe, ou aliment par aliment'
+                  : 'Aliment par aliment, avec les quantités'}
+                onClick={() => setMode('manuel')}
+              />
+              <Porte
+                icon={<span style={pastille}><IconCamera size={18} /></span>}
+                title="Photo"
+                detail="Bientôt"
+                disabled
+              />
+            </div>
+          </Section>
+
+          {templates.length === 0 ? (
+            <p className="meta sec" style={{ paddingTop: 18, lineHeight: 1.5 }}>
+              Un repas qui revient souvent&nbsp;? Depuis son détail, « En faire un
+              habituel » le place en haut de cet écran&nbsp;: un tap suffira ensuite.
+            </p>
+          ) : null}
+        </>
+      ) : null}
       <div className="fab-space" />
     </div>
   );
 }
 
-/** Une porte d'entrée pleine largeur : le lien Jow, la recherche d'aliment. */
-const entry: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-  padding: '11px 12px', borderRadius: 'var(--radius)',
-  border: '.5px solid var(--border-strong)', background: 'var(--surface-2)',
-  marginBottom: 8, cursor: 'pointer', color: 'var(--text-muted)',
-};
-
-const secondary: React.CSSProperties = {
-  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-  padding: 10, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer',
-};
+/** Une ligne de liste groupée : une pastille, ce qu'elle fait, où elle mène. */
+function Porte({ icon, title, detail, onClick, disabled = false }: {
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}): React.ReactElement {
+  return (
+    <button type="button" className="row porte" onClick={onClick} disabled={disabled}>
+      {icon}
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 15, lineHeight: 1.3 }}>{title}</span>
+        <span className="meta" style={{ display: 'block', marginTop: 2, lineHeight: 1.4 }}>{detail}</span>
+      </span>
+      {disabled ? null : <IconChevron size={17} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+    </button>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
-    <div className="sec" style={{ paddingTop: 14 }}>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>{title}</p>
+    <section className="sec" style={{ paddingTop: 22 }}>
+      <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 10 }}>{title}</h2>
       {children}
-    </div>
+    </section>
   );
 }
+
+/** Le terracotta discret des portes d'entrée — la marque, jamais un nutriment. */
+const pastille: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--coral-50)', color: 'var(--coral-600)',
+};
 
 const trim = (value: number): string => String(Math.round(value * 100) / 100);
 const capitalize = (text: string): string => text.slice(0, 1).toUpperCase() + text.slice(1);

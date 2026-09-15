@@ -368,6 +368,19 @@ input[type='number']::-webkit-inner-spin-button {
   width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
 }
 
+/* Les lignes d'une liste groupée : une carte, des lignes séparées d'un filet.
+   Pressée, la ligne s'assombrit sous le doigt sans rétrécir — une ligne qui
+   rapetisse dans sa carte se décolle des bords. */
+.porte { padding: 12px 14px 12px 12px; gap: 12px; transition: background-color 120ms ease; }
+.porte + .porte { border-top: .5px solid var(--border); }
+.porte:active:not(:disabled) { background: var(--surface-1); }
+.porte:disabled { cursor: default; opacity: .55; }
+.groupe { overflow: hidden; }
+
+/* Une tuile d'un tap répond sous le doigt, comme `.btn`. */
+.tuile { transition: transform 160ms cubic-bezier(.23, 1, .32, 1); }
+.tuile:active:not(:disabled) { transform: scale(.97); }
+
 .thumb {
   width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -417,7 +430,7 @@ input[type='number']::-webkit-inner-spin-button {
 
 /* Moins de mouvement, pas moins d'information : les fondus restent. */
 @media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled) { transform: none; }
+  .btn:active:not(:disabled), .tuile:active:not(:disabled) { transform: none; }
   .apparait { animation-name: fondu; }
 }
 
