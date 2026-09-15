@@ -32,8 +32,9 @@ type Mode = 'connexion' | 'inscription' | 'oubli';
 
 export function LoginScreen(): React.ReactElement {
   const { signIn, signUp, google } = useSession();
-  const { query } = useRoute();
-  const [mode, setMode] = useState<Mode>('connexion');
+  const { query, path } = useRoute();
+  // « Créer un compte », sur la présentation, arrive ici avec `?inscription`.
+  const [mode, setMode] = useState<Mode>(query.has('inscription') ? 'inscription' : 'connexion');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -107,10 +108,24 @@ export function LoginScreen(): React.ReactElement {
   return (
     <div className="app">
       <header className="appbar">
-        <div className="appbar__brand">
-          <span className="appbar__logo"><IconBowl size={14} /></span>
-          Tablée
-        </div>
+        {/*
+          Venu de la présentation, la marque y ramène. Sur `/share` ou une
+          invitation, non : elle ferait perdre ce qu'on était venu finir.
+        */}
+        {path === '/connexion' ? (
+          <button
+            type="button" className="appbar__brand appbar__retour"
+            aria-label="Tablée, retour à la présentation" onClick={() => navigate('/')}
+          >
+            <span className="appbar__logo"><IconBowl size={14} /></span>
+            Tablée
+          </button>
+        ) : (
+          <div className="appbar__brand">
+            <span className="appbar__logo"><IconBowl size={14} /></span>
+            Tablée
+          </div>
+        )}
       </header>
 
       <div className="sec" style={{ paddingTop: 28 }}>
@@ -232,7 +247,7 @@ function messageLisible(error: ApiError, mode: Mode): string {
 function erreurGoogle(code: string | null): string | null {
   if (code === null || code === 'access_denied') return null;
   if (code === 'account_not_linked') {
-    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe, puis liez Google depuis les réglages du foyer.';
+    return 'Un compte existe déjà avec cette adresse. Entrez avec votre mot de passe, puis liez Google depuis votre profil.';
   }
   return 'La connexion avec Google n’a pas abouti. Réessayez, ou entrez avec votre adresse.';
 }
@@ -285,7 +300,7 @@ export function ResetPasswordScreen(): React.ReactElement {
             <p className="meta" style={{ marginTop: 10, lineHeight: 1.6 }}>
               C’est fait. Vos autres appareils ont été déconnectés.
             </p>
-            <button className="btn" style={{ marginTop: 24 }} onClick={() => navigate('/', { replace: true })}>
+            <button className="btn" style={{ marginTop: 24 }} onClick={() => navigate('/connexion', { replace: true })}>
               Me connecter
             </button>
           </>

@@ -2,7 +2,8 @@
  * L'accueil — itération « journal » des maquettes, pas « tableau de bord ».
  *
  * Ordre d'apparition, et il compte : la date et ce qui s'est passé, la bande
- * de saison, le bilan, puis les repas. Le chiffre n'ouvre pas l'écran.
+ * de saison, le bilan, puis les repas et ce qui attend au frigo. Le chiffre
+ * n'ouvre pas l'écran.
  * L'assistant de recettes vient en dernier : on le demande, il ne s'impose pas.
  *
  * ⚠️ Changé le 14/09/2026 — le bilan était un rang d'anneaux qu'on dépliait
@@ -14,12 +15,14 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError, api, type AssistantRecipesResponse, type DashboardResponse, type Nutrient,
+  ApiError, api, type AssistantRecipesResponse, type DashboardResponse, type Meal, type Nutrient,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
+import { Avatar } from '../components/Avatar.tsx';
 import { BilanCard, TONE_COLOR, TONE_ICON } from '../components/Bilan.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { LeftoverRow } from '../components/Leftovers.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
@@ -34,8 +37,14 @@ export function TodayScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   /** La personne choisie. `null` : sa propre assiette, sinon la première. */
   const [chosen, setChosen] = useState<string | null>(null);
+  const [fridge, setFridge] = useState<Meal[]>([]);
 
   const load = useCallback(async () => {
+    // À côté de la journée, pas avant elle : un frigo illisible ne doit pas
+    // faire tomber l'accueil.
+    void api.get<{ meals: Meal[] }>('/api/meals/leftovers?days=3')
+      .then(({ meals }) => setFridge(meals))
+      .catch(() => setFridge([]));
     try {
       setData(await api.get<DashboardResponse>('/api/dashboard'));
     } catch {
@@ -82,6 +91,7 @@ export function TodayScreen(): React.ReactElement {
             <PersonTabs dashboard={data.dashboard} shownId={shown.eater.id} onChoose={setChosen} />
           ) : null}
           <BilanCard
+            eaterId={shown.eater.id}
             firstName={shown.eater.firstName}
             balance={shown.balance}
             referencesLoaded={data.referencesLoaded}
@@ -114,6 +124,13 @@ export function TodayScreen(): React.ReactElement {
           <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
                     onOpen={(id) => navigate(`/repas/${id}`)} />
         ))}
+
+        {fridge.length > 0 ? (
+          <>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Dans le frigo</p>
+            {fridge.map((meal) => <LeftoverRow key={meal.id} meal={meal} />)}
+          </>
+        ) : null}
 
         <button
           type="button"
@@ -248,10 +265,14 @@ function PersonTabs({
             <span style={{ display: 'flex', opacity: active ? 1 : .55 }}>
               <NutrientRing balance={balance} firstName={eater.firstName} size={40} />
             </span>
+            {/* Le dessin à côté du prénom, pas au centre de l'anneau : ses
+                plantes vertes s'y liraient comme une donnée (§8ter). */}
             <span style={{
+              display: 'flex', alignItems: 'center', gap: 4,
               fontSize: 12, fontWeight: active ? 500 : 400,
               color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
             }}>
+              <Avatar seed={eater.id} size={16} />
               {eater.firstName}
             </span>
           </button>

@@ -23,6 +23,9 @@ import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
+import {
+  RemainsPicker, UNCOUNTED_HINT, eatenHint, remainsOf, split,
+} from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl, IconClose, IconPlus, IconStar, IconTrash } from '../icons.tsx';
@@ -90,6 +93,9 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
   const present = new Set(meal.participants.map((p) => p.eaterId));
   const nutrition = meal.nutrition;
   const title = meal.recipe?.title ?? meal.items.map((i) => i.label).join(', ') ?? '';
+  const isLeftover = meal.leftoverOf !== null;
+  /** Ce qu'on avait devant soi : ce qui a été mangé, plus ce qui reste. */
+  const base = meal.servings + (meal.remainingServings ?? 0);
 
   return (
     <div className="app">
@@ -134,7 +140,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
 
       {/* ── Nutrition ─────────────────────────────────────────────────────── */}
       <section style={row}>
-        <p className="label">Nutrition du plat entier</p>
+        <p className="label">Nutrition de ce qui a été mangé</p>
         {nutrition === null ? (
           <p className="meta">Pas encore calculée.</p>
         ) : (
@@ -239,19 +245,30 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       </section>
 
       {/* ── Édition (V2) ──────────────────────────────────────────────────── */}
+      {/* Un repas se corrige comme il s'est saisi : ce qu'on avait devant soi,
+          ce qui en reste (15/09/2026, §6bis). Sans recette, le nombre de parts
+          ne sert à rien — seule compte la part mangée de ce qui a été servi. */}
+      {meal.recipe !== null ? (
+        <section className="spread" style={row}>
+          <div>
+            <p style={{ fontSize: 14 }}>{isLeftover ? 'Il restait' : 'Cuisiné pour'}</p>
+            <p className="meta">{isLeftover ? 'Parts sorties du frigo' : 'Parts du plat entier'}</p>
+          </div>
+          <Stepper
+            value={base}
+            onChange={(next) => { if (!busy) void patch(split(next, remainsOf(meal).value)); }}
+            min={0.1} max={20} step={0.5}
+            label={isLeftover ? 'Il restait' : 'Cuisiné pour'}
+          />
+        </section>
+      ) : null}
       <section className="spread" style={row}>
-        <div>
-          <p style={{ fontSize: 14 }}>Pour combien&nbsp;?</p>
-          {/* « Préparées » disait le contraire du calcul : ce nombre multiplie
-              les valeurs par portion, puis se répartit entre les présents. Ce
-              qui reste dans le plat n'appartient à personne — c'est un second
-              repas (§6bis), pas une fraction de celui-ci. */}
-          <p className="meta">Parts mangées à ce repas</p>
-        </div>
-        <Stepper
-          value={meal.servings}
-          onChange={(servings) => { void patch({ servings }); }}
-          min={0.5} max={20} step={0.5} label="Parts mangées à ce repas"
+        <RemainsPicker
+          label={isLeftover ? 'Il en reste encore ?' : 'Il en reste ?'}
+          hint={meal.recipe !== null ? eatenHint(meal.servings) : UNCOUNTED_HINT}
+          value={remainsOf(meal).value}
+          disabled={busy}
+          onChange={(fraction) => { void patch(split(base, fraction)); }}
         />
       </section>
 
@@ -270,6 +287,18 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
           guestCount={meal.guestCount}
           onGuestCount={(guestCount) => { void patch({ guestCount }); }}
         />
+      </section>
+
+      {/* Un reste ou un habituel arrive ici déjà créé, et chaque retouche part
+          aussitôt. Sans ce bouton, rien ne le dit : on cherche « Enregistrer »
+          là où le partage Jow et la saisie manuelle l'ont mis. */}
+      <section style={row}>
+        <button type="button" className="btn" disabled={busy} onClick={() => navigate('/')}>
+          {busy ? 'Enregistrement…' : 'Terminé'}
+        </button>
+        <p className="meta" style={{ marginTop: 8, textAlign: 'center' }}>
+          Déjà enregistré — chaque modification l’est aussitôt.
+        </p>
       </section>
 
       <section style={{ ...row, display: 'flex', gap: 8 }}>

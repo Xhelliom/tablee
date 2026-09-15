@@ -10,6 +10,7 @@
  * zone d'image et reste sur le chrome, sinon l'écran devient orange sur orange.
  */
 import type { Meal } from '../api.ts';
+import { Avatar } from './Avatar.tsx';
 import { IconBowl, IconLeaf } from '../icons.tsx';
 import { SLOT_LABELS } from '../design/vocabulary.ts';
 
@@ -22,7 +23,6 @@ interface Props {
 
 export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Props): React.ReactElement {
   const title = meal.recipe?.title ?? mealTitle(meal);
-  const who = describeWho(meal);
 
   if (!hero) {
     return (
@@ -34,9 +34,7 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
         )}
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 14, display: 'block' }}>{title}</span>
-          <span className="meta" style={{ display: 'block' }}>
-            {SLOT_LABELS[meal.slot]} · {who}
-          </span>
+          <Who meal={meal} />
         </span>
       </button>
     );
@@ -72,9 +70,7 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
       </span>
       <span style={{ display: 'block', padding: '13px 14px' }}>
         <span style={{ fontSize: 17, display: 'block' }}>{title}</span>
-        <span className="meta" style={{ display: 'block', marginTop: 4 }}>
-          {SLOT_LABELS[meal.slot]} · {who}
-        </span>
+        <Who meal={meal} style={{ marginTop: 4 }} />
       </span>
     </button>
   );
@@ -87,15 +83,32 @@ function mealTitle(meal: Meal): string {
 }
 
 /**
- * « toute la famille » quand tout le monde y était, sinon les prénoms. Plus
- * court à lire, et c'est l'information utile.
+ * Le créneau, puis le dessin de chaque personne qui a mangé ce plat.
+ *
+ * ⚠️ Changé le 14/09/2026 — c'était « toute la famille » dès quatre prénoms,
+ * sinon les prénoms en toutes lettres. Faux dans un foyer de cinq, et
+ * illisible le jour où deux adultes ne mangent pas le même plat le même midi :
+ * il fallait lire chaque carte pour savoir laquelle était la sienne. Un repère
+ * par convive se lit d'un coup d'œil ; les prénoms restent dans le nom
+ * accessible et l'infobulle.
  */
-function describeWho(meal: Meal): string {
+function Who({ meal, style }: { meal: Meal; style?: React.CSSProperties }): React.ReactElement {
   const names = meal.participants.map((p) => p.firstName);
-  if (names.length === 0) return 'personne d’enregistré';
-  if (names.length >= 4) return 'toute la famille';
-  const withGuests = meal.guestCount > 0
-    ? `${names.join(', ')} + ${meal.guestCount} invité${meal.guestCount > 1 ? 's' : ''}`
-    : names.join(', ');
-  return withGuests;
+
+  return (
+    <span className="meta" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, ...style }}>
+      {SLOT_LABELS[meal.slot]}
+      {names.length === 0 ? (
+        <span>· personne d’enregistré</span>
+      ) : (
+        <span role="img" aria-label={`mangé par ${names.join(', ')}`} title={names.join(', ')}
+              style={{ display: 'inline-flex', gap: 3 }}>
+          {meal.participants.map((p) => <Avatar key={p.eaterId} seed={p.eaterId} />)}
+        </span>
+      )}
+      {meal.guestCount > 0 ? (
+        <span>+ {meal.guestCount} invité{meal.guestCount > 1 ? 's' : ''}</span>
+      ) : null}
+    </span>
+  );
 }

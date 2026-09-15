@@ -6,15 +6,17 @@
  * navigation basse ni retour à l'accueil. Android l'ouvre par-dessus une autre
  * app, l'utilisateur valide et repart — c'est un chemin, pas une destination.
  */
-import type { ReactElement } from 'react';
-import { useSegments } from './router.tsx';
+import { useEffect, type ReactElement } from 'react';
+import { navigate, useSegments } from './router.tsx';
 import { SessionProvider, useSession } from './session.tsx';
 import { Chrome } from './components/Chrome.tsx';
+import { LandingScreen } from './screens/Landing.tsx';
 import { LoginScreen, ResetPasswordScreen } from './screens/Login.tsx';
 import { TodayScreen } from './screens/Today.tsx';
 import { ShareScreen } from './screens/Share.tsx';
 import { QuickAddScreen } from './screens/QuickAdd.tsx';
 import { MealDetailScreen } from './screens/MealDetail.tsx';
+import { LeftoverScreen } from './screens/Leftover.tsx';
 import { WeekScreen } from './screens/Week.tsx';
 import { HistoryScreen } from './screens/History.tsx';
 import { EatersScreen } from './screens/Eaters.tsx';
@@ -23,6 +25,7 @@ import { OnboardingScreen } from './screens/Onboarding.tsx';
 import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 import { HouseholdSettingsScreen } from './screens/HouseholdSettings.tsx';
 import { AssistantScreen } from './screens/Assistant.tsx';
+import { ProfileScreen } from './screens/Profile.tsx';
 
 export function App(): ReactElement {
   return (
@@ -35,6 +38,18 @@ export function App(): ReactElement {
 function Routes(): ReactElement {
   const segments = useSegments();
   const { loading, state, eaters } = useSession();
+
+  /**
+   * Une fois la session ouverte, `/connexion` n'a plus rien à montrer. On y
+   * revient connecté par trois chemins — le formulaire, le retour de Google, le
+   * lien de confirmation d'adresse, qui ramènent tous là d'où l'on est parti —,
+   * d'où une garde ici plutôt qu'une par chemin. `replace` : un retour arrière
+   * ne doit pas rouvrir le formulaire.
+   */
+  const connecté = !loading && state !== 'anonyme';
+  useEffect(() => {
+    if (connecté && segments[0] === 'connexion') navigate('/', { replace: true });
+  }, [connecté, segments]);
 
   if (loading) {
     return (
@@ -54,7 +69,17 @@ function Routes(): ReactElement {
 
   // Le lien de réinitialisation arrive par mail, par définition sans session.
   if (segments[0] === 'reinitialiser') return <ResetPasswordScreen />;
-  if (state === 'anonyme') return <LoginScreen />;
+
+  /**
+   * Sans session, la présentation (15/09/2026) — sauf quand l'URL porte
+   * quelque chose à finir. `/share` et l'invitation ouvrent la connexion
+   * directement : passer par la présentation, puis par « J'ai déjà un
+   * compte », perdrait la recette ou l'invitation en chemin.
+   */
+  if (state === 'anonyme') {
+    const àFinir = segments[0] === 'connexion' || segments[0] === 'share' || invitation !== undefined;
+    return àFinir ? <LoginScreen /> : <LandingScreen />;
+  }
   if (invitation !== undefined) return <AcceptInvitationScreen invitationId={invitation} />;
   if (state === 'sans_foyer') return <HouseholdScreen />;
 
@@ -74,11 +99,14 @@ function Routes(): ReactElement {
     case 'bienvenue':
       return <OnboardingScreen />;
     case undefined:
+    case 'connexion': // le temps que la garde du haut remplace l'URL
       return <Chrome tab="accueil"><TodayScreen /></Chrome>;
     case 'share':
       return <ShareScreen />;
     case 'ajouter':
       return <QuickAddScreen />;
+    case 'restes':
+      return segments[1] === undefined ? <QuickAddScreen /> : <LeftoverScreen mealId={segments[1]} />;
     case 'repas':
       return segments[1] === undefined
         ? <Chrome tab="accueil"><TodayScreen /></Chrome>
@@ -91,6 +119,8 @@ function Routes(): ReactElement {
       return <Chrome tab="conseils"><AssistantScreen /></Chrome>;
     case 'foyer':
       return <HouseholdSettingsScreen />;
+    case 'profil':
+      return <ProfileScreen />;
     case 'membres':
       return <Chrome tab="membres"><EatersScreen /></Chrome>;
     default:

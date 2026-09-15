@@ -5,8 +5,9 @@
  * l'assistant (`conseil.ts`) et les recettes de l'accueil (`recettes.ts`) — et
  * un quatrième devra en faire autant. Ce que ce module garantit à tous :
  *
- * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`, `Advise` et
- *   `SuggestRecipes` n'acceptent que des `Anonymized`, une marque que seul
+ * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`,
+ *   `ChooseFoods`, `Advise` et `SuggestRecipes` n'acceptent que des
+ *   `Anonymized`, une marque que seul
  *   `anonymize` pose — la même idée que `HouseholdDb` pour la RLS : un oubli ne
  *   compile pas (I3, I6). La marque dit que le filtre est passé, pas qu'il est
  *   complet (dette n° 17).
@@ -22,7 +23,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ApiError } from '../http/errors.ts';
 import { redactShareText } from '../jow/share.ts';
 import { advisor, type Advise } from './conseil.ts';
-import { mealSplitter, type SplitMeal } from './decoupage.ts';
+import { foodChooser, mealSplitter, type ChooseFoods, type SplitMeal } from './decoupage.ts';
 import { recipeSuggester, type SuggestRecipes } from './recettes.ts';
 
 /** Un texte dont les prénoms du foyer et les jetons Jow ont été retirés. */
@@ -30,6 +31,7 @@ export type Anonymized = string & { readonly __anonymized: true };
 
 export interface Llm {
   splitMeal: SplitMeal;
+  chooseFoods: ChooseFoods;
   advise: Advise;
   suggestRecipes: SuggestRecipes;
 }
@@ -41,6 +43,8 @@ export type Ask = (request: {
   effort: 'low' | 'medium';
   /** En millisecondes : c'est un téléphone qui attend. */
   timeout: number;
+  /** Nouveaux essais après un échec, dépassement de délai compris ; un par défaut. */
+  retries?: number;
   /** Un schéma JSON, pour une réponse structurée. */
   schema?: Record<string, unknown>;
   /** Pour recevoir la réponse au fil de sa génération plutôt que d'un bloc. */
@@ -73,7 +77,7 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
   // Un seul nouvel essai : au-delà, la personne a déjà renoncé.
   const client = new Anthropic({ apiKey, maxRetries: 1 });
 
-  const ask: Ask = async ({ system, messages, effort, timeout, schema, stream }) => {
+  const ask: Ask = async ({ system, messages, effort, timeout, retries, schema, stream }) => {
     const params = {
       model,
       max_tokens: 16000,
@@ -89,12 +93,13 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
       system,
       messages,
     };
+    const options = { timeout, ...(retries === undefined ? {} : { maxRetries: retries }) };
 
     // Le découpage et les recettes restent d'un bloc : en flux, un modèle qui
     // décline en cours de route laisse son début de réponse, que le repli
     // **continue** — un JSON recollé ainsi ne se lit plus.
     if (stream === undefined) {
-      const response = await client.beta.messages.create(params, { timeout });
+      const response = await client.beta.messages.create(params, options);
       if (response.stop_reason === 'refusal') return null;
       return response.content
         .flatMap((block) => (block.type === 'text' ? [block.text] : []))
@@ -109,7 +114,7 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
     // de ligne tomberait au milieu d'une phrase.
     let texte = '';
     const flux = client.beta.messages.stream(params, {
-      timeout,
+      ...options,
       signal: AbortSignal.any([stream.signal, AbortSignal.timeout(timeout)]),
     });
     flux.on('text', (delta) => {
@@ -120,7 +125,12 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
     return response.stop_reason === 'refusal' ? null : texte.trim();
   };
 
-  return { splitMeal: mealSplitter(ask), advise: advisor(ask), suggestRecipes: recipeSuggester(ask) };
+  return {
+    splitMeal: mealSplitter(ask),
+    chooseFoods: foodChooser(ask),
+    advise: advisor(ask),
+    suggestRecipes: recipeSuggester(ask),
+  };
 }
 
 /** Le refus commun aux routes IA d'une instance sans clé. */

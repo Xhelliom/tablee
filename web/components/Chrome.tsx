@@ -13,6 +13,7 @@ import { useRef, type ReactNode } from 'react';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { IconBowl, IconChat, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
+import { Avatar, accountSeed } from './Avatar.tsx';
 
 export type Tab = 'accueil' | 'semaine' | 'historique' | 'conseils' | 'membres';
 
@@ -25,8 +26,9 @@ const TABS: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] =
 ];
 
 export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): React.ReactElement {
-  const { user, signOut, ia } = useSession();
+  const { user, signOut, ia, eaters } = useSession();
   const menu = useRef<HTMLDivElement>(null);
+  const seed = user === null ? null : accountSeed(user.id, eaters);
 
   return (
     <div className="app" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -42,23 +44,21 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
           popoverTarget="menu-compte"
           aria-label={`Votre compte : ${user?.name ?? ''}`}
         >
-          {(user?.name.trim()[0] ?? '?').toUpperCase()}
+          {seed === null ? '?' : <Avatar seed={seed} size={28} />}
         </button>
         <div id="menu-compte" popover="auto" ref={menu} className="menu card">
-          <div style={{ padding: '8px 14px 10px' }}>
-            <p style={{ fontSize: 14 }}>{user?.name}</p>
-            <p className="meta" style={{ marginTop: 2 }}>{user?.email}</p>
+          <div style={{ padding: '8px 14px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {seed === null ? null : <Avatar seed={seed} size={36} />}
+            <div>
+              <p style={{ fontSize: 14 }}>{user?.name}</p>
+              <p className="meta" style={{ marginTop: 2 }}>{user?.email}</p>
+            </div>
           </div>
           <button
             type="button" className="row"
-            onClick={() => {
-              menu.current?.hidePopover();
-              navigate('/membres');
-              // `navigate` remonte en haut ; la section « Votre compte » est en pied d'écran.
-              requestAnimationFrame(() => document.getElementById('compte')?.scrollIntoView());
-            }}
+            onClick={() => { menu.current?.hidePopover(); navigate('/profil'); }}
           >
-            Votre compte
+            Votre profil
           </button>
           <button type="button" className="row" onClick={() => { void signOut(); }}>
             Se déconnecter

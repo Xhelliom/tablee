@@ -8,6 +8,7 @@
  */
 import type { Eater } from '../api.ts';
 import { IconCheck } from '../icons.tsx';
+import { Avatar } from './Avatar.tsx';
 import { Stepper } from './Stepper.tsx';
 
 interface Props {
@@ -50,6 +51,7 @@ export function WhoWasThere({
                   border: '.5px solid var(--border-strong)', display: 'block',
                 }} />
               )}
+              <Avatar seed={eater.id} size={20} />
               <span style={{ fontSize: 13 }}>{eater.firstName}</span>
             </button>
           );

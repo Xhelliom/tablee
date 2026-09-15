@@ -16,6 +16,7 @@
  */
 import { useEffect, useState } from 'react';
 import { api, type WeekResponse } from '../api.ts';
+import { Avatar } from '../components/Avatar.tsx';
 import { NUTRIENT_COLOR, shortDay } from '../design/vocabulary.ts';
 
 /** La hauteur d'un graphe, pour 100 % de part végétale. */
@@ -76,6 +77,7 @@ export function WeekScreen(): React.ReactElement {
           {data.eaters.map((eater) => (
             <PlantWeek
               key={eater.id}
+              eaterId={eater.id}
               firstName={eater.firstName}
               days={days}
               today={today}
@@ -91,8 +93,9 @@ export function WeekScreen(): React.ReactElement {
 }
 
 function PlantWeek({
-  firstName, days, today, average, cells,
+  eaterId, firstName, days, today, average, cells,
 }: {
+  eaterId: string;
   firstName: string;
   days: string[];
   today: string;
@@ -109,7 +112,10 @@ function PlantWeek({
 
   return (
     <div className="card" style={{ padding: '14px 15px' }}>
-      <p style={{ fontSize: 15 }}>{firstName}</p>
+      <p style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Avatar seed={eaterId} size={24} />
+        {firstName}
+      </p>
       <div style={{ position: 'relative', marginTop: 10, height: PLOT, borderBottom: '1px solid var(--border)' }}>
         <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: columns }}>
           {cells.map((c, i) => (

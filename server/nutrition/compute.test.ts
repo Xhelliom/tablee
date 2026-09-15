@@ -244,6 +244,42 @@ describe('calculerNutrition — somme des items', () => {
   });
 });
 
+describe('calculerNutrition — ce qui reste dans le plat (§6bis)', () => {
+  it('ne compte que la part mangée de ce qui a été servi, grammes compris', () => {
+    const result = calculerNutrition(
+      meal({
+        items: [item('Riz', RIZ, 200), item('Poulet', POULET, 200)],
+        servings: 0.75, remainingServings: 0.25,
+      }),
+      VIDE,
+    );
+    assert.equal(result.kcal, 417);           // (260 + 296) × ¾
+    assert.equal(result.max.kcal, 417);
+    assert.equal(result.gramsTotal, 300);     // 400 g servis, 300 mangés
+    assert.equal(result.plantRatio, 50);      // le rapport, lui, ne bouge pas
+    assert.equal(result.items[0]?.quantityG, 200, 'la composition reste celle du plat servi');
+  });
+
+  it('laisse un repas sans reste déclaré tel qu’il était', () => {
+    const result = calculerNutrition(
+      meal({ items: [item('Riz', RIZ, 200)], servings: 1, remainingServings: null }),
+      VIDE,
+    );
+    assert.equal(result.kcal, 260);
+  });
+
+  it('ne réduit pas un plat Jow : ses parts sont déjà la part mangée', () => {
+    const result = calculerNutrition(
+      meal({
+        source: 'jow', servings: 3, remainingServings: 1,
+        recipe: { perServing: { kcal: 500, proteinG: 20, carbG: 60, fatG: 15, fiberG: 5 }, confidence: 'haute' },
+      }),
+      VIDE,
+    );
+    assert.equal(result.kcal, 1500);
+  });
+});
+
 describe('calculerNutrition — part végétale', () => {
   it('rapporte les grammes végétaux aux grammes connus', () => {
     const result = calculerNutrition(

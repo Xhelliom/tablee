@@ -228,6 +228,40 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(shares[adulte] + shares[enfant], 1);
     });
 
+    /**
+     * « On n'a pas mangé ensemble le midi » : deux plats au même créneau, un
+     * par personne. Chacun ne compte que pour qui l'a mangé — une part entière,
+     * et rien dans le bilan de l'autre.
+     */
+    it('deux plats différents au même midi restent chacun à qui les a mangés', async () => {
+      const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const elle = await addEater('Adulte deux', '1987-01-01', 1);
+      const enfant = await addEater('Enfant', '2016-01-01', 0.5);
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
+      const pates = await insertFood(pool, 'Pâtes cuites', { kcal: 150, protein: 5, carb: 30, fat: 1, fiber: 2 }, true);
+
+      const plat = async (eaterId: string, foodId: string, label: string): Promise<any> =>
+        (await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
+          participants: [{ eaterId }],
+          items: [{ foodId, label, quantity: 100, unit: 'g', quantityG: 100 }],
+        })).body.meal;
+      const monPlat = await plat(moi, riz, 'Riz');
+      const sonPlat = await plat(elle, pates, 'Pâtes');
+
+      assert.deepEqual(monPlat.participants.map((p: any) => [p.eaterId, p.share]), [[moi, 1]]);
+      assert.deepEqual(sonPlat.participants.map((p: any) => [p.eaterId, p.share]), [[elle, 1]]);
+
+      const { body: jour } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+      assert.equal(jour.meals.filter((m: any) => m.slot === 'dejeuner').length, 2);
+
+      const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const repas = Object.fromEntries(
+        bilan.dashboard.map((e: any) => [e.eater.id, e.balance.mealCount]),
+      );
+      assert.deepEqual(repas, { [moi]: 1, [elle]: 1, [enfant]: 0 });
+    });
+
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
@@ -382,7 +416,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(liste.templates[0].useCount, 1);
     });
 
-    it('ne propose en restes que les plats à recette des 3 derniers jours', async () => {
+    it('ne propose en restes que les plats entamés des 3 derniers jours', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const { rows } = await pool.query<{ id: string }>(
         `insert into recipe (source, jow_recipe_id, title, base_servings)
@@ -390,42 +424,70 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       );
       const recipeId = rows[0]!.id;
 
-      // Un plat d'hier, avec recette : proposé.
+      // Un plat d'hier dont il reste un quart : proposé.
       const hier = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const { body: source } = await call('POST', '/api/meals', {
-        eaten_at: hier, slot: 'diner', source: 'jow', recipe_id: recipeId, servings: 4,
+        eaten_at: hier, slot: 'diner', source: 'jow', recipe_id: recipeId,
+        servings: 3, remaining_servings: 1,
         participants: [{ eaterId: adulte }],
       });
-      // Un repas sans recette : jamais proposé, il n'y a rien à resservir.
+      assert.equal(source.meal.remainingServings, 1);
+      // Le même plat, fini : rien à resservir.
+      await call('POST', '/api/meals', {
+        eaten_at: hier, slot: 'dejeuner', source: 'jow', recipe_id: recipeId,
+        servings: 4, remaining_servings: 0,
+        participants: [{ eaterId: adulte }],
+      });
+      // Un repas sans recette, fini : rien à resservir.
       await call('POST', '/api/meals', {
         eaten_at: hier, slot: 'dejeuner', source: 'texte',
         participants: [{ eaterId: adulte }],
       });
+      // Une pizza maison dont il reste un quart : proposée, recette ou pas.
+      const { body: pizza } = await call('POST', '/api/meals', {
+        eaten_at: hier, slot: 'gouter', source: 'texte',
+        servings: 0.75, remaining_servings: 0.25,
+        items: [{ foodId: null, label: 'Pizza maison', quantity: 600, unit: 'g', quantityG: 600 }],
+        participants: [{ eaterId: adulte }],
+      });
+      const ids = (b: { meals: { id: string }[] }): string[] => b.meals.map((m) => m.id).sort();
       // Un plat d'il y a dix jours : hors fenêtre.
       await sql(
-        `insert into meal (household_id, eaten_at, slot, source, recipe_id)
-         values ($1, now() - interval '10 days', 'diner', 'jow', $2)`,
+        `insert into meal (household_id, eaten_at, slot, source, recipe_id, remaining_servings)
+         values ($1, now() - interval '10 days', 'diner', 'jow', $2, 1)`,
         [householdId, recipeId],
       );
 
       const { body } = await call('GET', '/api/meals/leftovers?days=3');
-      assert.equal(body.meals.length, 1);
-      assert.equal(body.meals[0].id, source.meal.id);
+      assert.deepEqual(ids(body), [source.meal.id, pizza.meal.id].sort());
 
       // Le 2e service pointe la même recette et garde sa traçabilité, sans
-      // contrainte sur la somme des parts (§6bis).
+      // contrainte sur la somme des parts (§6bis). Il n'est pas fini non plus.
       const { body: restes } = await call('POST', '/api/meals', {
         eaten_at: new Date().toISOString(), slot: 'dejeuner', source: 'jow',
-        recipe_id: recipeId, servings: 1.5, leftover_of: source.meal.id,
+        recipe_id: recipeId, servings: 1.5, remaining_servings: 0.5, leftover_of: source.meal.id,
         participants: [{ eaterId: adulte }],
       });
       assert.ok(restes.meal !== undefined, JSON.stringify(restes));
       assert.equal(restes.meal.leftoverOf, source.meal.id);
       assert.equal(restes.meal.recipe.id, recipeId);
 
-      // Et il ne se propose pas lui-même comme reste d'un reste.
+      // Le plat d'hier sort du frigo ; ce 2e service y entre à sa place.
       const { body: apres } = await call('GET', '/api/meals/leftovers?days=3');
-      assert.equal(apres.meals.length, 1);
+      assert.deepEqual(ids(apres), [restes.meal.id, pizza.meal.id].sort());
+
+      // « Il n'en reste rien », dit après coup : ce service quitte le frigo.
+      await call('PATCH', `/api/meals/${restes.meal.id}`, { remainingServings: 0 });
+      const { body: ensuite } = await call('GET', '/api/meals/leftovers?days=3');
+      assert.deepEqual(ids(ensuite), [pizza.meal.id]);
+
+      // Resservir la pizza sans envoyer de composition : le serveur reprend
+      // celle du plat, réduite à ce qui restait.
+      const { body: part } = await call('POST', '/api/meals', {
+        eaten_at: new Date().toISOString(), slot: 'diner', source: 'texte',
+        leftover_of: pizza.meal.id, servings: 1, participants: [{ eaterId: adulte }],
+      });
+      assert.equal(part.meal.items[0].quantityG, 150);   // 600 g × ¼
     });
 
     it('repère un repas qui revient trois fois, et se tait après le template', async () => {

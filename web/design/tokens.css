@@ -255,7 +255,7 @@ a { color: inherit; }
   color: var(--on-coral-dim); display: flex;
 }
 
-/* Le compte : une initiale, comme le logo en face. */
+/* Le compte : son dessin (`Avatar.tsx`), rond comme le logo est carré en face. */
 .appbar__profil {
   width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
   background: var(--on-coral); color: var(--coral);
@@ -318,8 +318,11 @@ a { color: inherit; }
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 13px; border: 0; border-radius: var(--radius);
   background: var(--coral); color: #fff; font-size: 15px; cursor: pointer;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
 }
 .btn:disabled { opacity: .5; cursor: default; }
+/* Pressé, il répond sous le doigt : l'interface a entendu. */
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn--ghost {
   /* Le liseré suit le texte, pas l'aplat : un contour #D85A30 sous un libellé
      éclairci se lit comme deux terracottas différents. */
@@ -365,6 +368,19 @@ input[type='number']::-webkit-inner-spin-button {
   width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
 }
 
+/* Les lignes d'une liste groupée : une carte, des lignes séparées d'un filet.
+   Pressée, la ligne s'assombrit sous le doigt sans rétrécir — une ligne qui
+   rapetisse dans sa carte se décolle des bords. */
+.porte { padding: 12px 14px 12px 12px; gap: 12px; transition: background-color 120ms ease; }
+.porte + .porte { border-top: .5px solid var(--border); }
+.porte:active:not(:disabled) { background: var(--surface-1); }
+.porte:disabled { cursor: default; opacity: .55; }
+.groupe { overflow: hidden; }
+
+/* Une tuile d'un tap répond sous le doigt, comme `.btn`. */
+.tuile { transition: transform 160ms cubic-bezier(.23, 1, .32, 1); }
+.tuile:active:not(:disabled) { transform: scale(.97); }
+
 .thumb {
   width: 46px; height: 46px; border-radius: 9px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -399,7 +415,105 @@ input[type='number']::-webkit-inner-spin-button {
 
 .fab-space { height: 26px; }
 
+/* ── Mouvement ───────────────────────────────────────────────────────────── */
+/*
+ * Peu, et seulement quand il dit quelque chose : une ligne qui arrive dans une
+ * liste s'y pose au lieu d'y surgir, une réponse qu'on attend pulse. Rien sur
+ * ce qui change à chaque frappe — les résultats d'une recherche n'animent pas.
+ */
+.apparait { animation: apparait 220ms cubic-bezier(.23, 1, .32, 1) both; }
+@keyframes apparait { from { opacity: 0; transform: translateY(4px); } }
+@keyframes fondu { from { opacity: 0; } }
+
+.attente { animation: attente 900ms ease-in-out infinite alternate; }
+@keyframes attente { from { opacity: .4; } }
+
+/* Moins de mouvement, pas moins d'information : les fondus restent. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled), .tuile:active:not(:disabled) { transform: none; }
+  .apparait { animation-name: fondu; }
+}
+
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── La présentation, sans session (`web/screens/Landing.tsx`) ───────────── */
+
+/* L'aplat de la barre de titre se prolonge sous le titre, et l'exemple vient
+   mordre dessus : une seule surface terracotta, pas un bandeau de plus.
+   `--on-coral` y contraste à 3,4 pour 1 — assez pour un titre de 34 px, pas
+   pour du texte courant, qui se pose donc sur le crème, plus bas. */
+.accroche { background: var(--coral); color: var(--on-coral); padding: 14px 18px 96px; }
+.accroche .display { font-size: 34px; letter-spacing: -.01em; }
+
+.exemple { margin-top: -72px; overflow: hidden; border-radius: 14px; position: relative; }
+/* L'aplat vert tient la place d'une photo Jow, comme sur les maquettes. */
+.exemple__photo {
+  height: 96px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--green-100); color: var(--green-900);
+}
+.exemple__tag {
+  position: absolute; left: 10px; bottom: 10px;
+  font-size: 11px; padding: 3px 8px; border-radius: var(--radius);
+  background: var(--green-900); color: var(--surface-2);
+}
+.exemple__tablee {
+  list-style: none; margin: 14px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+}
+.exemple__tablee li { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+
+/* Une assiette vue de dessus : un marli, et la part posée dedans. */
+.assiette {
+  position: relative; width: 58px; height: 58px; margin-bottom: 7px;
+  border-radius: 50%; background: var(--surface-1);
+  border: .5px solid var(--border-strong);
+  box-shadow: inset 0 0 0 6px var(--surface-2), inset 0 0 0 6.5px var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.assiette__part {
+  width: 36px; height: 36px; border-radius: 50%;
+  /* Le liseré porte la part la nuit, où `--green-100` se fond dans l'assiette. */
+  background: var(--green-100); box-shadow: inset 0 0 0 1px var(--green-600);
+  animation: servir 520ms cubic-bezier(.23, 1, .32, 1) both;
+}
+@keyframes servir { from { opacity: 0; transform: scale(.3); } }
+.assiette__convive { position: absolute; right: -7px; bottom: -5px; }
+
+.vitrine__chapo { margin-top: 20px; font-size: 15px; line-height: 1.6; color: var(--text-secondary); }
+.vitrine__bloc { margin-top: 46px; }
+.vitrine__fin { padding-bottom: 34px; }
+.vitrine__titre {
+  margin-top: 6px; font-family: var(--font-voice); font-weight: 400;
+  font-size: 28px; line-height: 1.1; letter-spacing: -.005em;
+}
+.vitrine__texte { margin-top: 10px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+
+.etapes { list-style: none; margin: 16px 0 0; padding: 0; }
+.etapes li { display: flex; gap: 14px; padding: 15px 0; border-top: .5px solid var(--border); }
+.etapes__num {
+  width: 18px; flex-shrink: 0;
+  font-family: var(--font-voice); font-size: 26px; line-height: 1; color: var(--coral-fg);
+}
+.etapes__titre { font-size: 15px; font-weight: 500; }
+.etapes__texte { margin-top: 4px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+
+.principes { list-style: none; margin: 16px 0 0; padding: 0; }
+.principes li { display: flex; gap: 12px; padding: 13px 14px; font-size: 14px; line-height: 1.5; }
+.principes li + li { border-top: .5px solid var(--border); }
+.principes__coche {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--coral-50); color: var(--coral-600);
+}
+
+/* La marque, cliquable sur `/connexion` : elle ramène à la présentation. Une
+   PWA installée sur iPhone n'a pas de bouton retour. */
+.appbar__retour { background: none; border: 0; padding: 0; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .assiette__part { animation-name: fondu; }
 }

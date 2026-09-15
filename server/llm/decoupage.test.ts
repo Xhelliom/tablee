@@ -3,7 +3,10 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { readSplit, SplitRefused } from './decoupage.ts';
+import type { FoodSummary } from '../repo/foods.ts';
+import {
+  applyChoices, describeCandidates, readSplit, SplitRefused, type MatchedItem,
+} from './decoupage.ts';
 
 describe('découpage par IA — ce qui revient', () => {
   it('garde les lignes lisibles et laisse à préciser les poids absurdes', () => {
@@ -24,5 +27,48 @@ describe('découpage par IA — ce qui revient', () => {
 
   it('refuse une réponse sans liste', () => {
     assert.throws(() => readSplit({ autre: 1 }), SplitRefused);
+  });
+});
+
+describe('découpage par IA — le choix dans Ciqual', () => {
+  const food = (name: string): FoodSummary => ({
+    id: name, name, source: 'ciqual', category: null, plantBased: null, kcal100g: null, units: [],
+  });
+  // Les deux cas relevés sur la vraie table le 14/09/2026.
+  const pâtes: MatchedItem = {
+    label: 'des pâtes', grams: 200,
+    foods: ['Pâte à pizza cuite', 'Pâte sablée, cuite', 'Pâtes sèches standard, cuites, non salées'].map(food),
+  };
+  const pomme: MatchedItem = { label: 'une pomme', grams: 150, foods: ['Pomme, sèche', 'Pomme, pulpe, crue'].map(food) };
+  const noms = (items: MatchedItem[]): string[][] => items.map((item) => item.foods.map((f) => f.name));
+
+  it('met en tête l’aliment désigné par son numéro, sans perdre les autres', () => {
+    const choisis = applyChoices([pâtes, pomme], { choix: [{ ligne: 1, numero: 3 }, { ligne: 2, numero: 2 }] });
+    assert.deepEqual(noms(choisis), [
+      ['Pâtes sèches standard, cuites, non salées', 'Pâte à pizza cuite', 'Pâte sablée, cuite'],
+      ['Pomme, pulpe, crue', 'Pomme, sèche'],
+    ]);
+    assert.deepEqual(choisis.map((item) => item.foodId), ['Pâtes sèches standard, cuites, non salées', 'Pomme, pulpe, crue']);
+  });
+
+  it('garde l’ordre de la recherche pour un numéro hors liste ou une réponse illisible', () => {
+    const avant = noms([pâtes, pomme]);
+    const horsListe = applyChoices([pâtes, pomme], { choix: [{ ligne: 1, numero: 9 }] });
+    assert.deepEqual(noms(horsListe), avant);
+    assert.deepEqual(horsListe.map((item) => item.foodId), ['Pâte à pizza cuite', 'Pomme, sèche']);
+    assert.deepEqual(noms(applyChoices([pâtes, pomme], null)), avant);
+  });
+
+  it('ne présélectionne rien quand le modèle dit qu’aucun ne convient', () => {
+    const [ligne] = applyChoices([pâtes], { choix: [{ ligne: 1, numero: null }] });
+    assert.equal(ligne?.foodId, null);
+    assert.deepEqual(noms(ligne === undefined ? [] : [ligne]), noms([pâtes]), 'la liste reste, pour choisir à la main');
+  });
+
+  it('numérote les candidats sous chaque ligne, sans aucune valeur', () => {
+    assert.equal(
+      describeCandidates([pomme, { label: 'une truffe', grams: null, foods: [] }]),
+      'Ligne 1 : une pomme\n1. Pomme, sèche\n2. Pomme, pulpe, crue\n\nLigne 2 : une truffe\n(aucun candidat)',
+    );
   });
 });

@@ -204,6 +204,12 @@ Trois voies, par priorité d'usage :
    > repas porte la source `ia` (migration 012), dont la confiance est
    > plafonnée à « moyenne » (R6). Facultatif : sans `ANTHROPIC_API_KEY`, la
    > saisie reste celle de la V1.
+   >
+   > ⚠️ **Précisé le même jour — le modèle choisit aussi l'aliment.** La
+   > recherche seule présélectionnait « Pâte à pizza cuite » pour des pâtes et
+   > « Pomme, sèche » pour une pomme. Un second appel reçoit les quinze premiers
+   > candidats de chaque ligne — des noms, sans valeurs — et désigne le bon par
+   > son numéro ; hors liste, il est ignoré, et « aucun » ne présélectionne rien. En-tête de `server/llm/decoupage.ts`.
 3. **Photo** — fallback uniquement (cantine, plat de famille). `confidence='basse'`.
 
 ### Référentiels et ETL
@@ -342,6 +348,37 @@ proposer un bouton **« Restes de… »** listant les repas des 3 derniers jours
 ayant une `recipe_id` : un tap, on choisit qui mange, c'est enregistré. Sans
 cette affordance, les restes ne seront jamais saisis et les déjeuners
 resteront vides.
+
+> **Renversé en partie le 15/09/2026 — ce qui reste se déclare.**
+>
+> À l'usage, « parts mangées » ne se sait pas ; « il en reste un quart », si.
+> Et rien ne gardait ce qui restait : « Restes de… » proposait tous les plats
+> à recette des trois derniers jours, finis ou non, et un tap enregistrait
+> d'office une part pour tout le foyer — l'étape « on choisit qui mange »
+> avait sauté.
+>
+> - L'écran demande **« Cuisiné pour »** (`base_servings` par défaut) et
+>   **« Il en reste ? »** : rien, un fond (10 %), ¼, ½, ¾. `servings` s'en
+>   déduit et garde son sens — parts mangées — : le §11 ne change pas, les
+>   parts figées non plus.
+> - `meal.remaining_servings` (014) garde les parts laissées dans le plat.
+>   `NULL` : rien n'a été dit, ce qui n'est pas « rien ».
+> - **Sans recette, ce qu'on saisit est ce qui a été servi** — la pizza
+>   entière — et seul « Il en reste ? » est demandé : le nombre de parts n'y
+>   sert à rien. Le §11 ne compte que la part mangée, grammes compris (encart
+>   du 15/09/2026). Resservir recopie la composition réduite à ce qui restait,
+>   et un habituel rejoue ce qui a été mangé, pas le plat entier.
+> - « Restes de… » et **« Dans le frigo »** (l'accueil) listent les repas des
+>   3 derniers jours, recette ou pas, dont il reste quelque chose et qu'aucun
+>   service n'a suivi. `leftover_of` pointe désormais le **service
+>   précédent** : un reste qu'on ne finit pas devient la source du suivant. Il
+>   n'entre toujours dans aucun calcul nutritionnel ; il sert à la liste.
+> - Resservir ouvre une feuille : ce qui restait, qui mange — sa propre fiche
+>   par défaut —, s'il en reste encore.
+> - **La somme n'est toujours pas contrainte.** Le reste est déclaré, jamais
+>   vérifié contre `base_servings` : le paragraphe plus haut tient.
+> - Des paliers et pas un pourcentage : un « 25 % » posé à côté de barres en
+>   « % du repère du jour » se lirait comme de la nutrition.
 
 ### Les invités — `guest_count`, pas de membre fictif
 
@@ -502,6 +539,9 @@ est la principale façon de faire échouer la V1.
 >   sien : les deux adresses peuvent différer (`allowDifferentEmails`), à la
 >   différence de la liaison implicite à la connexion. C'est la porte des
 >   comptes jamais confirmés.
+>   ⚠️ Déplacé le 14/09/2026 : la liaison vit sur « Votre profil » (`/profil`),
+>   plus dans les réglages du foyer — c'est le compte qu'on lie, pas le foyer.
+>   La page dit aussi si un compte Google est déjà lié.
 
 
 **Un compte par foyer. Pas de compte individuel.**
@@ -1102,6 +1142,19 @@ calculerNutrition(meal):
   # 3. Persister dans meal_nutrition
 ```
 
+> **Précisé le 15/09/2026 — sans recette, les items sont ce qui a été servi.**
+>
+> Pour un repas sans recette, les totaux **et** les grammes du point 2 sont
+> multipliés par la part mangée, `servings / (servings + remaining_servings)`
+> (§6bis). Les grammes aussi : la journée les somme pour sa part végétale, et
+> un reste compté y pèserait. `remaining_servings` absent vaut 0 — les repas
+> d'avant ne bougent pas. Avec recette, rien ne change : `servings` y est déjà
+> la part mangée, et un item ajouté au plat compte entier — il ne se ressert
+> pas non plus.
+>
+> La fraction est déclarée à table, en paliers. Elle ne dégrade pas la
+> confiance, pas plus que le nombre de parts d'un repas Jow ne l'a jamais fait.
+
 ```
 calculerShares(meal, membres_présents):
   # R2 — appelé UNE SEULE FOIS, à l'écriture
@@ -1171,7 +1224,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 >
 > | Méthode | Route | Pourquoi elle existe |
 > |---|---|---|
-> | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
+> | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Deux appels au modèle par requête depuis le 14/09/2026 : le découpage, puis le choix de l'aliment, par numéro, parmi quinze candidats Ciqual par ligne. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
 > | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. *Précisé le 15/09/2026* : la réponse arrive en Server-Sent Events — des `texte` au fil de la génération, puis `fin`, qui porte la réponse entière et fait foi, ou `erreur` si le flux casse en route. Ce qui est refusé avant le flux (400, 429, 503) reste une erreur JSON. |
 > | `POST` | `/api/assistant/recipes` | V3 — le bouton « Demander à l'assistant des recettes » de l'accueil, pour rendre la semaine plus équilibrée. Même résumé du foyer que `/api/assistant`, plus l'ordre des repères et la liste des recettes Jow du foyer : le modèle **choisit** par numéro parmi elles et ajoute une ou deux idées de plats marquées « à vérifier », sans jamais écrire une valeur (R1). Le texte envoyé revient dans la réponse, pour se relire à l'écran. `409` quand il n'aurait rien sur quoi s'appuyer ; même plafond et même 503 que le découpage. Ce qu'il approxime : dette n° 20. |
 > | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
@@ -1239,6 +1292,7 @@ depuis les `portion_coef` courants (R2).
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
+| **Présentation** (sans session) | *Ajoutée le 15/09/2026.* Ce que voit un visiteur non connecté, à la place du formulaire de connexion : ce que fait Tablée en trois temps, ce qu'elle refuse — calories à compter, scores, fiches confiées à une IA —, puis l'inscription. L'exemple montre un plat partagé entre des assiettes de tailles différentes, et **aucun bilan** : des barres d'exemple seraient des valeurs nutritionnelles sans source. La connexion passe sur `/connexion`, qu'une session ouverte renvoie à l'accueil. `/share` et `/invitation/…` y mènent directement, sans présentation : la traverser perdrait la recette ou l'invitation. |
 | **Synthèse** (V3) | Texte hebdomadaire + notes famille. |
 | **Conseils** (V3) | *Ajouté le 14/09/2026.* Une question, une réponse de l'assistant, et la conversation qui suit. Dit avant la première question ce qu'il ne sait pas — prénoms, allergies — et qu'il n'est pas un avis médical. Onglet absent sans clé API. La conversation s'efface en changeant d'onglet. *Précisé le 15/09/2026* : la réponse s'écrit au fil de sa génération ; si le flux casse en route, le début de réponse disparaît, la question revient dans le champ et l'erreur s'affiche. |
 

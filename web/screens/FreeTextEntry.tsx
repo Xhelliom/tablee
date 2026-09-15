@@ -18,20 +18,37 @@
  * « estimé », se corrige avant l'enregistrement, et le repas porte la source
  * `ia`, plafonnée à « Estimation » (R6). La recherche aliment par aliment
  * reste, pour qui n'en veut pas ou pour une instance sans clé.
+ *
+ * ⚠️ Renversé le 14/09/2026 — la description passe devant. Un même champ
+ * servait aux deux et se présentait comme une recherche : on ajoutait les
+ * aliments un à un sans voir le découpage. Avec une clé, on décrit d'abord son
+ * plat ; la recherche, dessous, complète à la main ce que l'IA a manqué. Sans
+ * clé, l'écran reste celui de la V1.
+ *
+ * L'ordre suit le geste, pas les données : décrire, relire ce qui a été servi,
+ * compléter à la main, dire ce qui en reste, puis quand et qui. « Enregistrer » reste collé au
+ * bas de l'écran : après un découpage, la liste le poussait hors de vue.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  api, ApiError, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
+  api, ApiError, type FoodSearchResponse, type FoodSummary, type Slot,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
+import { RemainsPicker, UNCOUNTED_HINT, split } from '../components/Leftovers.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconClose, IconSearch } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
 
 interface Draft {
+  /**
+   * Stable d'un rendu à l'autre. Une clé tirée de l'index remontait toutes les
+   * lignes qui suivent une ligne retirée : leur saisie repartait, et leur
+   * entrée se rejouait.
+   */
+  key: number;
   foodId: string | null;
   label: string;
   grams: number | null;
@@ -45,11 +62,14 @@ interface Draft {
 
 /** Ce que rend `POST /api/meals/decoupage`. */
 interface Découpage {
-  items: { label: string; grams: number | null; foods: FoodSummary[] }[];
+  items: { label: string; grams: number | null; foods: FoodSummary[]; foodId: string | null }[];
 }
+
+let prochaineClé = 0;
 
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
   const { eaters, ia } = useSession();
+  const [description, setDescription] = useState('');
   const [découpage, setDécoupage] = useState(false);
   const [erreurIA, setErreurIA] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -87,29 +107,30 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   }, [query]);
 
   const add = (food: FoodSummary): void => {
-    setItems((current) => [...current, { foodId: food.id, label: food.name, grams: null }]);
+    const ligne: Draft = { key: prochaineClé++, foodId: food.id, label: food.name, grams: null };
+    setItems((current) => [...current, ligne]);
     setQuery('');
     setResults([]);
   };
 
   const découper = async (): Promise<void> => {
+    const texte = description.trim();
+    if (texte === '' || découpage) return;
     setDécoupage(true);
     setErreurIA(null);
     try {
-      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: query.trim() });
-      // Le premier aliment proposé est présélectionné ; la liste permet d'en
-      // changer, ou de n'en garder aucun.
-      setItems((current) => [
-        ...current,
-        ...lignes.map((ligne) => ({
-          foodId: ligne.foods[0]?.id ?? null,
-          label: ligne.label,
-          grams: ligne.grams,
-          foods: ligne.foods,
-        })),
-      ]);
-      setQuery('');
-      setResults([]);
+      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: texte });
+      // Le serveur dit quel aliment présélectionner — aucun quand l'IA n'en voit
+      // pas qui convienne ; la liste permet d'en changer.
+      const nouvelles = lignes.map((ligne): Draft => ({
+        key: prochaineClé++,
+        foodId: ligne.foodId,
+        label: ligne.label,
+        grams: ligne.grams,
+        foods: ligne.foods,
+      }));
+      setItems((current) => [...current, ...nouvelles]);
+      setDescription('');
     } catch (cause) {
       setErreurIA(cause instanceof ApiError ? cause.message : 'le découpage n’a pas abouti');
     }
@@ -121,9 +142,15 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     if (label.length === 0) return;
     // Aucun aliment rattaché : le repas sera enregistré, sa nutrition restera
     // inconnue et son badge le dira. Mieux que de perdre la saisie.
-    setItems((current) => [...current, { foodId: null, label, grams: null }]);
+    const ligne: Draft = { key: prochaineClé++, foodId: null, label, grams: null };
+    setItems((current) => [...current, ligne]);
     setQuery('');
   };
+
+  const update = (key: number, patch: Partial<Draft>): void =>
+    setItems((current) => current.map((draft) => (draft.key === key ? { ...draft, ...patch } : draft)));
+
+  const [remains, setRemains] = useState(0);
 
   const toggle = useCallback((eaterId: string) => {
     setPresent((current) => {
@@ -137,11 +164,13 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
-      const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
+      await api.post('/api/meals', {
         eatenAt: new Date().toISOString(),
         slot,
         source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
-        servings: 1,
+        // Ce qui est saisi est ce qui a été servi ; le reste n'est mangé par
+        // personne, et attend au frigo (§6bis).
+        ...split(1, remains),
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         items: items.map((item) => ({
@@ -152,29 +181,154 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           quantityG: item.grams,
         })),
       });
-      navigate(`/repas/${meal.id}`, { replace: true });
+      // L'accueil, pas le détail : même raison que dans `Share.tsx`.
+      navigate('/', { replace: true });
     } catch {
       setError('Le repas n’a pas pu être enregistré.');
       setSaving(false);
     }
   };
 
+  const estimé = items.some((item) => item.foods !== undefined);
+  // Un bouton grisé sans raison se lit comme une panne.
+  const manque = items.length === 0
+    ? 'Ajoutez au moins un aliment.'
+    : present.size === 0 ? 'Cochez qui était à table.' : null;
+
   return (
     <div className="app">
       <ModalHeader title="Saisir un repas" onClose={onClose} />
 
-      <section style={{ padding: '14px 16px', background: 'var(--surface-2)' }}>
+      <section style={{ ...bloc, borderTop: 0, paddingTop: 20, paddingBottom: 18 }}>
+        {ia ? (
+          <form onSubmit={(e) => { e.preventDefault(); void découper(); }}>
+            <label className="display" htmlFor="description-plat" style={titre}>
+              Décrivez<br />votre plat
+            </label>
+            <p className="meta" style={{ margin: '8px 0 14px', lineHeight: 1.5 }}>
+              L’IA le découpe en aliments, vous vérifiez avant d’enregistrer.
+            </p>
+            <textarea
+              id="description-plat" className="field" rows={3} maxLength={500}
+              value={description}
+              readOnly={découpage}
+              onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={(e) => {
+                // Entrée valide, comme dans un champ d'une ligne ; Maj+Entrée va à la ligne.
+                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                void découper();
+              }}
+              placeholder="Des pâtes bolognaise, une salade verte et un yaourt"
+              style={{ resize: 'none', lineHeight: 1.45 }}
+            />
+            <button type="submit" className="btn" style={{ marginTop: 10 }}
+                    disabled={découpage || description.trim() === ''}>
+              {découpage ? 'Découpage…' : 'Découper avec l’IA'}
+            </button>
+            {erreurIA !== null ? (
+              <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 8 }}>{erreurIA}</p>
+            ) : null}
+          </form>
+        ) : (
+          <p className="display" style={titre}>Qu’y avait-il<br />au menu&nbsp;?</p>
+        )}
+      </section>
+
+      {items.length > 0 || découpage ? (
+        <section style={bloc}>
+          <div className="spread">
+            <p style={{ fontSize: 14 }}>Ce qui a été servi</p>
+            {/* Toute estimation porte sa confiance à l'écran, avant l'enregistrement aussi. */}
+            {estimé ? <span className="chip">Estimation</span> : null}
+          </div>
+          {estimé ? (
+            <p className="meta" style={{ marginTop: 4, lineHeight: 1.5 }}>
+              Aliments et quantités proposés par l’IA, pour tout le repas&nbsp;: à vérifier.
+            </p>
+          ) : null}
+
+          <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 0' }}>
+            {items.map((item) => (
+              <li key={item.key} className="apparait" style={ligne}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14 }}>
+                    {item.label}
+                    {item.foods !== undefined && item.grams !== null ? (
+                      <span className="meta"> · estimé</span>
+                    ) : null}
+                  </p>
+                  {item.foods !== undefined && item.foods.length > 0 ? (
+                    <select
+                      className="field" style={{ marginTop: 6, padding: '6px 8px', fontSize: 13 }}
+                      value={item.foodId ?? ''}
+                      aria-label={`Aliment du référentiel pour ${item.label}`}
+                      onChange={(e) => update(item.key, { foodId: e.target.value === '' ? null : e.target.value })}
+                    >
+                      {item.foods.map((food) => <option key={food.id} value={food.id}>{food.name}</option>)}
+                      <option value="">Aucun de ceux-là</option>
+                    </select>
+                  ) : null}
+                  {/* Dire avant l'enregistrement ce qui ne sera pas compté, plutôt
+                      que de le découvrir après coup sur un badge « à vérifier ».
+                      La quantité manquante est en terracotta, comme « à compléter »
+                      sur le bilan : un geste y répond. L'aliment inconnu, non. */}
+                  {item.foodId === null ? (
+                    <p className="meta" style={{ marginTop: 4 }}>
+                      aliment non rattaché — sans valeurs nutritionnelles
+                    </p>
+                  ) : item.grams === null ? (
+                    <p style={{ fontSize: 12, color: 'var(--coral-600)', marginTop: 4 }}>
+                      quantité à préciser — sans elle, l’aliment n’est pas compté
+                    </p>
+                  ) : null}
+                </div>
+                <GramsInput
+                  value={item.grams}
+                  label={item.label}
+                  resetKey={item.key}
+                  onCommit={(grams) => update(item.key, { grams })}
+                />
+                <button type="button" className="appbar__action"
+                        style={{ color: 'var(--text-muted)', marginTop: 3 }}
+                        aria-label={`Retirer ${item.label}`}
+                        onClick={() => setItems((c) => c.filter((draft) => draft.key !== item.key))}>
+                  <IconClose size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Deux appels au modèle : quelques secondes, qui doivent se voir. */}
+          {découpage ? (
+            <div role="status" style={{ ...ligne, display: 'block' }}>
+              <span className="sr-only">L’IA découpe votre plat…</span>
+              {[58, 40, 66].map((largeur) => (
+                <span key={largeur} aria-hidden="true" className="attente" style={{
+                  display: 'block', height: 10, width: `${largeur}%`, margin: '5px 0 13px',
+                  borderRadius: 4, background: 'var(--surface-0)',
+                }} />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section style={bloc}>
+        <label htmlFor="recherche-aliment" style={{ display: 'block', fontSize: 14, marginBottom: 10 }}>
+          {ia ? 'Ajouter un aliment à la main' : 'Chercher un aliment'}
+        </label>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px',
           borderRadius: 'var(--radius)', border: '.5px solid var(--border-strong)',
         }}>
           <IconSearch size={17} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
+            id="recherche-aliment"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addFreeText(); }}
-            placeholder={ia ? 'Un aliment, ou tout le repas : 2 œufs, un café…' : 'Courgette, pain complet, yaourt…'}
-            aria-label="Chercher un aliment"
+            placeholder="Courgette, pain complet, yaourt…"
             style={{
               border: 0, outline: 'none', flex: 1, fontSize: 15,
               background: 'transparent', fontFamily: 'inherit', minWidth: 0,
@@ -220,91 +374,25 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
             Ajouter « {query.trim()} » sans valeurs
           </button>
         ) : null}
-
-        {ia && query.trim().length >= 3 ? (
-          <button type="button" className="btn btn--ghost" style={{ marginTop: 10 }}
-                  disabled={découpage} onClick={() => { void découper(); }}>
-            {découpage ? 'Découpage…' : 'Découper avec l’IA'}
-          </button>
-        ) : null}
-        {erreurIA !== null ? (
-          <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 8 }}>{erreurIA}</p>
-        ) : null}
       </section>
 
       {items.length > 0 ? (
-        <section style={{ ...row, paddingBottom: 6 }}>
-          <p className="label">Dans l’assiette</p>
-          <div className="stack">
-            {items.map((item, index) => (
-              <div key={`${item.label}-${index}`} className="spread">
-                <span style={{ fontSize: 14, flex: 1, minWidth: 0 }}>
-                  {item.label}
-                  {item.foods !== undefined && item.foods.length > 0 ? (
-                    <select
-                      className="field" style={{ marginTop: 6, padding: '6px 8px', fontSize: 13 }}
-                      value={item.foodId ?? ''}
-                      aria-label={`Aliment du référentiel pour ${item.label}`}
-                      onChange={(e) => {
-                        const foodId = e.target.value === '' ? null : e.target.value;
-                        setItems((current) =>
-                          current.map((draft, i) => (i === index ? { ...draft, foodId } : draft)),
-                        );
-                      }}
-                    >
-                      {item.foods.map((food) => <option key={food.id} value={food.id}>{food.name}</option>)}
-                      <option value="">Aucun de ceux-là</option>
-                    </select>
-                  ) : null}
-                  {item.foods !== undefined && item.grams !== null ? (
-                    <span className="meta" style={{ display: 'block' }}>
-                      quantité estimée par l’IA, pour tout le repas — à vérifier
-                    </span>
-                  ) : null}
-                  {/* Dire avant l'enregistrement ce qui ne sera pas compté, plutôt
-                      que de le découvrir après coup sur un badge « à vérifier ». */}
-                  {item.foodId === null ? (
-                    <span className="meta" style={{ display: 'block' }}>
-                      aliment non rattaché — sans valeurs nutritionnelles
-                    </span>
-                  ) : item.grams === null ? (
-                    <span className="meta" style={{ display: 'block' }}>
-                      quantité à préciser — sans elle, l’aliment n’est pas compté
-                    </span>
-                  ) : null}
-                </span>
-                <GramsInput
-                  value={item.grams}
-                  label={item.label}
-                  resetKey={`${item.label}-${index}`}
-                  onCommit={(grams) =>
-                    setItems((current) =>
-                      current.map((draft, i) => (i === index ? { ...draft, grams } : draft)),
-                    )
-                  }
-                />
-                <button type="button" className="appbar__action"
-                        style={{ color: 'var(--text-muted)' }}
-                        aria-label={`Retirer ${item.label}`}
-                        onClick={() => setItems((c) => c.filter((_, i) => i !== index))}>
-                  <IconClose size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
+        <section className="spread" style={bloc}>
+          <RemainsPicker label="Il en reste ?" hint={UNCOUNTED_HINT} value={remains} onChange={setRemains} />
         </section>
       ) : null}
 
-      <section className="spread" style={row}>
-        <span style={{ fontSize: 14 }}>Quel repas</span>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <section style={bloc}>
+        <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {SLOT_ORDER.map((option) => (
             <button
               key={option}
               type="button"
+              aria-pressed={option === slot}
               onClick={() => setSlot(option)}
               style={{
-                fontSize: 13, padding: '5px 11px', borderRadius: 'var(--radius)',
+                fontSize: 13, padding: '6px 12px', borderRadius: 'var(--radius)',
                 border: option === slot ? '.5px solid var(--coral)' : '.5px solid var(--border)',
                 background: option === slot ? 'var(--coral)' : 'transparent',
                 color: option === slot ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
@@ -316,29 +404,44 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         </div>
       </section>
 
-      <section style={{ ...row, paddingBottom: 14 }}>
+      <section style={{ ...bloc, paddingBottom: 16 }}>
         <WhoWasThere eaters={eaters} present={present} onToggle={toggle}
                      guestCount={guestCount} onGuestCount={setGuestCount} />
       </section>
 
-      <section style={row}>
+      <footer style={pied}>
         {error !== null ? (
           <p style={{ fontSize: 13, color: 'var(--text-warning)', marginBottom: 8 }}>{error}</p>
+        ) : manque !== null ? (
+          <p className="meta" style={{ marginBottom: 8, textAlign: 'center' }}>{manque}</p>
         ) : null}
-        <button type="button" className="btn" disabled={saving || present.size === 0 || items.length === 0}
+        <button type="button" className="btn" disabled={saving || manque !== null}
                 onClick={() => { void save(); }}>
           {saving ? 'Enregistrement…' : 'Enregistrer'}
         </button>
-      </section>
-      <div className="fab-space" />
+      </footer>
     </div>
   );
 }
 
-const row: React.CSSProperties = {
-  padding: '12px 16px',
+const titre: React.CSSProperties = { display: 'block', fontSize: 28 };
+
+const bloc: React.CSSProperties = {
+  padding: '14px 16px',
   borderTop: '.5px solid var(--border)',
   background: 'var(--surface-2)',
+};
+
+const ligne: React.CSSProperties = {
+  display: 'flex', alignItems: 'flex-start', gap: 10,
+  padding: '11px 0', borderTop: '.5px solid var(--border)',
+};
+
+/** Collé au bas de l'écran, comme la navigation des onglets. */
+const pied: React.CSSProperties = {
+  position: 'sticky', bottom: 0, zIndex: 5,
+  padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
+  borderTop: '.5px solid var(--border)', background: 'var(--surface-2)',
 };
 
 const resultRow: React.CSSProperties = {
