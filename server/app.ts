@@ -17,6 +17,7 @@ import type pg from 'pg';
 import { acquireForHousehold, type HouseholdDb, type ScopedClient } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
+import type { DrawDish } from './llm/image.ts';
 import type { Llm } from './llm/index.ts';
 import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
@@ -42,6 +43,8 @@ export interface AppContext {
    * dire.
    */
   llm?: Llm | null;
+  /** L'image d'un plat saisi avec l'IA, `null` ou absente sans `GEMINI_API_KEY`. */
+  drawDish?: DrawDish | null;
 }
 
 /**

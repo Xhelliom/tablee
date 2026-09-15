@@ -3,7 +3,9 @@
  *
  * Trois usages passent par ici — le découpage d'un texte libre (`decoupage.ts`),
  * l'assistant (`conseil.ts`) et les recettes de l'accueil (`recettes.ts`) — et
- * un quatrième devra en faire autant. Ce que ce module garantit à tous :
+ * un quatrième devra en faire autant. L'image d'un plat part chez Google
+ * (`image.ts`), mais passe par le même `anonymize`. Ce que ce module garantit
+ * à tous :
  *
  * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`,
  *   `ChooseFoods`, `Advise` et `SuggestRecipes` n'acceptent que des
@@ -47,7 +49,15 @@ export type Ask = (request: {
   retries?: number;
   /** Un schéma JSON, pour une réponse structurée. */
   schema?: Record<string, unknown>;
+  /** Pour recevoir la réponse au fil de sa génération plutôt que d'un bloc. */
+  stream?: TextStream;
 }) => Promise<string | null>;
+
+/** Une réponse suivie morceau par morceau, et le signal qui l'interrompt. */
+export interface TextStream {
+  onText: (delta: string) => void;
+  signal: AbortSignal;
+}
 
 /**
  * Chaque appel se paie, et l'inscription est ouverte (§16) : les 300 requêtes
@@ -69,28 +79,52 @@ export function buildLlm(env: NodeJS.ProcessEnv): Llm | null {
   // Un seul nouvel essai : au-delà, la personne a déjà renoncé.
   const client = new Anthropic({ apiKey, maxRetries: 1 });
 
-  const ask: Ask = async ({ system, messages, effort, timeout, retries, schema }) => {
-    const response = await client.beta.messages.create({
+  const ask: Ask = async ({ system, messages, effort, timeout, retries, schema, stream }) => {
+    const params = {
       model,
       max_tokens: 16000,
       // Une demande déclinée est rejouée côté serveur sur le modèle de repli
       // recommandé, plutôt que de rendre un refus à quelqu'un qui décrit son
       // petit-déjeuner.
       betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
+      fallbacks: 'default' as const,
       output_config: {
         effort,
         ...(schema === undefined ? {} : { format: { type: 'json_schema' as const, schema } }),
       },
       system,
       messages,
-    }, { timeout, ...(retries === undefined ? {} : { maxRetries: retries }) });
+    };
+    const options = { timeout, ...(retries === undefined ? {} : { maxRetries: retries }) };
 
-    if (response.stop_reason === 'refusal') return null;
-    return response.content
-      .flatMap((block) => (block.type === 'text' ? [block.text] : []))
-      .join('\n')
-      .trim();
+    // Le découpage et les recettes restent d'un bloc : en flux, un modèle qui
+    // décline en cours de route laisse son début de réponse, que le repli
+    // **continue** — un JSON recollé ainsi ne se lit plus.
+    if (stream === undefined) {
+      const response = await client.beta.messages.create(params, options);
+      if (response.stop_reason === 'refusal') return null;
+      return response.content
+        .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+        .join('\n')
+        .trim();
+    }
+
+    // En flux, le `timeout` du SDK ne couvre que l'attente des en-têtes : sans
+    // plafond sur la réponse entière, un flux figé laisserait l'écran attendre
+    // sans fin. Le texte rendu est celui qui s'est affiché, et non les blocs
+    // de la réponse finale joints : après un repli en cours de route, le saut
+    // de ligne tomberait au milieu d'une phrase.
+    let texte = '';
+    const flux = client.beta.messages.stream(params, {
+      ...options,
+      signal: AbortSignal.any([stream.signal, AbortSignal.timeout(timeout)]),
+    });
+    flux.on('text', (delta) => {
+      texte += delta;
+      stream.onText(delta);
+    });
+    const response = await flux.finalMessage();
+    return response.stop_reason === 'refusal' ? null : texte.trim();
   };
 
   return {

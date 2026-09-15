@@ -42,7 +42,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   let cuisinésPour: number[] = [];
   let choisis: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
+  /** Le faux assistant lâche après son premier morceau. */
+  let enPanne = false;
   let recettes: string[] = [];
+  /** Ce que le faux modèle d'image a reçu : exactement ce qui serait parti chez Google. */
+  let dessinés: string[] = [];
 
   const call = async (
     app: FastifyInstance, method: string, url: string, payload?: unknown,
@@ -63,6 +67,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     return body.eater.id;
   };
 
+  const oeuf = async (label: string): Promise<Record<string, unknown>> => {
+    const { rows } = await pool.query<{ id: string }>(`select id from food where name = 'Oeuf, cru'`);
+    return { foodId: rows[0]!.id, label, quantity: 110, unit: 'g', quantityG: 110 };
+  };
+
   before(async () => {
     pool = await testPool();
     auth = buildTestAuth(pool);
@@ -79,8 +88,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         choisis.push(lines);
         return Promise.resolve({ choix: [{ ligne: 1, numero: 2 }, { ligne: 2, numero: 1 }] });
       },
-      advise: (facts: string, conversation: Turn[]): Promise<string> => {
+      advise: (facts: string, conversation: Turn[], { onText }: { onText: (delta: string) => void }): Promise<string> => {
         conseillé = { facts, conversation };
+        onText('Une soupe ');
+        if (enPanne) return Promise.reject(new Error('le modèle a lâché en route'));
+        onText('de légumes ?');
         return Promise.resolve('Une soupe de légumes ?');
       },
       suggestRecipes: (facts: string): Promise<unknown> => {
@@ -94,7 +106,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         });
       },
     };
-    avecIA = buildApp({ pool, auth, baseURL: TEST_BASE_URL, llm }, { webDir: '/dev/null/absent' });
+    const drawDish = (prompt: string): Promise<{ mimeType: string; bytes: Buffer }> => {
+      dessinés.push(prompt);
+      return Promise.resolve({ mimeType: 'image/png', bytes: Buffer.from('png') });
+    };
+    avecIA = buildApp({ pool, auth, baseURL: TEST_BASE_URL, llm, drawDish }, { webDir: '/dev/null/absent' });
     sansIA = buildApp({ pool, auth, baseURL: TEST_BASE_URL }, { webDir: '/dev/null/absent' });
     await avecIA.ready();
     await sansIA.ready();
@@ -113,7 +129,9 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     cuisinésPour = [];
     choisis = [];
     conseillé = null;
+    enPanne = false;
     recettes = [];
+    dessinés = [];
     await pool.query(
       `insert into food (source, external_id, name, plant_based,
                          kcal_100g, protein_100g, carb_100g, fat_100g, fiber_100g,
@@ -129,6 +147,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     const question = { messages: [{ role: 'user', content: 'Une idée ?' }] };
     assert.equal((await call(sansIA, 'POST', '/api/assistant', question)).status, 503);
     assert.equal((await call(sansIA, 'POST', '/api/assistant/recipes')).status, 503);
+    assert.equal((await call(sansIA, 'POST', `/api/meals/${crypto.randomUUID()}/image`)).status, 503);
   });
 
   describe('le découpage d’un repas', () => {
@@ -176,14 +195,68 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { body: fiche } = await call(avecIA, 'POST', '/api/eaters', {
         firstName: 'Sam', birthDate: '1988-01-01', sex: 'M', self: true,
       });
-      const { rows } = await pool.query<{ id: string }>(`select id from food where name = 'Oeuf, cru'`);
       const { status, body } = await call(avecIA, 'POST', '/api/meals', {
         eatenAt: new Date().toISOString(), slot: 'petit_dej', source: 'ia',
         participants: [{ eaterId: fiche.eater.id, present: true }],
-        items: [{ foodId: rows[0]!.id, label: '2 œufs', quantity: 110, unit: 'g', quantityG: 110 }],
+        items: [await oeuf('2 œufs')],
       });
       assert.equal(status, 201);
       assert.equal(body.meal.nutrition.confidence, 'moyenne');
+    });
+  });
+
+  describe('l’image d’un plat décrit avec l’IA', () => {
+    const repas = async (eaterId: string, fields: Record<string, unknown>): Promise<any> => {
+      const { body } = await call(avecIA, 'POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        participants: [{ eaterId, present: true }], ...fields,
+      });
+      return body.meal;
+    };
+    const truffe = (label: string): Record<string, unknown> => ({ foodId: null, label });
+
+    it('dessine le plat une fois, sans prénom, et reprend l’image pour les mêmes ingrédients', async () => {
+      const léa = await créerLéa();
+      const items = [await oeuf('2 œufs'), truffe('truffe de Léa')];
+      const premier = await repas(léa, { items, remainingServings: 1 });
+      assert.equal(premier.imageUrl, null, 'rien avant qu’on la demande');
+
+      const { status, body } = await call(avecIA, 'POST', `/api/meals/${premier.id}/image`, {
+        description: 'Léa a mangé des œufs et une truffe',
+      });
+      assert.equal(status, 200);
+      assert.match(body.imageUrl, /^\/api\/images\//);
+      assert.equal(dessinés.length, 1);
+      assert.match(dessinés[0]!, /Le repas : quelqu’un a mangé des œufs et une truffe/);
+      assert.match(dessinés[0]!, /Ingrédients : Oeuf, cru, truffe de quelqu’un\./, 'le nom Ciqual plutôt que le libellé');
+      assert.ok(!dessinés[0]!.includes('Léa'), dessinés[0]);
+
+      assert.equal((await call(avecIA, 'GET', `/api/meals/${premier.id}`)).body.meal.imageUrl, body.imageUrl);
+      const image = await avecIA.inject({ method: 'GET', url: body.imageUrl, headers: { cookie: foyer.cookie } });
+      assert.equal(image.statusCode, 200);
+      assert.equal(image.headers['content-type'], 'image/png');
+      assert.equal(image.body, 'png');
+
+      const second = await repas(léa, { items });
+      const reprise = await call(avecIA, 'POST', `/api/meals/${second.id}/image`, {});
+      assert.equal(reprise.body.imageUrl, body.imageUrl, 'mêmes ingrédients, même image');
+      assert.equal(dessinés.length, 1, 'rien n’est redessiné');
+
+      const restes = await repas(léa, { source: 'texte', leftoverOf: premier.id });
+      assert.equal(restes.imageUrl, body.imageUrl, 'les restes gardent l’image du plat');
+    });
+
+    it('ne dessine pas un repas saisi à la main, ni ne montre l’image au foyer d’à côté (§16)', async () => {
+      const léa = await créerLéa();
+      const àLaMain = await repas(léa, { source: 'texte', items: [truffe('une truffe')] });
+      assert.equal((await call(avecIA, 'POST', `/api/meals/${àLaMain.id}/image`, {})).status, 409);
+      assert.deepEqual(dessinés, [], 'rien ne part');
+
+      const décrit = await repas(léa, { items: [truffe('une truffe')] });
+      const { body } = await call(avecIA, 'POST', `/api/meals/${décrit.id}/image`, {});
+      const voisin = await signUpWithHousehold(auth, pool, 'voisin@exemple.test');
+      const vue = await avecIA.inject({ method: 'GET', url: body.imageUrl, headers: { cookie: voisin.cookie } });
+      assert.equal(vue.statusCode, 404);
     });
   });
 
@@ -196,12 +269,48 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
     });
 
-    it('résume le foyer en tranches d’âge, sans prénom ni date de naissance (I3)', async () => {
-      const { status, body } = await call(avecIA, 'POST', '/api/assistant', {
-        messages: [{ role: 'user', content: 'Léa aime les pâtes, une idée ?' }],
+    /** Une question, et les événements de la réponse dans l'ordre. */
+    const poser = async (content: string): Promise<{ status: number; type: unknown; events: [string, unknown][] }> => {
+      const response = await avecIA.inject({
+        method: 'POST',
+        url: '/api/assistant',
+        headers: { cookie: foyer.cookie },
+        payload: { messages: [{ role: 'user', content }] },
       });
+      return {
+        status: response.statusCode,
+        type: response.headers['content-type'],
+        events: response.payload.trim().split('\n\n').map((bloc): [string, unknown] => {
+          const [event = '', data = ''] = bloc.split('\n');
+          return [event.replace('event: ', ''), JSON.parse(data.replace('data: ', ''))];
+        }),
+      };
+    };
+
+    it('envoie la réponse par morceaux pendant la génération, puis celle qui fait foi', async () => {
+      const { status, type, events } = await poser('Une idée ?');
       assert.equal(status, 200);
-      assert.equal(body.reply, 'Une soupe de légumes ?');
+      assert.match(String(type), /^text\/event-stream/);
+      assert.deepEqual(events, [
+        ['texte', 'Une soupe '],
+        ['texte', 'de légumes ?'],
+        ['fin', { reply: 'Une soupe de légumes ?' }],
+      ]);
+    });
+
+    it('dit qu’un flux a cassé en route, et répond encore à la question suivante', async () => {
+      enPanne = true;
+      assert.deepEqual((await poser('Une idée ?')).events, [
+        ['texte', 'Une soupe '],
+        ['erreur', { error: { code: 'ia_injoignable', message: 'l’assistant n’a pas répondu — réessayez dans un instant' } }],
+      ]);
+      enPanne = false;
+      assert.deepEqual((await poser('Une idée ?')).events.at(-1), ['fin', { reply: 'Une soupe de légumes ?' }]);
+    });
+
+    it('résume le foyer en tranches d’âge, sans prénom ni date de naissance (I3)', async () => {
+      const { status } = await poser('Léa aime les pâtes, une idée ?');
+      assert.equal(status, 200);
       assert.ok(conseillé !== null);
       const { facts, conversation } = conseillé;
       assert.match(facts, /1 enfant de 6-9 ans/);

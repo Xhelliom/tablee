@@ -1243,12 +1243,19 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
 > | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
 >
+> **Ajoutées le 15/09/2026** :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `POST` | `/api/meals/:id/image` | V3 — l'image d'un repas décrit avec l'IA (source `ia`), que l'écran de saisie demande sitôt le repas enregistré, sans l'attendre. Les mêmes ingrédients reprennent l'image du foyer ; sinon Gemini 3.1 Flash Lite Image la dessine depuis les aliments et la description, prénoms retirés. `409` pour un autre repas, même plafond que le découpage, `503` sans `GEMINI_API_KEY`. Migration 015, dette n° 21. |
+> | `GET` | `/api/images/:id` | L'image elle-même, derrière la session et la RLS : elle dessine une description du foyer, elle ne se sert pas à un autre. |
+>
 > **Ajoutées le 14/09/2026** :
 >
 > | Méthode | Route | Pourquoi elle existe |
 > |---|---|---|
 > | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Deux appels au modèle par requête depuis le 14/09/2026 : le découpage, puis le choix de l'aliment, par numéro, parmi quinze candidats Ciqual par ligne. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
-> | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. |
+> | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. *Précisé le 15/09/2026* : la réponse arrive en Server-Sent Events — des `texte` au fil de la génération, puis `fin`, qui porte la réponse entière et fait foi, ou `erreur` si le flux casse en route. Ce qui est refusé avant le flux (400, 429, 503) reste une erreur JSON. |
 > | `POST` | `/api/assistant/recipes` | V3 — le bouton « Demander à l'assistant des recettes » de l'accueil, pour rendre la semaine plus équilibrée. Même résumé du foyer que `/api/assistant`, plus l'ordre des repères et la liste des recettes Jow du foyer : le modèle **choisit** par numéro parmi elles et ajoute une ou deux idées de plats marquées « à vérifier », sans jamais écrire une valeur (R1). Le texte envoyé revient dans la réponse, pour se relire à l'écran. `409` quand il n'aurait rien sur quoi s'appuyer ; même plafond et même 503 que le découpage. Ce qu'il approxime : dette n° 20. |
 > | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
 >
@@ -1315,8 +1322,9 @@ depuis les `portion_coef` courants (R2).
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
+| **Présentation** (sans session) | *Ajoutée le 15/09/2026.* Ce que voit un visiteur non connecté, à la place du formulaire de connexion : ce que fait Tablée en trois temps, ce qu'elle refuse — calories à compter, scores, fiches confiées à une IA —, puis l'inscription. L'exemple montre un plat partagé entre des assiettes de tailles différentes, et **aucun bilan** : des barres d'exemple seraient des valeurs nutritionnelles sans source. La connexion passe sur `/connexion`, qu'une session ouverte renvoie à l'accueil. `/share` et `/invitation/…` y mènent directement, sans présentation : la traverser perdrait la recette ou l'invitation. |
 | **Synthèse** (V3) | Texte hebdomadaire + notes famille. |
-| **Conseils** (V3) | *Ajouté le 14/09/2026.* Une question, une réponse de l'assistant, et la conversation qui suit. Dit avant la première question ce qu'il ne sait pas — prénoms, allergies — et qu'il n'est pas un avis médical. Onglet absent sans clé API. La conversation s'efface en changeant d'onglet. |
+| **Conseils** (V3) | *Ajouté le 14/09/2026.* Une question, une réponse de l'assistant, et la conversation qui suit. Dit avant la première question ce qu'il ne sait pas — prénoms, allergies — et qu'il n'est pas un avis médical. Onglet absent sans clé API. La conversation s'efface en changeant d'onglet. *Précisé le 15/09/2026* : la réponse s'écrit au fil de sa génération ; si le flux casse en route, le début de réponse disparaît, la question revient dans le champ et l'erreur s'affiche. |
 
 **Contraintes UI :**
 - Enregistrer un repas Jow ≤ **3 taps** après le partage.

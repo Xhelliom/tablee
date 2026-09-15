@@ -29,7 +29,7 @@
  * réponse avant l'écran (dette n° 17).
  */
 import { ageBracket } from '../nutrition/age.ts';
-import type { Anonymized, Ask } from './index.ts';
+import type { Anonymized, Ask, TextStream } from './index.ts';
 
 export interface Turn {
   role: 'user' | 'assistant';
@@ -39,6 +39,7 @@ export interface Turn {
 export type Advise = (
   facts: Anonymized,
   conversation: { role: Turn['role']; content: Anonymized }[],
+  stream: TextStream,
 ) => Promise<string>;
 
 /**
@@ -134,7 +135,7 @@ Règles, sans exception :
 - Réponds en français, en quelques phrases courtes. Ni titres, ni gras, ni tableaux ; une courte liste à tirets si tu proposes plusieurs idées.`;
 
 export function advisor(ask: Ask): Advise {
-  return async (facts, conversation) => {
+  return async (facts, conversation, stream) => {
     // Effort moyen et une minute, et non l'effort bas et les 30 s du découpage :
     // une réponse réfléchie est plus longue à venir qu'une liste d'aliments.
     const réponse = await ask({
@@ -142,7 +143,10 @@ export function advisor(ask: Ask): Advise {
       messages: conversation,
       effort: 'medium',
       timeout: 60_000,
+      stream,
     });
+    // Un refus arrive parfois après un début de réponse déjà affiché : ce
+    // texte-ci le remplace (`fin`, dans `routes/assistant.ts`).
     if (réponse === null) return 'Je ne peux pas répondre à cette question. Essayez de la formuler autrement.';
     return réponse === '' ? 'Je n’ai pas de réponse à proposer.' : réponse;
   };
