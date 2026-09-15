@@ -7,6 +7,7 @@
  * qu'il refuse : en-têtes de `server/llm/conseil.ts` et
  * `server/llm/recettes.ts`. Rien n'est écrit en base.
  */
+import { PassThrough } from 'node:stream';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { ApiError } from '../http/errors.ts';
 import { array, body, str } from '../http/validate.ts';
@@ -37,7 +38,15 @@ const MAX_TURNS = 12;
 const MAX_REPLY = 6000;
 
 export function assistantRoutes(app: FastifyInstance, ctx: AppContext): void {
-  app.post('/api/assistant', { config: { rateLimit: LLM_RATE_LIMIT } }, async (request) => {
+  /**
+   * La réponse part en Server-Sent Events, au fil de sa génération : des
+   * `texte`, puis `fin` ou `erreur`. `fin` porte la réponse entière et c'est
+   * elle qui fait foi — un refus du modèle en cours de route remplace le début
+   * déjà affiché, et c'est cette réponse-là que l'écran renverra au tour
+   * suivant. Ce qui est refusé avant le flux (400, 429, 503) reste une erreur
+   * JSON ordinaire.
+   */
+  app.post('/api/assistant', { config: { rateLimit: LLM_RATE_LIMIT } }, async (request, reply) => {
     const { advise } = requireLlm(ctx.llm);
     const conversation = turns(body(request.body)['messages']);
 
@@ -45,14 +54,36 @@ export function assistantRoutes(app: FastifyInstance, ctx: AppContext): void {
     // Tout est lu : le client retourne au pool avant l'attente du modèle.
     await request.releaseDb();
 
-    const reply = await advise(
+    // Rendu par `reply.send` plutôt qu'écrit sur la socket : un
+    // `reply.hijack()` sauterait les crochets, en-têtes de sécurité compris.
+    const flux = new PassThrough();
+    const envoyer = (event: 'texte' | 'fin' | 'erreur', data: unknown): void => {
+      if (flux.writable) flux.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    // L'application fermée ou le réseau perdu : la génération s'arrête, et ce
+    // qu'elle coûte avec.
+    const coupure = new AbortController();
+    reply.raw.on('close', () => coupure.abort());
+
+    void advise(
       anonymize(describeHousehold(facts), names),
       conversation.map((turn) => ({ ...turn, content: anonymize(turn.content, names) })),
-    ).catch((cause: unknown) => {
-      request.log.error(cause);
-      throw new ApiError(502, 'ia_injoignable', 'l’assistant n’a pas répondu — réessayez dans un instant');
-    });
-    return { reply: reply.slice(0, MAX_REPLY) };
+      { onText: (delta) => envoyer('texte', delta), signal: coupure.signal },
+    ).then(
+      (texte) => envoyer('fin', { reply: texte.slice(0, MAX_REPLY) }),
+      (cause: unknown) => {
+        if (!coupure.signal.aborted) request.log.error(cause);
+        envoyer('erreur', new ApiError(502, 'ia_injoignable', 'l’assistant n’a pas répondu — réessayez dans un instant').toBody());
+      },
+    ).finally(() => flux.end());
+
+    // Sans `x-accel-buffering`, l'ingress nginx retient la réponse jusqu'à la
+    // fin, et le flux arrive d'un bloc.
+    return reply
+      .type('text/event-stream; charset=utf-8')
+      .header('cache-control', 'no-cache')
+      .header('x-accel-buffering', 'no')
+      .send(flux);
   });
 
   /**

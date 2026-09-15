@@ -1,5 +1,6 @@
 /**
- * V3 — l'assistant : une question sur les repas, une réponse.
+ * V3 — l'assistant : une question sur les repas, une réponse qui s'écrit au fil
+ * de sa génération (Server-Sent Events, `api.events`).
  *
  * Hors de la roadmap d'origine (14/09/2026). Ce que le serveur lui transmet,
  * et surtout ce qu'il ne lui transmet pas, est dans `server/llm/conseil.ts`.
@@ -35,6 +36,8 @@ export function AssistantScreen(): ReactElement {
   const [conversation, setConversation] = useState<Turn[]>([]);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
+  /** La réponse en train de s'écrire. Elle n'entre dans la conversation qu'à `fin`. */
+  const [enCours, setEnCours] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const demander = async (texte: string): Promise<void> => {
@@ -46,15 +49,23 @@ export function AssistantScreen(): ReactElement {
     setBusy(true);
     setError(null);
     try {
-      const { reply } = await api.post<{ reply: string }>('/api/assistant', { messages: suite.slice(-ENVOYÉS) });
+      const { reply } = await api.events<{ reply: string }>(
+        '/api/assistant',
+        { messages: suite.slice(-ENVOYÉS) },
+        (delta) => setEnCours((déjà) => déjà + delta),
+      );
+      // `reply`, et non ce qui s'est affiché : un refus en cours de route
+      // remplace le début de réponse.
       setConversation([...suite, { role: 'assistant', content: reply }]);
     } catch (cause) {
-      // La question sans réponse est retirée et rendue au champ : deux
-      // questions d'affilée casseraient l'alternance que le serveur exige.
+      // La question sans réponse, et son début de réponse s'il y en a un, est
+      // retirée et rendue au champ : deux questions d'affilée casseraient
+      // l'alternance que le serveur exige.
       setConversation(conversation);
       setQuestion(contenu);
       setError(cause instanceof ApiError ? cause.message : 'l’assistant n’a pas répondu');
     }
+    setEnCours('');
     setBusy(false);
   };
 
@@ -88,7 +99,8 @@ export function AssistantScreen(): ReactElement {
             : <p key={index} style={bulleQuestion}>{turn.content}</p>
         ))}
 
-        {busy ? <p className="meta">L’assistant réfléchit…</p> : null}
+        {busy && enCours === '' ? <p className="meta">L’assistant réfléchit…</p> : null}
+        {busy && enCours !== '' ? <p className="card" style={bulleRéponse}>{enCours}</p> : null}
         {error !== null ? <p style={{ fontSize: 13, color: 'var(--text-warning)' }}>{error}</p> : null}
 
         <form className="stack" onSubmit={(e) => { e.preventDefault(); void demander(question); }}>
