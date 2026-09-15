@@ -27,8 +27,8 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
   if (!hero) {
     return (
       <button type="button" className="card row" onClick={() => onOpen(meal.id)}>
-        {meal.recipe?.imageUrl != null ? (
-          <img className="thumb" src={meal.recipe.imageUrl} alt="" loading="lazy" />
+        {meal.imageUrl !== null ? (
+          <img className="thumb" src={meal.imageUrl} alt="" loading="lazy" />
         ) : (
           <span className="thumb"><IconBowl size={22} /></span>
         )}
@@ -51,8 +51,8 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
         display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
         height: 118, background: 'var(--green-100)', color: 'var(--green-900)',
       }}>
-        {meal.recipe?.imageUrl != null ? (
-          <img src={meal.recipe.imageUrl} alt=""
+        {meal.imageUrl !== null ? (
+          <img src={meal.imageUrl} alt=""
                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <IconBowl size={40} />

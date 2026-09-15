@@ -589,6 +589,42 @@ pas (I7 : pages publiques seulement).
 
 ---
 
+## 21. L'image d'un plat décrit avec l'IA : reprise sur les seuls ingrédients, et un second tiers
+
+**Où** — `server/llm/image.ts`, `POST /api/meals/:id/image`, migration 015.
+
+**Reprise à ingrédients égaux, description ignorée.** L'étiquette d'une image
+est l'ensemble exact de ses ingrédients (aliment Ciqual, sinon libellé). Des
+pâtes, des tomates et des lardons dessinés en gratin reprennent le gratin le
+jour où on les décrit en salade. À l'inverse, un ingrédient de plus redessine
+tout, même pour un plat identique à l'œil.
+
+**Un second tiers voit la description.** Gemini reçoit ce qu'Anthropic reçoit
+déjà pour le découpage : les aliments et le texte tapé, passés au même filtre
+de prénoms, avec les mêmes trous (dette n° 17). La route est plafonnée comme
+les autres routes IA, mais l'inscription reste ouverte : la clé Google mérite
+sa limite de dépense.
+
+**L'image arrive après l'accueil.** L'écran de saisie la demande sans
+l'attendre et revient à l'accueil. Celui-ci s'affiche avant qu'elle soit
+dessinée : le bol reste jusqu'au prochain chargement. Une demande perdue (app
+fermée aussitôt, modèle en panne) laisse le bol pour de bon : rien ne la
+rejoue.
+
+**Ni réduite ni vérifiée.** L'image est gardée telle que le modèle la rend,
+en 1K, pour des vignettes de 42 à 118 px. Et le format de réponse de
+`generateContent` est lu d'après la documentation de Google : aucun appel réel
+n'a été fait à l'écriture, faute de clé.
+
+**Ce que ça coûte.** Une image qui ne ressemble pas au plat, ou pas d'image :
+jamais une valeur fausse. Quelques centaines de Ko par plat distinct en base.
+
+**Ce qui le lèverait.** Rapprocher des ensembles voisins plutôt qu'égaux ;
+rafraîchir l'accueil quand l'image arrive ; réduire l'image avant de la garder
+(une dépendance de plus, `sharp`, pour quelques Ko).
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

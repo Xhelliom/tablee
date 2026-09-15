@@ -145,6 +145,14 @@ spec:
             - name: TABLEE_LLM_MODEL
               value: claude-sonnet-5
 
+            # L'image d'un plat décrit avec l'IA. Absente, la carte garde son
+            # bol dessiné. Voir `server/llm/image.ts`.
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef: { name: tablee, key: GEMINI_API_KEY, optional: true }
+            - name: TABLEE_IMAGE_MODEL
+              value: gemini-3.1-flash-lite-image
+
             # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
             - name: TABLEE_LOG
               value: '0'

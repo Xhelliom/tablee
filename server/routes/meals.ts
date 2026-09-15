@@ -2,7 +2,7 @@
  * §12 — repas.
  */
 import type { FastifyInstance } from 'fastify';
-import { transaction } from '../db.ts';
+import { transaction, withHousehold } from '../db.ts';
 import { ApiError } from '../http/errors.ts';
 import {
   body, int, isoDateTime, mealItems, num, optionalStr, optionalUuid,
@@ -11,9 +11,13 @@ import {
 import {
   applyChoices, CANDIDATES, describeCandidates, SplitRefused, type MatchedItem,
 } from '../llm/decoupage.ts';
+import { dishPrompt, dishTag } from '../llm/image.ts';
 import { anonymize, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { searchFoods } from '../repo/foods.ts';
+import {
+  dishImageUrl, findDishImage, loadDishImage, saveDishImage, setMealImage,
+} from '../repo/images.ts';
 import {
   createMeal, deleteMeal, getMeal, listMeals, openLeftovers, updateMeal,
 } from '../repo/meals.ts';
@@ -115,6 +119,74 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
 
     reply.code(201);
     return { meal: await getMeal(request.db, householdId, id) };
+  });
+
+  /**
+   * L'image d'un repas saisi avec l'IA (015). L'écran la demande sitôt le repas
+   * enregistré, sans l'attendre : le repas est déjà là, une image manquée ne
+   * coûte qu'une vignette. Les mêmes ingrédients reprennent l'image du foyer ;
+   * sinon le modèle la dessine — ce qui part : en-tête de `server/llm/image.ts`.
+   * Plafonnée comme les autres routes IA : chaque image se paie.
+   */
+  app.post<{ Params: { id: string } }>(
+    '/api/meals/:id/image', { config: { rateLimit: LLM_RATE_LIMIT } }, async (request) => {
+      const drawDish = ctx.drawDish ?? null;
+      if (drawDish === null) {
+        throw new ApiError(503, 'image_non_configuree', 'la génération d’image n’est pas configurée sur ce serveur');
+      }
+      const identity = request.identity();
+      const { householdId } = identity;
+      const id = uuid(request.params.id, 'id');
+      const description = optionalStr(body(request.body)['description'], 'description', { max: 2000 });
+
+      const meal = await getMeal(request.db, householdId, id);
+      if (meal === null) throw ApiError.notFound('repas introuvable');
+      if (meal.source !== 'ia' || meal.items.length === 0) {
+        throw new ApiError(409, 'repas_sans_ia', 'seul un repas décrit avec l’IA reçoit une image');
+      }
+      if (meal.imageUrl !== null) return { imageUrl: meal.imageUrl };
+
+      const tag = dishTag(meal.items);
+      const known = await findDishImage(request.db, householdId, tag);
+      if (known !== null) {
+        await setMealImage(request.db, householdId, id, known);
+        return { imageUrl: dishImageUrl(known) };
+      }
+
+      const eaters = await listEaters(request.db, householdId, { includeInactive: true });
+      const noms = namesToHide(eaters, identity.name);
+      // Le dessin prend des secondes : le client retourne au pool avant.
+      await request.releaseDb();
+
+      // Les noms Ciqual ne passent pas au filtre des prénoms, pour la même
+      // raison qu'au découpage : « Riz blanc » deviendrait « Riz quelqu’un ».
+      const prompt = anonymize(dishPrompt(
+        meal.items.map((item) => item.foodName ?? anonymize(item.label, noms)),
+        description === null ? null : anonymize(description, noms),
+      ), []);
+      const image = await drawDish(prompt).catch((cause: unknown) => {
+        request.log.error(cause);
+        throw new ApiError(502, 'image_injoignable', 'l’image du plat n’a pas pu être dessinée');
+      });
+      if (image === null) return { imageUrl: null };
+
+      const imageId = await withHousehold(ctx.pool, householdId, async (db) => {
+        const saved = await saveDishImage(db, householdId, tag, image);
+        await setMealImage(db, householdId, id, saved);
+        return saved;
+      });
+      return { imageUrl: dishImageUrl(imageId) };
+    },
+  );
+
+  app.get<{ Params: { id: string } }>('/api/images/:id', async (request, reply) => {
+    const image = await loadDishImage(request.db, uuid(request.params.id, 'id'));
+    if (image === null) throw ApiError.notFound('image introuvable');
+    // Une image ne change jamais sous son identifiant : le téléphone la garde.
+    return reply
+      .type(image.mimeType)
+      .header('cache-control', 'private, max-age=31536000, immutable')
+      .send(image.bytes);
   });
 
   app.get<{ Querystring: { from?: string; to?: string } }>('/api/meals', async (request) => {

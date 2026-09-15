@@ -1220,6 +1220,13 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
 > | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
 >
+> **Ajoutées le 15/09/2026** :
+>
+> | Méthode | Route | Pourquoi elle existe |
+> |---|---|---|
+> | `POST` | `/api/meals/:id/image` | V3 — l'image d'un repas décrit avec l'IA (source `ia`), que l'écran de saisie demande sitôt le repas enregistré, sans l'attendre. Les mêmes ingrédients reprennent l'image du foyer ; sinon Gemini 3.1 Flash Lite Image la dessine depuis les aliments et la description, prénoms retirés. `409` pour un autre repas, même plafond que le découpage, `503` sans `GEMINI_API_KEY`. Migration 015, dette n° 21. |
+> | `GET` | `/api/images/:id` | L'image elle-même, derrière la session et la RLS : elle dessine une description du foyer, elle ne se sert pas à un autre. |
+>
 > **Ajoutées le 14/09/2026** :
 >
 > | Méthode | Route | Pourquoi elle existe |

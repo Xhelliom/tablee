@@ -58,7 +58,7 @@ server/
   jow/            parseur des pages publiques Jow (Tâche 0, verrouillée)
   llm/            l'IA (V3) : la seule porte vers Anthropic (index.ts), le
                   découpage d'un texte libre, l'assistant, les recettes de
-                  l'accueil
+                  l'accueil ; l'image d'un plat, chez Google (image.ts)
   test-support/   fabriques de comptes/foyers, base de test, migrations
   *.test.ts       les suites d'intégration vivent à la racine de server/
 web/
@@ -312,6 +312,14 @@ l'invérifiable.
 > pas lui laisser écrire une teneur, ni proposer une recette manuelle : leur
 > titre est écrit par le foyer. Le modèle de toute la couche se règle par
 > `TABLEE_LLM_MODEL` (Sonnet 5 par défaut). Ce qu'il approxime : dette n° 20.
+>
+> **Le 15/09/2026, l'image d'un plat décrit avec l'IA**, toujours à sa demande
+> (`server/llm/image.ts`, migration 015). Gemini 3.1 Flash Lite Image, choisi
+> pour son prix, la dessine à l'enregistrement depuis les aliments et la
+> description — ce qui part déjà chez Anthropic, par le même `anonymize`, et
+> rien de plus. Une image par ensemble d'ingrédients **et par foyer** : elle
+> dessine un texte du foyer, ne pas la mutualiser comme une recette Jow. Ce
+> qu'elle approxime : dette n° 21.
 
 ---
 

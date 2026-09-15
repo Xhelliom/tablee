@@ -103,8 +103,8 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
 
       <section style={{ padding: '14px 16px', background: 'var(--surface-2)' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          {meal.recipe?.imageUrl != null ? (
-            <img src={meal.recipe.imageUrl} alt=""
+          {meal.imageUrl !== null ? (
+            <img src={meal.imageUrl} alt=""
                  style={{ width: 54, height: 54, borderRadius: 'var(--radius)', objectFit: 'cover' }} />
           ) : (
             <span className="thumb" style={{ width: 54, height: 54 }}><IconBowl size={24} /></span>
