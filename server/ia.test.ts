@@ -39,6 +39,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   let foyer: TestHousehold;
   /** Ce que les faux modèles ont reçu : exactement ce qui serait parti chez Anthropic. */
   let découpés: string[] = [];
+  let cuisinésPour: number[] = [];
   let choisis: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
   /** Le faux assistant lâche après son premier morceau. */
@@ -75,8 +76,9 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     pool = await testPool();
     auth = buildTestAuth(pool);
     const llm = {
-      splitMeal: (text: string): Promise<ProposedItem[]> => {
+      splitMeal: (text: string, personnes: number): Promise<ProposedItem[]> => {
         découpés.push(text);
+        cuisinésPour.push(personnes);
         return Promise.resolve([
           { label: '2 œufs', search: 'oeuf', grams: 110 },
           { label: 'une truffe', search: 'truffe', grams: null },
@@ -124,6 +126,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     await resetDatabase(pool);
     foyer = await signUpWithHousehold(auth, pool, 'papa@exemple.test');
     découpés = [];
+    cuisinésPour = [];
     choisis = [];
     conseillé = null;
     enPanne = false;
@@ -155,6 +158,14 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
       assert.equal(status, 200);
       assert.deepEqual(découpés, ['quelqu’un a mangé 2 œufs et une truffe']);
+    });
+
+    it('dit au modèle pour combien le plat a été préparé — une personne à défaut', async () => {
+      await call(avecIA, 'POST', '/api/meals/decoupage', { text: 'des pâtes', personnes: 4.5 });
+      await call(avecIA, 'POST', '/api/meals/decoupage', { text: 'des pâtes' });
+      assert.deepEqual(cuisinésPour, [4.5, 1]);
+      const { status } = await call(avecIA, 'POST', '/api/meals/decoupage', { text: 'des pâtes', personnes: 0 });
+      assert.equal(status, 400);
     });
 
     it('rapproche chaque ligne de Ciqual, et n’invente rien quand il ne connaît pas', async () => {

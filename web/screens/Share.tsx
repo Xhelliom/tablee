@@ -6,6 +6,12 @@
  * valider. Tout est donc pré-rempli : le créneau selon l'heure, les parts selon
  * ce que Jow prévoit, les convives selon les membres actifs.
  *
+ * ⚠️ Renversé le 15/09/2026 — les parts suivent qui est à table, plus
+ * `coversCount`. Jow publie la plupart de ses recettes « pour 1 » (6 sur 8 dans
+ * `server/jow/fixtures/`) : enregistré sans toucher au compteur, un dîner à
+ * quatre comptait une seule assiette partagée entre quatre, et tous les bilans
+ * restaient loin sous les repères. Le nombre de Jow reste affiché, en rappel.
+ *
  * I6 : le texte partagé porte `key` et `userId`, qui sont des jetons de compte.
  * Il n'est jamais affiché tel quel, jamais mis dans l'URL après coup, et le
  * serveur ne persiste que sa version expurgée.
@@ -85,7 +91,8 @@ export function SharedRecipe(
   const [state, setState] = useState<ResolveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot>(() => currentSlot());
-  const [cooked, setCooked] = useState(1);
+  /** `null` tant qu'on n'y a pas touché : « Cuisiné pour » suit alors les cases cochées. */
+  const [cookedByHand, setCookedByHand] = useState<number | null>(null);
   const [remains, setRemains] = useState(0);
   const [guestCount, setGuestCount] = useState(0);
   const [present, setPresent] = useState<Set<string>>(new Set());
@@ -113,10 +120,7 @@ export function SharedRecipe(
       : api.post<ResolveResponse>('/api/recipes/resolve', { text: clé });
 
     void lecture
-      .then((response) => {
-        setState(response);
-        if (response.recipe !== null) setCooked(response.recipe.baseServings);
-      })
+      .then(setState)
       .catch(() => setError('La recette n’a pas pu être lue. Le repas peut être saisi à la main.'));
   }, [kind, clé]);
 
@@ -129,6 +133,9 @@ export function SharedRecipe(
     });
   }, []);
 
+  // Une part par personne à table, invités compris (voir l'en-tête). Jamais sous
+  // 1 : le minimum du compteur, quand plus aucune case n'est cochée.
+  const cooked = cookedByHand ?? Math.max(present.size + guestCount, 1);
   const parts = split(cooked, remains);
 
   const save = async (): Promise<void> => {
@@ -260,10 +267,10 @@ export function SharedRecipe(
             <div>
               <p style={{ fontSize: 14 }}>Cuisiné pour</p>
               <p className="meta">
-                {recipe !== null ? `Recette prévue pour ${recipe.baseServings}` : 'Parts préparées'}
+                {recipe !== null ? `Personnes · recette prévue pour ${recipe.baseServings}` : 'Personnes'}
               </p>
             </div>
-            <Stepper value={cooked} onChange={setCooked} min={0.5} max={20} step={0.5}
+            <Stepper value={cooked} onChange={setCookedByHand} min={0.5} max={20} step={0.5}
                      label="Cuisiné pour" />
           </section>
 

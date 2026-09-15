@@ -25,10 +25,20 @@
  *
  * ── Ce qui part chez Anthropic ──────────────────────────────────────────────
  *
- * Le texte tapé, rien d'autre (R5), et seulement une fois passé par
- * `anonymize` — le type l'exige. Un texte tapé peut contenir un prénom ou un
+ * Le texte tapé et pour combien de personnes le plat a été préparé, rien
+ * d'autre (R5) : un compte, pas qui — ni prénom, ni âge. Le texte ne part
+ * qu'une fois passé par `anonymize` — le type l'exige. Un texte tapé peut contenir un prénom ou un
  * lien Jow et son jeton : voir `server/llm/index.ts`, la seule porte vers
  * Anthropic, et la dette n° 17 pour ce que le filtre laisse passer.
+ *
+ * ── Pour combien de personnes ───────────────────────────────────────────────
+ *
+ * ⚠️ Ajouté le 15/09/2026. Le repas enregistré est réparti entre tous ceux qui
+ * étaient à table, et le modèle ne le savait pas : « des pâtes » rendait une
+ * portion individuelle, ensuite partagée entre quatre. Il reçoit donc le
+ * « Cuisiné pour » de l'écran, et estime le plat entier. Changer ce nombre
+ * ensuite remet les grammes à l'échelle côté écran : on ne rappelle pas le
+ * modèle pour une règle de trois.
  */
 import type { FoodSummary } from '../repo/foods.ts';
 import type { Anonymized, Ask } from './index.ts';
@@ -43,7 +53,7 @@ export interface ProposedItem {
   grams: number | null;
 }
 
-export type SplitMeal = (text: Anonymized) => Promise<ProposedItem[]>;
+export type SplitMeal = (text: Anonymized, personnes: number) => Promise<ProposedItem[]>;
 
 /** Le modèle a décliné, ou rendu quelque chose d'inexploitable. Réessayer n'y changera rien. */
 export class SplitRefused extends Error {}
@@ -53,7 +63,7 @@ const CONSIGNE = `Tu reçois la description d'un repas, écrite en français par
 Pour chaque aliment :
 - label : l'aliment tel que le texte le dit, avec sa quantité s'il y en a une (« 2 œufs », « un bol de lait »).
 - search : un à trois mots pour le retrouver dans la table de composition Ciqual de l'ANSES — le nom de l'aliment au singulier, sans quantité, sans marque ni article (« oeuf », « lait demi-écrémé », « pain baguette »).
-- grams : le poids en grammes de ce que le texte décrit pour tout le repas. Sans quantité précisée, une portion individuelle courante. null seulement si rien ne permet de l'estimer.
+- grams : le poids en grammes pour le plat entier, préparé pour le nombre de personnes indiqué avant la description. Sans quantité précisée, une portion courante par personne. Une quantité qui décrit l'assiette de chacun (« un yaourt ») vaut pour chacun ; une quantité partagée (« une pizza », « un plat de lasagnes ») vaut pour le plat entier. null seulement si rien ne permet de l'estimer.
 
 Un plat nommé sans autre détail reste une seule ligne (« lasagnes »). Quand le texte en nomme les composants (« tartine beurrée »), une ligne par composant.
 N'ajoute aucun aliment que le texte ne mentionne pas. Les boissons comptent.`;
@@ -80,12 +90,15 @@ const FORMAT = {
 };
 
 export function mealSplitter(ask: Ask): SplitMeal {
-  return async (text) => {
+  return async (text, personnes) => {
     // Effort bas et 30 s : la tâche est courte, et au-delà la personne a déjà
     // tapé ses aliments un par un.
     const réponse = await ask({
       system: CONSIGNE,
-      messages: [{ role: 'user', content: text }],
+      messages: [{
+        role: 'user',
+        content: `Cuisiné pour ${personnes} personne${personnes > 1 ? 's' : ''}\n\n${text}`,
+      }],
       effort: 'low',
       timeout: 30_000,
       schema: FORMAT,
