@@ -5,8 +5,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { FoodSummary } from '../repo/foods.ts';
 import {
-  applyChoices, describeCandidates, readSplit, SplitRefused, type MatchedItem,
+  applyChoices, describeCandidates, mealSplitter, readSplit, SplitRefused, type MatchedItem,
 } from './decoupage.ts';
+import type { Anonymized } from './index.ts';
 
 describe('découpage par IA — ce qui revient', () => {
   it('garde les lignes lisibles et laisse à préciser les poids absurdes', () => {
@@ -27,6 +28,16 @@ describe('découpage par IA — ce qui revient', () => {
 
   it('refuse une réponse sans liste', () => {
     assert.throws(() => readSplit({ autre: 1 }), SplitRefused);
+  });
+
+  it('dit au modèle pour combien le plat a été préparé, avant la description', async () => {
+    let envoyé = '';
+    const découper = mealSplitter((requête) => {
+      envoyé = requête.messages[0]?.content ?? '';
+      return Promise.resolve('{"items":[]}');
+    });
+    assert.deepEqual(await découper('des pâtes' as Anonymized, 4), []);
+    assert.equal(envoyé, 'Cuisiné pour 4 personnes\n\ndes pâtes');
   });
 });
 

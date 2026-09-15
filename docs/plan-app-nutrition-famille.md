@@ -380,6 +380,29 @@ resteront vides.
 > - Des paliers et pas un pourcentage : un « 25 % » posé à côté de barres en
 >   « % du repère du jour » se lirait comme de la nutrition.
 
+> **Renversé le 15/09/2026, le même jour — « Cuisiné pour » sur tous les repas.**
+>
+> Deux défauts trouvés sur des repas réels, et un seul geste pour les deux :
+>
+> - **Jow publie la plupart de ses recettes « pour 1 »** (6 sur 8 dans
+>   `server/jow/fixtures/`), et le lien de partage ne dit pas pour combien on a
+>   cuisiné dans l'app (§3 de `docs/jow-contract.md`). Avec `base_servings` par
+>   défaut, un dîner à quatre comptait une assiette partagée entre quatre. Le
+>   défaut est maintenant **le nombre de personnes à table**, invités compris,
+>   tant qu'on ne touche pas au compteur.
+> - **Sans recette, les grammes estimés par l'IA valaient une assiette**, elle
+>   aussi partagée entre toute la table. « Cuisiné pour » y est donc demandé
+>   aussi : l'IA le reçoit — un nombre, rien de plus (R5) —, et le changer,
+>   avant ou après l'enregistrement, remet chaque quantité à l'échelle.
+>   `servings + remaining_servings` le porte ; « Il en reste ? » reste un
+>   rapport, et le §11 ne change pas. Seul un reste sans recette s'en passe :
+>   sa composition est déjà ce qui restait.
+> - Les enfants n'ont rien de spécial : on dit pour combien on a cuisiné, les
+>   coefficients ne font que répartir.
+> - Les repas sans recette enregistrés avant valent « Cuisiné pour 1 » : les
+>   passer à 4 multiplierait leurs grammes par 4. Pas de migration, décidé avec
+>   le propriétaire — il y en avait quatre.
+
 ### Les invités — `guest_count`, pas de membre fictif
 
 Un champ entier sur `meal`. Les invités entrent au dénominateur du calcul des

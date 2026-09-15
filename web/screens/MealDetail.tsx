@@ -24,7 +24,7 @@ import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
 import {
-  RemainsPicker, UNCOUNTED_HINT, eatenHint, remainsOf, split,
+  RemainsPicker, UNCOUNTED_HINT, eatenHint, remainsOf, rescaled, split,
 } from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
@@ -96,6 +96,8 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
   const isLeftover = meal.leftoverOf !== null;
   /** Ce qu'on avait devant soi : ce qui a été mangé, plus ce qui reste. */
   const base = meal.servings + (meal.remainingServings ?? 0);
+  /** Des parts à montrer : tout plat, sauf un reste sans recette. */
+  const counted = meal.recipe !== null || !isLeftover;
 
   return (
     <div className="app">
@@ -247,16 +249,36 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       {/* ── Édition (V2) ──────────────────────────────────────────────────── */}
       {/* Un repas se corrige comme il s'est saisi : ce qu'on avait devant soi,
           ce qui en reste (15/09/2026, §6bis). Sans recette, le nombre de parts
-          ne sert à rien — seule compte la part mangée de ce qui a été servi. */}
-      {meal.recipe !== null ? (
+          ne sert à rien — seule compte la part mangée de ce qui a été servi.
+          ⚠️ Renversé le même jour : sans recette aussi, « Cuisiné pour » dit
+          pour combien le plat a été préparé, et le changer remet chaque
+          quantité à l'échelle. Seul un reste sans recette s'en passe : sa
+          composition est déjà ce qui restait. */}
+      {counted ? (
         <section className="spread" style={row}>
           <div>
             <p style={{ fontSize: 14 }}>{isLeftover ? 'Il restait' : 'Cuisiné pour'}</p>
-            <p className="meta">{isLeftover ? 'Parts sorties du frigo' : 'Parts du plat entier'}</p>
+            <p className="meta">
+              {isLeftover
+                ? 'Parts sorties du frigo'
+                : meal.recipe !== null ? 'Personnes, plat entier' : 'Personnes — les quantités suivent'}
+            </p>
           </div>
           <Stepper
             value={base}
-            onChange={(next) => { if (!busy) void patch(split(next, remainsOf(meal).value)); }}
+            onChange={(next) => {
+              if (busy) return;
+              const parts = split(next, remainsOf(meal).value);
+              // Avec recette, les parts suffisent : la nutrition vient de Jow.
+              void patch(meal.recipe !== null ? parts : {
+                ...parts,
+                items: meal.items.map((item) => ({
+                  foodId: item.foodId, label: item.label, unit: item.unit,
+                  quantity: rescaled(item.quantity, next / base),
+                  quantityG: rescaled(item.quantityG, next / base),
+                })),
+              });
+            }}
             min={0.1} max={20} step={0.5}
             label={isLeftover ? 'Il restait' : 'Cuisiné pour'}
           />
@@ -265,7 +287,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       <section className="spread" style={row}>
         <RemainsPicker
           label={isLeftover ? 'Il en reste encore ?' : 'Il en reste ?'}
-          hint={meal.recipe !== null ? eatenHint(meal.servings) : UNCOUNTED_HINT}
+          hint={counted ? eatenHint(meal.servings) : UNCOUNTED_HINT}
           value={remainsOf(meal).value}
           disabled={busy}
           onChange={(fraction) => { void patch(split(base, fraction)); }}

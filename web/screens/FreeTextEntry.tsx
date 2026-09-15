@@ -28,6 +28,10 @@
  * L'ordre suit le geste, pas les données : décrire, relire ce qui a été servi,
  * compléter à la main, dire ce qui en reste, puis quand et qui. « Enregistrer » reste collé au
  * bas de l'écran : après un découpage, la liste le poussait hors de vue.
+ *
+ * ⚠️ Ajouté le 15/09/2026 — « Cuisiné pour ». Ce qui est saisi vaut pour le plat
+ * entier, puis se répartit entre qui était à table : sans dire pour combien il
+ * avait été préparé, l'IA estimait une assiette, partagée ensuite entre quatre.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -37,7 +41,8 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
-import { RemainsPicker, UNCOUNTED_HINT, split } from '../components/Leftovers.tsx';
+import { RemainsPicker, eatenHint, rescaled, split } from '../components/Leftovers.tsx';
+import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconClose, IconSearch } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
@@ -80,6 +85,13 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const [slot, setSlot] = useState<Slot>(() => currentSlot());
   const [present, setPresent] = useState<Set<string>>(new Set());
   const [guestCount, setGuestCount] = useState(0);
+  /**
+   * « Cuisiné pour » : les grammes valent pour le plat entier, préparé pour ce
+   * nombre de personnes. Il suit les cases cochées tant que rien n'est servi,
+   * puis ne bouge plus qu'au compteur, qui remet les grammes à l'échelle.
+   */
+  const [cookedFor, setCookedFor] = useState<number | null>(null);
+  const cooked = cookedFor ?? Math.max(present.size + guestCount, 1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -109,6 +121,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const add = (food: FoodSummary): void => {
     const ligne: Draft = { key: prochaineClé++, foodId: food.id, label: food.name, grams: null };
     setItems((current) => [...current, ligne]);
+    setCookedFor(cooked);
     setQuery('');
     setResults([]);
   };
@@ -119,7 +132,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setDécoupage(true);
     setErreurIA(null);
     try {
-      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: texte });
+      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: texte, personnes: cooked });
       // Le serveur dit quel aliment présélectionner — aucun quand l'IA n'en voit
       // pas qui convienne ; la liste permet d'en changer.
       const nouvelles = lignes.map((ligne): Draft => ({
@@ -130,6 +143,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         foods: ligne.foods,
       }));
       setItems((current) => [...current, ...nouvelles]);
+      // Les grammes proposés valent pour ce nombre-là : il ne suit plus les cases.
+      setCookedFor(cooked);
       setDescription('');
     } catch (cause) {
       setErreurIA(cause instanceof ApiError ? cause.message : 'le découpage n’a pas abouti');
@@ -144,11 +159,18 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     // inconnue et son badge le dira. Mieux que de perdre la saisie.
     const ligne: Draft = { key: prochaineClé++, foodId: null, label, grams: null };
     setItems((current) => [...current, ligne]);
+    setCookedFor(cooked);
     setQuery('');
   };
 
   const update = (key: number, patch: Partial<Draft>): void =>
     setItems((current) => current.map((draft) => (draft.key === key ? { ...draft, ...patch } : draft)));
+
+  /** Le plat change d'échelle, chaque quantité suit : cuisiné pour 6 au lieu de 4, ×1,5. */
+  const rescale = (next: number): void => {
+    setItems((current) => current.map((draft) => ({ ...draft, grams: rescaled(draft.grams, next / cooked) })));
+    setCookedFor(next);
+  };
 
   const [remains, setRemains] = useState(0);
 
@@ -168,9 +190,9 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         eatenAt: new Date().toISOString(),
         slot,
         source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
-        // Ce qui est saisi est ce qui a été servi ; le reste n'est mangé par
-        // personne, et attend au frigo (§6bis).
-        ...split(1, remains),
+        // Ce qui est saisi est le plat entier, cuisiné pour `cooked` ; le reste
+        // n'est mangé par personne, et attend au frigo (§6bis).
+        ...split(cooked, remains),
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         items: items.map((item) => ({
@@ -206,7 +228,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               Décrivez<br />votre plat
             </label>
             <p className="meta" style={{ margin: '8px 0 14px', lineHeight: 1.5 }}>
-              L’IA le découpe en aliments, vous vérifiez avant d’enregistrer.
+              L’IA le découpe en aliments pour {cooked > 1 ? `${cooked} personnes` : 'une personne'}, vous
+              vérifiez avant d’enregistrer.
             </p>
             <textarea
               id="description-plat" className="field" rows={3} maxLength={500}
@@ -286,7 +309,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
                 <GramsInput
                   value={item.grams}
                   label={item.label}
-                  resetKey={item.key}
+                  // Les grammes bougent aussi sous le champ, au « Cuisiné pour ».
+                  resetKey={`${item.key}:${item.grams ?? ''}`}
                   onCommit={(grams) => update(item.key, { grams })}
                 />
                 <button type="button" className="appbar__action"
@@ -377,9 +401,19 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
       </section>
 
       {items.length > 0 ? (
-        <section className="spread" style={bloc}>
-          <RemainsPicker label="Il en reste ?" hint={UNCOUNTED_HINT} value={remains} onChange={setRemains} />
-        </section>
+        <>
+          <section className="spread" style={bloc}>
+            <div>
+              <p style={{ fontSize: 14 }}>Cuisiné pour</p>
+              <p className="meta">Personnes — les quantités suivent</p>
+            </div>
+            <Stepper value={cooked} onChange={rescale} min={0.5} max={20} step={0.5} label="Cuisiné pour" />
+          </section>
+          <section className="spread" style={bloc}>
+            <RemainsPicker label="Il en reste ?" hint={eatenHint(split(cooked, remains).servings)}
+                           value={remains} onChange={setRemains} />
+          </section>
+        </>
       ) : null}
 
       <section style={bloc}>

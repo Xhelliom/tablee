@@ -36,7 +36,11 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     const début = Date.now();
     const { splitMeal, chooseFoods } = requireLlm(ctx.llm);
     const identity = request.identity();
-    const text = str(body(request.body)['text'], 'text', { max: 500 });
+    const input = body(request.body);
+    const text = str(input['text'], 'text', { max: 500 });
+    // « Cuisiné pour », au demi près comme à l'écran. Absent : une personne, ce
+    // que le modèle supposait avant le 15/09/2026.
+    const personnes = input['personnes'] === undefined ? 1 : num(input['personnes'], 'personnes', { min: 0.5, max: 99 });
 
     const eaters = await listEaters(request.db, identity.householdId, { includeInactive: true });
     const noms = namesToHide(eaters, identity.name);
@@ -45,7 +49,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     // modèle. La recherche qui suit lit `food`, référentiel public, sur le pool.
     await request.releaseDb();
 
-    const proposed = await splitMeal(envoyé).catch((cause: unknown) => {
+    const proposed = await splitMeal(envoyé, personnes).catch((cause: unknown) => {
       if (cause instanceof SplitRefused) {
         throw new ApiError(
           422, 'decoupage_impossible',

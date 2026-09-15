@@ -34,6 +34,11 @@ export function split(base: number, fraction: number): { servings: number; remai
   return { servings: round(base - remainingServings), remainingServings };
 }
 
+/** Une quantité remise à l'échelle d'un plat cuisiné pour plus ou moins de monde. */
+export function rescaled(value: number | null, ratio: number): number | null {
+  return value === null ? null : round(value * ratio);
+}
+
 /** Le palier le plus proche de ce qu'un repas a déclaré. `null` se lit « rien ». */
 export function remainsOf(
   meal: Pick<Meal, 'servings' | 'remainingServings'>,
@@ -121,7 +126,7 @@ export function dishTitle(meal: Pick<Meal, 'recipe' | 'items'>): string {
   return meal.recipe?.title ?? (meal.items.map((item) => item.label).join(', ') || 'Plat');
 }
 
-/** Sans recette, pas de parts à montrer : seulement ce que devient le reste. */
+/** Un reste sans recette : pas de parts à montrer, seulement ce que devient ce qui reste. */
 export const UNCOUNTED_HINT = 'Ce qui reste n’est compté pour personne';
 
 const round = (value: number): number => Math.round(value * 100) / 100;
