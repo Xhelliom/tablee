@@ -15,6 +15,7 @@ import { TodayScreen } from './screens/Today.tsx';
 import { ShareScreen } from './screens/Share.tsx';
 import { QuickAddScreen } from './screens/QuickAdd.tsx';
 import { MealDetailScreen } from './screens/MealDetail.tsx';
+import { LeftoverScreen } from './screens/Leftover.tsx';
 import { WeekScreen } from './screens/Week.tsx';
 import { HistoryScreen } from './screens/History.tsx';
 import { EatersScreen } from './screens/Eaters.tsx';
@@ -80,6 +81,8 @@ function Routes(): ReactElement {
       return <ShareScreen />;
     case 'ajouter':
       return <QuickAddScreen />;
+    case 'restes':
+      return segments[1] === undefined ? <QuickAddScreen /> : <LeftoverScreen mealId={segments[1]} />;
     case 'repas':
       return segments[1] === undefined
         ? <Chrome tab="accueil"><TodayScreen /></Chrome>

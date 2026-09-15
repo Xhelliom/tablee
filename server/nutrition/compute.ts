@@ -82,6 +82,13 @@ export interface MealInput {
    * portions que personne n'avait mangées — corrigé le 14/09/2026.
    */
   servings: number;
+  /**
+   * Parts laissées dans le plat (§6bis, 15/09/2026). Les items décrivent ce
+   * qui a été **servi** — la pizza entière — et seule la part mangée compte :
+   * `servings / (servings + remainingServings)`. Absent ou `null` : tout a été
+   * mangé, et les repas d'avant ne bougent pas.
+   */
+  remainingServings?: number | null;
   source: MealSource;
   recipe: RecipeSnapshot | null;
   /** Items hors-Jow, ou ajustements. */
@@ -156,8 +163,16 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
   if (servings !== meal.servings) {
     warnings.push('nombre de parts invalide, 1 part retenue');
   }
-
   const items = meal.items.map((item) => resolve(item, defaults, warnings));
+  // Les items sont ce qui a été servi ; ce qui reste dans le plat n'a été mangé
+  // par personne. Le snapshot Jow n'en a pas besoin : `servings` y est déjà la
+  // part mangée. `items`, lui, repart tel quel — c'est la composition.
+  // Avec recette, les items sont des ajouts mangés tels quels : pas de réduction.
+  const eaten = meal.recipe === null ? eatenFraction(servings, meal.remainingServings) : 1;
+  const eatenItems = items.map((item) => ({
+    ...item,
+    quantityG: item.quantityG === null ? null : item.quantityG * eaten,
+  }));
   // Les ingrédients Jow passent par la même résolution : sans elle, une cuillère
   // de sauce ne comptait jamais dans la part végétale. Leurs manques se disent
   // déjà sur l'écran de la recette (`recipeGaps`) — pas une seconde fois ici.
@@ -187,7 +202,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
       );
     }
   } else {
-    const summed = sum(items, warnings);
+    const summed = sum(eatenItems, warnings);
     macros = summed.min;
     maxima = summed.max;
     confidence = summed.confidence;
@@ -198,9 +213,18 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
 
   confidence = worst(confidence, PLAFOND[meal.source]);
 
-  const plant = plantRatio(recipeItems, items, servings, warnings);
+  const plant = plantRatio(recipeItems, eatenItems, servings, warnings);
 
   return { ...macros, max: maxima, ...plant, confidence, warnings, items };
+}
+
+/**
+ * Part de ce qui a été servi qui a été mangée (§6bis). Un reste non déclaré
+ * vaut 0 : tout a été mangé. Les grammes suivent la même part — la journée les
+ * somme pour sa part végétale, et un reste compté y pèserait.
+ */
+export function eatenFraction(servings: number, remaining: number | null | undefined): number {
+  return servings / (servings + Math.max(remaining ?? 0, 0));
 }
 
 function resolve(item: NutritionItem, defaults: UnitDefaults, warnings: string[]): ResolvedItem {

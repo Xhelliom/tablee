@@ -15,7 +15,7 @@ import { anonymize, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index
 import { listEaters } from '../repo/eaters.ts';
 import { searchFoods } from '../repo/foods.ts';
 import {
-  createMeal, deleteMeal, getMeal, listMeals, recentWithRecipe, updateMeal,
+  createMeal, deleteMeal, getMeal, listMeals, openLeftovers, updateMeal,
 } from '../repo/meals.ts';
 import { createTemplateFromMeal } from '../repo/templates.ts';
 import { householdTimezone } from '../repo/dashboard.ts';
@@ -93,12 +93,14 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
         recipeId: optionalUuid(input['recipe_id'] ?? input['recipeId'], 'recipe_id'),
         servings:
           input['servings'] === undefined ? 1 : num(input['servings'], 'servings', { min: 0.01, max: 99 }),
+        remainingServings: remainingServings(input),
         leftoverOf: optionalUuid(input['leftover_of'] ?? input['leftoverOf'], 'leftover_of'),
         guestCount:
           input['guest_count'] === undefined && input['guestCount'] === undefined
             ? 0
             : int(input['guest_count'] ?? input['guestCount'], 'guest_count', { min: 0, max: 50 }),
-        items: input['items'] === undefined ? [] : mealItems(input['items']),
+        // Absent n'est pas vide : des restes sans composition reprennent celle du plat.
+        ...(input['items'] !== undefined && { items: mealItems(input['items']) }),
         participants: participants(input['participants'] ?? []),
         note: optionalStr(input['note'], 'note', { max: 1000 }),
         // I6 : expurgé une seconde fois par `createMeal`, avant l'insertion.
@@ -122,10 +124,10 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     return { meals: await listMeals(request.db, householdId, from, to) };
   });
 
-  /** Les repas des 3 derniers jours portant une recette — bouton « Restes de… ». */
+  /** Les plats dont il reste quelque chose — « Restes de… » et « Dans le frigo ». */
   app.get<{ Querystring: { days?: string } }>('/api/meals/leftovers', async (request) => {
     const days = Math.min(Number(request.query.days ?? 3) || 3, 14);
-    return { meals: await recentWithRecipe(request.db, request.householdId(), days) };
+    return { meals: await openLeftovers(request.db, request.householdId(), days) };
   });
 
   app.get<{ Params: { id: string } }>('/api/meals/:id', async (request) => {
@@ -155,6 +157,9 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
         ...(input['servings'] !== undefined && {
           servings: num(input['servings'], 'servings', { min: 0.01, max: 99 }),
         }),
+        ...(input['remaining_servings'] !== undefined || input['remainingServings'] !== undefined
+          ? { remainingServings: remainingServings(input) }
+          : {}),
         ...(input['guest_count'] !== undefined || input['guestCount'] !== undefined
           ? { guestCount: int(input['guest_count'] ?? input['guestCount'], 'guest_count', { min: 0, max: 50 }) }
           : {}),
@@ -190,6 +195,14 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     reply.code(201);
     return { template };
   });
+}
+
+/** Parts laissées dans le plat. Absent ou `null` : rien n'a été dit, ce qui n'est pas 0. */
+function remainingServings(input: Record<string, unknown>): number | null {
+  const value = input['remaining_servings'] ?? input['remainingServings'];
+  return value === undefined || value === null
+    ? null
+    : num(value, 'remaining_servings', { min: 0, max: 99 });
 }
 
 /**

@@ -4,9 +4,9 @@
  * Ordre imposé par l'usage réel, pas par la richesse des fonctions :
  *
  *   1. **Habituels** — le petit-déj est identique tous les matins. Un tap.
- *   2. **Restes de…** — les repas des 3 derniers jours ayant une recette.
- *      Sans cette affordance, les restes ne sont jamais saisis et les déjeuners
- *      restent vides.
+ *   2. **Restes de…** — les plats des 3 derniers jours dont il reste quelque
+ *      chose. Sans cette affordance, les restes ne sont jamais saisis et les
+ *      déjeuners restent vides.
  *   3. **Coller un lien Jow** — la même chaîne que `/share`, pour quand la
  *      feuille de partage d'Android n'est pas là : ordinateur, navigateur sans
  *      PWA installée, ou recette reçue par message.
@@ -31,16 +31,17 @@ import {
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
+import { dishTitle, leftoverDetail } from '../components/Leftovers.tsx';
 import {
   IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
 } from '../icons.tsx';
-import { SLOT_LABELS, SLOT_WHEN, currentSlot, relativeDay } from '../design/vocabulary.ts';
+import { SLOT_LABELS, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
 import { JowLink } from './JowLink.tsx';
 import { Recipes } from './Recipes.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
-  const { eaters, ia } = useSession();
+  const { ia } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
@@ -79,30 +80,6 @@ export function QuickAddScreen(): React.ReactElement {
       navigate(`/repas/${meal.id}`, { replace: true });
     } catch {
       setError('le template n’a pas pu être appliqué');
-      setBusy(false);
-    }
-  };
-
-  /**
-   * « Restes de… » : un second repas pointant la même recette (§6bis), pas un
-   * repas fractionné. Le nombre de parts repart à 1 et les convives sont ceux
-   * cochés par défaut — on corrige ensuite si besoin, depuis le détail.
-   */
-  const logLeftover = async (meal: Meal): Promise<void> => {
-    setBusy(true);
-    try {
-      const { meal: created } = await api.post<{ meal: Meal }>('/api/meals', {
-        eatenAt: new Date().toISOString(),
-        slot: currentSlot(),
-        source: meal.source,
-        recipeId: meal.recipe?.id ?? null,
-        servings: 1,
-        leftoverOf: meal.id,
-        participants: eaters.map((m) => ({ eaterId: m.id, present: true })),
-      });
-      navigate(`/repas/${created.id}`, { replace: true });
-    } catch {
-      setError('les restes n’ont pas pu être enregistrés');
       setBusy(false);
     }
   };
@@ -209,11 +186,10 @@ export function QuickAddScreen(): React.ReactElement {
                     icon={meal.recipe?.imageUrl ? (
                       <img src={meal.recipe.imageUrl} alt="" style={{ ...pastille, objectFit: 'cover' }} />
                     ) : <span style={pastille}><IconFridge size={18} /></span>}
-                    title={meal.recipe?.title ?? 'Plat'}
-                    detail={`${capitalize(relativeDay(meal.eatenAt))} · ${trim(meal.servings)} part${
-                      meal.servings > 1 ? 's' : ''} mangée${meal.servings > 1 ? 's' : ''}`}
+                    title={dishTitle(meal)}
+                    detail={leftoverDetail(meal)}
                     disabled={busy}
-                    onClick={() => { void logLeftover(meal); }}
+                    onClick={() => navigate(`/restes/${meal.id}`)}
                   />
                 ))}
               </div>
@@ -308,6 +284,3 @@ const pastille: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--coral-50)', color: 'var(--coral-600)',
 };
-
-const trim = (value: number): string => String(Math.round(value * 100) / 100);
-const capitalize = (text: string): string => text.slice(0, 1).toUpperCase() + text.slice(1);

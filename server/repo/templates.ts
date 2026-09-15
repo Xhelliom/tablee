@@ -12,7 +12,9 @@
  * futur).
  */
 import type { HouseholdDb } from '../db.ts';
-import { createMeal, type MealItemInput, type MealSource, type Slot } from './meals.ts';
+import {
+  createMeal, portionOfItems, type MealItemInput, type MealSource, type Slot,
+} from './meals.ts';
 
 export interface TemplatePayload {
   source: MealSource;
@@ -93,14 +95,6 @@ export async function createTemplateFromMeal(
   const meal = mealRows[0];
   if (meal === undefined) return null;
 
-  const { rows: items } = await db.query<{
-    food_id: string | null; label: string; quantity: number | null;
-    unit: string | null; quantity_g: number | null;
-  }>(
-    `select food_id, label, quantity, unit, quantity_g
-     from meal_item where meal_id = $1 order by position`,
-    [mealId],
-  );
   const { rows: participants } = await db.query<{ eater_id: string }>(
     'select eater_id from meal_participant where meal_id = $1',
     [mealId],
@@ -113,10 +107,9 @@ export async function createTemplateFromMeal(
     recipeId: meal.recipe_id,
     servings: meal.servings,
     guestCount: meal.guest_count,
-    items: items.map((i) => ({
-      foodId: i.food_id, label: i.label, quantity: i.quantity,
-      unit: i.unit, quantityG: i.quantity_g,
-    })),
+    // Une habitude rejoue ce qui a été mangé, pas le plat servi : un plat dont
+    // il restait un quart ne se rejoue pas entier (§6bis).
+    items: await portionOfItems(db, householdId, mealId, 'eaten'),
     participants: participants.map((p) => ({ eaterId: p.eater_id, present: true })),
   };
 
