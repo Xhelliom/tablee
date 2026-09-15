@@ -31,7 +31,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  api, ApiError, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
+  api, ApiError, type FoodSearchResponse, type FoodSummary, type Slot,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
@@ -161,7 +161,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
-      const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
+      await api.post('/api/meals', {
         eatenAt: new Date().toISOString(),
         slot,
         source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
@@ -176,7 +176,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           quantityG: item.grams,
         })),
       });
-      navigate(`/repas/${meal.id}`, { replace: true });
+      // L'accueil, pas le détail : même raison que dans `Share.tsx`.
+      navigate('/', { replace: true });
     } catch {
       setError('Le repas n’a pas pu être enregistré.');
       setSaving(false);
