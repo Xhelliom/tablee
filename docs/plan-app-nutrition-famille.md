@@ -349,6 +349,37 @@ ayant une `recipe_id` : un tap, on choisit qui mange, c'est enregistré. Sans
 cette affordance, les restes ne seront jamais saisis et les déjeuners
 resteront vides.
 
+> **Renversé en partie le 15/09/2026 — ce qui reste se déclare.**
+>
+> À l'usage, « parts mangées » ne se sait pas ; « il en reste un quart », si.
+> Et rien ne gardait ce qui restait : « Restes de… » proposait tous les plats
+> à recette des trois derniers jours, finis ou non, et un tap enregistrait
+> d'office une part pour tout le foyer — l'étape « on choisit qui mange »
+> avait sauté.
+>
+> - L'écran demande **« Cuisiné pour »** (`base_servings` par défaut) et
+>   **« Il en reste ? »** : rien, un fond (10 %), ¼, ½, ¾. `servings` s'en
+>   déduit et garde son sens — parts mangées — : le §11 ne change pas, les
+>   parts figées non plus.
+> - `meal.remaining_servings` (014) garde les parts laissées dans le plat.
+>   `NULL` : rien n'a été dit, ce qui n'est pas « rien ».
+> - **Sans recette, ce qu'on saisit est ce qui a été servi** — la pizza
+>   entière — et seul « Il en reste ? » est demandé : le nombre de parts n'y
+>   sert à rien. Le §11 ne compte que la part mangée, grammes compris (encart
+>   du 15/09/2026). Resservir recopie la composition réduite à ce qui restait,
+>   et un habituel rejoue ce qui a été mangé, pas le plat entier.
+> - « Restes de… » et **« Dans le frigo »** (l'accueil) listent les repas des
+>   3 derniers jours, recette ou pas, dont il reste quelque chose et qu'aucun
+>   service n'a suivi. `leftover_of` pointe désormais le **service
+>   précédent** : un reste qu'on ne finit pas devient la source du suivant. Il
+>   n'entre toujours dans aucun calcul nutritionnel ; il sert à la liste.
+> - Resservir ouvre une feuille : ce qui restait, qui mange — sa propre fiche
+>   par défaut —, s'il en reste encore.
+> - **La somme n'est toujours pas contrainte.** Le reste est déclaré, jamais
+>   vérifié contre `base_servings` : le paragraphe plus haut tient.
+> - Des paliers et pas un pourcentage : un « 25 % » posé à côté de barres en
+>   « % du repère du jour » se lirait comme de la nutrition.
+
 ### Les invités — `guest_count`, pas de membre fictif
 
 Un champ entier sur `meal`. Les invités entrent au dénominateur du calcul des
@@ -1110,6 +1141,19 @@ calculerNutrition(meal):
 
   # 3. Persister dans meal_nutrition
 ```
+
+> **Précisé le 15/09/2026 — sans recette, les items sont ce qui a été servi.**
+>
+> Pour un repas sans recette, les totaux **et** les grammes du point 2 sont
+> multipliés par la part mangée, `servings / (servings + remaining_servings)`
+> (§6bis). Les grammes aussi : la journée les somme pour sa part végétale, et
+> un reste compté y pèserait. `remaining_servings` absent vaut 0 — les repas
+> d'avant ne bougent pas. Avec recette, rien ne change : `servings` y est déjà
+> la part mangée, et un item ajouté au plat compte entier — il ne se ressert
+> pas non plus.
+>
+> La fraction est déclarée à table, en paliers. Elle ne dégrade pas la
+> confiance, pas plus que le nombre de parts d'un repas Jow ne l'a jamais fait.
 
 ```
 calculerShares(meal, membres_présents):

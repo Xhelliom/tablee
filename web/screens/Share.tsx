@@ -27,11 +27,12 @@ import { navigate, useRoute } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge, Warnings } from '../components/Confidence.tsx';
+import { RemainsPicker, eatenHint, split } from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
-import { formatGrams } from '../design/quantities.ts';
+import { formatGrams, formatNumber } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
   const { query } = useRoute();
@@ -84,7 +85,8 @@ export function SharedRecipe(
   const [state, setState] = useState<ResolveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot>(() => currentSlot());
-  const [servings, setServings] = useState(1);
+  const [cooked, setCooked] = useState(1);
+  const [remains, setRemains] = useState(0);
   const [guestCount, setGuestCount] = useState(0);
   const [present, setPresent] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -113,7 +115,7 @@ export function SharedRecipe(
     void lecture
       .then((response) => {
         setState(response);
-        if (response.recipe !== null) setServings(response.recipe.baseServings);
+        if (response.recipe !== null) setCooked(response.recipe.baseServings);
       })
       .catch(() => setError('La recette n’a pas pu être lue. Le repas peut être saisi à la main.'));
   }, [kind, clé]);
@@ -127,6 +129,8 @@ export function SharedRecipe(
     });
   }, []);
 
+  const parts = split(cooked, remains);
+
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
@@ -135,7 +139,7 @@ export function SharedRecipe(
         slot,
         source: 'jow',
         recipeId: state?.recipe?.id ?? null,
-        servings,
+        ...parts,
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         // Expurgé côté serveur avant insertion, et de nouveau ici par principe.
@@ -212,7 +216,7 @@ export function SharedRecipe(
                     {ingredient.quantityG !== null
                       ? ` ${formatGrams(ingredient.quantityG)}`
                       : ingredient.quantity !== null && ingredient.unit !== null
-                        ? ` ${trim(ingredient.quantity)} ${ingredient.unit.toLowerCase()} ?`
+                        ? ` ${formatNumber(ingredient.quantity)} ${ingredient.unit.toLowerCase()} ?`
                         : ''}
                   </span>
                 ))}
@@ -246,31 +250,27 @@ export function SharedRecipe(
           </section>
 
           {/*
-            Ce nombre est ce qui a été **mangé à ce repas**, pas ce qui est
-            sorti de la casserole : la nutrition du plat vaut `parts × valeurs
-            par portion`, et elle est répartie entre les convives présents.
-            Cuisiner pour 4 et en laisser la moitié, c'est donc 2 ici — sinon
-            le foyer se voit attribuer deux portions que personne n'a mangées.
-            §6bis : le reste est un second repas, le lendemain.
+            `servings` reste ce qui a été **mangé à ce repas** : la nutrition
+            vaut `parts × valeurs par portion`, répartie entre les présents.
+            Mais on ne le demande plus (15/09/2026) — personne ne sait dire
+            « 2,5 parts », tout le monde sait dire « il en reste un quart ».
+            Ce qui reste n'est attribué à personne : il attend au frigo (§6bis).
           */}
           <section className="spread" style={row}>
             <div>
-              <p style={{ fontSize: 14 }}>Pour combien&nbsp;?</p>
+              <p style={{ fontSize: 14 }}>Cuisiné pour</p>
               <p className="meta">
-                Parts mangées à ce repas
-                {recipe !== null ? ` · recette prévue pour ${recipe.baseServings}` : ''}
+                {recipe !== null ? `Recette prévue pour ${recipe.baseServings}` : 'Parts préparées'}
               </p>
             </div>
-            <Stepper value={servings} onChange={setServings} min={0.5} max={20} step={0.5}
-                     label="Parts mangées à ce repas" />
+            <Stepper value={cooked} onChange={setCooked} min={0.5} max={20} step={0.5}
+                     label="Cuisiné pour" />
           </section>
 
-          {recipe !== null && servings < recipe.baseServings ? (
-            <p className="meta" style={{ ...row, paddingTop: 0, lineHeight: 1.5, borderTop: 0 }}>
-              Il en reste&nbsp;: demain, « Restes de… » le réenregistre en un
-              tap, pour qui sera là ce jour-là.
-            </p>
-          ) : null}
+          <section className="spread" style={row}>
+            <RemainsPicker label="Il en reste ?" hint={eatenHint(parts.servings)}
+                           value={remains} onChange={setRemains} />
+          </section>
 
           <section style={{ ...row, paddingBottom: 14 }}>
             <WhoWasThere
@@ -304,7 +304,3 @@ const row: React.CSSProperties = {
   borderTop: '.5px solid var(--border)',
   background: 'var(--surface-2)',
 };
-
-/** Quantité Jow brute (« 0,25 Pièce ») : la fraction se lit mieux en décimal. */
-const trim = (value: number): string =>
-  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value);

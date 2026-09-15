@@ -48,6 +48,13 @@ export function formatGrams(grams: number | null): string {
   return grams >= 1000 ? `${nf.format(grams / 1000)} kg` : `${nf.format(grams)} g`;
 }
 
+const nf2 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
+/** Un nombre nu — « 0,25 pièce », « 1,5 part » : la fraction se lit mieux en décimal. */
+export function formatNumber(value: number): string {
+  return nf2.format(value);
+}
+
 /** Un pourcentage simple, à une décimale, en français. */
 export function formatPercent(value: number | null): string {
   return value === null ? 'indisponible' : `${nf.format(value)} %`;

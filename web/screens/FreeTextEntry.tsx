@@ -25,8 +25,8 @@
  * plat ; la recherche, dessous, complète à la main ce que l'IA a manqué. Sans
  * clé, l'écran reste celui de la V1.
  *
- * L'ordre suit le geste, pas les données : décrire, relire l'assiette,
- * compléter à la main, puis dire quand et qui. « Enregistrer » reste collé au
+ * L'ordre suit le geste, pas les données : décrire, relire ce qui a été servi,
+ * compléter à la main, dire ce qui en reste, puis quand et qui. « Enregistrer » reste collé au
  * bas de l'écran : après un découpage, la liste le poussait hors de vue.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -37,6 +37,7 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
+import { RemainsPicker, UNCOUNTED_HINT, split } from '../components/Leftovers.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconClose, IconSearch } from '../icons.tsx';
 import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
@@ -149,6 +150,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const update = (key: number, patch: Partial<Draft>): void =>
     setItems((current) => current.map((draft) => (draft.key === key ? { ...draft, ...patch } : draft)));
 
+  const [remains, setRemains] = useState(0);
+
   const toggle = useCallback((eaterId: string) => {
     setPresent((current) => {
       const next = new Set(current);
@@ -165,7 +168,9 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         eatenAt: new Date().toISOString(),
         slot,
         source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
-        servings: 1,
+        // Ce qui est saisi est ce qui a été servi ; le reste n'est mangé par
+        // personne, et attend au frigo (§6bis).
+        ...split(1, remains),
         guestCount,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         items: items.map((item) => ({
@@ -233,7 +238,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
       {items.length > 0 || découpage ? (
         <section style={bloc}>
           <div className="spread">
-            <p style={{ fontSize: 14 }}>Dans l’assiette</p>
+            <p style={{ fontSize: 14 }}>Ce qui a été servi</p>
             {/* Toute estimation porte sa confiance à l'écran, avant l'enregistrement aussi. */}
             {estimé ? <span className="chip">Estimation</span> : null}
           </div>
@@ -370,6 +375,12 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           </button>
         ) : null}
       </section>
+
+      {items.length > 0 ? (
+        <section className="spread" style={bloc}>
+          <RemainsPicker label="Il en reste ?" hint={UNCOUNTED_HINT} value={remains} onChange={setRemains} />
+        </section>
+      ) : null}
 
       <section style={bloc}>
         <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas</p>

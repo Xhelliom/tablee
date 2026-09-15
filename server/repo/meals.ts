@@ -14,7 +14,7 @@
 import type { HouseholdDb } from '../db.ts';
 import { redactShareText } from '../jow/share.ts';
 import type { Confidence, MealNutrition, NutritionItem } from '../nutrition/compute.ts';
-import { calculerNutrition } from '../nutrition/compute.ts';
+import { calculerNutrition, eatenFraction } from '../nutrition/compute.ts';
 import { ApiError } from '../http/errors.ts';
 import { calculerShares } from '../nutrition/shares.ts';
 import { loadFoodValues } from './foods.ts';
@@ -42,6 +42,7 @@ export interface CreateMealInput {
   source: MealSource;
   recipeId?: string | null;
   servings?: number;
+  remainingServings?: number | null;
   leftoverOf?: string | null;
   guestCount?: number;
   items?: MealItemInput[];
@@ -71,6 +72,8 @@ export interface Meal {
   slot: Slot;
   source: MealSource;
   servings: number;
+  /** Parts laissées dans le plat (014). `null` : rien n'a été dit, pas « rien ». */
+  remainingServings: number | null;
   guestCount: number;
   leftoverOf: string | null;
   note: string | null;
@@ -117,11 +120,12 @@ export async function createMeal(
 ): Promise<string> {
   const { rows } = await client.query<{ id: string }>(
     `insert into meal (household_id, eaten_at, slot, source, recipe_id, servings,
-                       leftover_of, guest_count, raw_input, note, created_by)
+                       leftover_of, guest_count, raw_input, note, created_by,
+                       remaining_servings)
      -- Les casts ne sont pas décoratifs : sans eux Postgres déduit le type du
      -- littéral de coalesce, et « 2,5 parts » échoue en entier invalide.
      values ($1, $2::timestamptz, $3, $4, $5, coalesce($6::numeric, 1), $7,
-             coalesce($8::int, 0), $9, $10, $11)
+             coalesce($8::int, 0), $9, $10, $11, $12::numeric)
      returning id`,
     [
       householdId, input.eatenAt, input.slot, input.source, input.recipeId ?? null,
@@ -130,16 +134,62 @@ export async function createMeal(
       input.rawInput === null || input.rawInput === undefined
         ? null
         : redactShareText(input.rawInput),
-      input.note ?? null, input.createdBy ?? null,
+      input.note ?? null, input.createdBy ?? null, input.remainingServings ?? null,
     ],
   );
   const id = rows[0]?.id;
   if (id === undefined) throw new Error('repas non créé');
 
-  await writeItems(client, id, input.items ?? []);
+  // Des restes sans composition reprennent celle du plat, réduite à ce qui
+  // restait (§6bis) — la même règle que les habituels, au même endroit.
+  const leftoverOf = input.leftoverOf ?? null;
+  const items = input.items
+    ?? (leftoverOf === null ? [] : await portionOfItems(client, householdId, leftoverOf, 'remaining'));
+  await writeItems(client, id, items);
   await writeShares(client, householdId, id, input.participants, input.guestCount ?? 0);
   await recomputeNutrition(client, id);
   return id;
+}
+
+/**
+ * La composition d'un repas réduite à une part de ce qui avait été servi
+ * (§6bis) : ce qui a été mangé pour un habituel, ce qui restait pour des restes.
+ */
+export async function portionOfItems(
+  db: HouseholdDb,
+  householdId: string,
+  mealId: string,
+  part: 'eaten' | 'remaining',
+): Promise<MealItemInput[]> {
+  const { rows: mealRows } = await db.query<{
+    servings: number; remaining_servings: number | null; recipe_id: string | null;
+  }>(
+    'select servings, remaining_servings, recipe_id from meal where household_id = $1 and id = $2',
+    [householdId, mealId],
+  );
+  const meal = mealRows[0];
+  if (meal === undefined) return [];
+  // Avec recette, les items sont des ajouts, pas le plat : ils ne se resservent
+  // pas, et un habituel les rejoue entiers — comme avant le 15/09/2026.
+  const eaten = meal.recipe_id === null ? eatenFraction(meal.servings, meal.remaining_servings) : 1;
+  const factor = part === 'eaten' ? eaten : 1 - eaten;
+  // Rien à resservir : pas de composition, plutôt que des items à 0 g qui
+  // afficheraient « 0 kcal » en confiance haute.
+  if (factor <= 0) return [];
+
+  const { rows } = await db.query<{
+    food_id: string | null; label: string; quantity: number | null;
+    unit: string | null; quantity_g: number | null;
+  }>(
+    `select food_id, label, quantity, unit, quantity_g
+     from meal_item where meal_id = $1 order by position`,
+    [mealId],
+  );
+  return rows.map((r) => ({
+    foodId: r.food_id, label: r.label, unit: r.unit,
+    quantity: r.quantity === null ? null : r.quantity * factor,
+    quantityG: r.quantity_g === null ? null : r.quantity_g * factor,
+  }));
 }
 
 async function writeItems(
@@ -205,6 +255,7 @@ export interface MealPatch {
   eatenAt?: string;
   slot?: Slot;
   servings?: number;
+  remainingServings?: number | null;
   guestCount?: number;
   note?: string | null;
   recipeId?: string | null;
@@ -232,6 +283,7 @@ export async function updateMeal(
   if (patch.eatenAt !== undefined) set('eaten_at', patch.eatenAt);
   if (patch.slot !== undefined) set('slot', patch.slot);
   if (patch.servings !== undefined) set('servings', patch.servings);
+  if (patch.remainingServings !== undefined) set('remaining_servings', patch.remainingServings);
   if (patch.guestCount !== undefined) set('guest_count', patch.guestCount);
   if (patch.note !== undefined) set('note', patch.note);
   if (patch.recipeId !== undefined) set('recipe_id', patch.recipeId);
@@ -304,8 +356,8 @@ export async function recomputeNutrition(
   mealId: string,
 ): Promise<MealNutrition> {
   const { rows: mealRows } = await client.query<{
-    servings: number; source: MealSource; recipe_id: string | null;
-  }>('select servings, source, recipe_id from meal where id = $1', [mealId]);
+    servings: number; remaining_servings: number | null; source: MealSource; recipe_id: string | null;
+  }>('select servings, remaining_servings, source, recipe_id from meal where id = $1', [mealId]);
   const meal = mealRows[0];
   if (meal === undefined) throw new Error('repas introuvable');
 
@@ -339,6 +391,7 @@ export async function recomputeNutrition(
   const result = calculerNutrition(
     {
       servings: meal.servings,
+      remainingServings: meal.remaining_servings,
       source: meal.source,
       recipe: recipe?.snapshot ?? null,
       items,
@@ -416,7 +469,7 @@ export async function recomputeMealsUsingIngredient(
 // ── lecture ─────────────────────────────────────────────────────────────────
 
 const MEAL_SELECT = `
-  select m.id, m.eaten_at, m.slot, m.source, m.servings, m.guest_count,
+  select m.id, m.eaten_at, m.slot, m.source, m.servings, m.remaining_servings, m.guest_count,
          m.leftover_of, m.note,
          r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
@@ -428,7 +481,7 @@ const MEAL_SELECT = `
 
 interface MealRow {
   id: string; eaten_at: Date; slot: Slot; source: MealSource; servings: number;
-  guest_count: number; leftover_of: string | null; note: string | null;
+  remaining_servings: number | null; guest_count: number; leftover_of: string | null; note: string | null;
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
   nutri_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
@@ -464,14 +517,19 @@ export async function getMeal(db: HouseholdDb, householdId: string, id: string):
 }
 
 /**
- * Repas des N derniers jours portant une recette — la liste du bouton
- * « Restes de… » (§6bis).
+ * Ce qui attend dans le frigo : « Restes de… » et l'accueil (§6bis).
  *
- * Les repas déjà marqués comme restes d'un autre sont exclus : proposer
- * « restes des restes » allonge la liste sans rien apporter, et la liste est
- * ce qui doit rester courte pour que le bouton tienne sa promesse de deux taps.
+ * Un repas des N derniers jours dont il reste quelque chose et qu'aucun
+ * service n'a encore suivi — recette ou pas : une pizza maison se ressert
+ * comme un plat Jow. `leftover_of` pointe le service
+ * précédent : un reste qu'on ne finit pas devient à son tour la source du
+ * suivant, et le plat quitte la liste quand on déclare qu'il n'en reste rien.
+ *
+ * ⚠️ Renversé le 15/09/2026 : les restes des restes étaient exclus, et tout
+ * plat à recette proposé, fini ou non. La liste raccourcit quand même — les
+ * plats finis n'y entrent plus. Au-delà de N jours, un reste sort de lui-même.
  */
-export async function recentWithRecipe(
+export async function openLeftovers(
   db: HouseholdDb,
   householdId: string,
   days = 3,
@@ -480,8 +538,8 @@ export async function recentWithRecipe(
   const { rows } = await db.query<MealRow>(
     `${MEAL_SELECT}
      where m.household_id = $1
-       and m.recipe_id is not null
-       and m.leftover_of is null
+       and m.remaining_servings > 0
+       and not exists (select 1 from meal suite where suite.leftover_of = m.id)
        and m.eaten_at > now() - ($2 || ' days')::interval
      order by m.eaten_at desc
      limit $3`,
@@ -563,6 +621,7 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
     slot: row.slot,
     source: row.source,
     servings: row.servings,
+    remainingServings: row.remaining_servings,
     guestCount: row.guest_count,
     leftoverOf: row.leftover_of,
     note: row.note,

@@ -195,6 +195,8 @@ export interface Meal {
   slot: Slot;
   source: MealSource;
   servings: number;
+  /** Parts laissées dans le plat. `null` : rien n'a été dit, pas « rien ». */
+  remainingServings: number | null;
   guestCount: number;
   leftoverOf: string | null;
   note: string | null;
