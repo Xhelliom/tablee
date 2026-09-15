@@ -13,10 +13,11 @@ interface Props {
   max?: number;
   step?: number;
   label: string;
+  disabled?: boolean;
 }
 
 export function Stepper({
-  value, onChange, min = 0, max = 20, step = 1, label,
+  value, onChange, min = 0, max = 20, step = 1, label, disabled = false,
 }: Props): React.ReactElement {
   const clamp = (next: number): number =>
     Math.round(Math.min(Math.max(next, min), max) * 100) / 100;
@@ -28,7 +29,7 @@ export function Stepper({
         className="appbar__action"
         style={{ color: 'inherit' }}
         onClick={() => onChange(clamp(value - step))}
-        disabled={value <= min}
+        disabled={disabled || value <= min}
         aria-label={`${label} : diminuer`}
       >
         <IconMinus size={18} />
@@ -41,7 +42,7 @@ export function Stepper({
         className="appbar__action"
         style={{ color: 'inherit' }}
         onClick={() => onChange(clamp(value + step))}
-        disabled={value >= max}
+        disabled={disabled || value >= max}
         aria-label={`${label} : augmenter`}
       >
         <IconPlus size={18} />

@@ -407,7 +407,10 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
               <p style={{ fontSize: 14 }}>Cuisiné pour</p>
               <p className="meta">Personnes — les quantités suivent</p>
             </div>
-            <Stepper value={cooked} onChange={rescale} min={0.5} max={20} step={0.5} label="Cuisiné pour" />
+            {/* Figé pendant un découpage : les lignes attendues sont estimées pour
+                ce nombre-là, et le retour de l'IA le reposerait. */}
+            <Stepper value={cooked} onChange={rescale} min={0.5} max={20} step={0.5}
+                     label="Cuisiné pour" disabled={découpage} />
           </section>
           <section className="spread" style={bloc}>
             <RemainsPicker label="Il en reste ?" hint={eatenHint(split(cooked, remains).servings)}
