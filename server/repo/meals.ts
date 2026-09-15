@@ -18,6 +18,7 @@ import { calculerNutrition, eatenFraction } from '../nutrition/compute.ts';
 import { ApiError } from '../http/errors.ts';
 import { calculerShares } from '../nutrition/shares.ts';
 import { loadFoodValues } from './foods.ts';
+import { dishImageUrl } from './images.ts';
 import { ingredientsAsItems, loadIngredients, loadRecipe } from './recipes.ts';
 import { loadUnitDefaults } from './refs.ts';
 
@@ -77,7 +78,9 @@ export interface Meal {
   guestCount: number;
   leftoverOf: string | null;
   note: string | null;
-  recipe: { id: string; title: string; imageUrl: string | null; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA (015). */
+  imageUrl: string | null;
   items: MealItem[];
   participants: MealParticipant[];
   nutrition: StoredNutrition | null;
@@ -121,11 +124,13 @@ export async function createMeal(
   const { rows } = await client.query<{ id: string }>(
     `insert into meal (household_id, eaten_at, slot, source, recipe_id, servings,
                        leftover_of, guest_count, raw_input, note, created_by,
-                       remaining_servings)
+                       remaining_servings, image_id)
      -- Les casts ne sont pas décoratifs : sans eux Postgres déduit le type du
      -- littéral de coalesce, et « 2,5 parts » échoue en entier invalide.
+     -- Des restes gardent l'image du plat qu'ils resservent (015).
      values ($1, $2::timestamptz, $3, $4, $5, coalesce($6::numeric, 1), $7,
-             coalesce($8::int, 0), $9, $10, $11, $12::numeric)
+             coalesce($8::int, 0), $9, $10, $11, $12::numeric,
+             (select image_id from meal where household_id = $1 and id = $7))
      returning id`,
     [
       householdId, input.eatenAt, input.slot, input.source, input.recipeId ?? null,
@@ -470,7 +475,7 @@ export async function recomputeMealsUsingIngredient(
 
 const MEAL_SELECT = `
   select m.id, m.eaten_at, m.slot, m.source, m.servings, m.remaining_servings, m.guest_count,
-         m.leftover_of, m.note,
+         m.leftover_of, m.note, m.image_id,
          r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
          n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
@@ -482,6 +487,7 @@ const MEAL_SELECT = `
 interface MealRow {
   id: string; eaten_at: Date; slot: Slot; source: MealSource; servings: number;
   remaining_servings: number | null; guest_count: number; leftover_of: string | null; note: string | null;
+  image_id: string | null;
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
   nutri_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
@@ -631,9 +637,9 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
         : {
             id: row.recipe_id,
             title: row.recipe_title ?? '',
-            imageUrl: row.image_url,
             nutriScore: row.nutri_score,
           },
+    imageUrl: row.image_url ?? (row.image_id === null ? null : dishImageUrl(row.image_id)),
     items: itemsByMeal.get(row.id) ?? [],
     participants: partsByMeal.get(row.id) ?? [],
     seasonalCount: seasonal.get(row.id) ?? 0,

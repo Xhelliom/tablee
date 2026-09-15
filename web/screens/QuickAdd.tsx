@@ -183,8 +183,8 @@ export function QuickAddScreen(): React.ReactElement {
                 {leftovers.map((meal) => (
                   <Porte
                     key={meal.id}
-                    icon={meal.recipe?.imageUrl ? (
-                      <img src={meal.recipe.imageUrl} alt="" style={{ ...pastille, objectFit: 'cover' }} />
+                    icon={meal.imageUrl !== null ? (
+                      <img src={meal.imageUrl} alt="" style={{ ...pastille, objectFit: 'cover' }} />
                     ) : <span style={pastille}><IconFridge size={18} /></span>}
                     title={dishTitle(meal)}
                     detail={leftoverDetail(meal)}

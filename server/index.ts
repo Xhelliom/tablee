@@ -12,6 +12,7 @@ import { buildAuth } from './auth/auth.ts';
 import { buildMailer, MailConfigError, type SendMail } from './auth/mail.ts';
 import { closePool, getPool } from './db.ts';
 import { assertIsolation, IsolationError } from './db/guard.ts';
+import { buildDrawDish } from './llm/image.ts';
 import { buildLlm } from './llm/index.ts';
 
 const port = Number(process.env['PORT'] ?? 3000);
@@ -88,6 +89,12 @@ const google = googleClientId === '' ? null : { clientId: googleClientId, client
  */
 const llm = buildLlm(process.env);
 
+/**
+ * L'image d'un plat saisi avec l'IA, facultative : `GEMINI_API_KEY`, voir
+ * `server/llm/image.ts`. Sans elle, la carte garde son bol dessiné.
+ */
+const drawDish = buildDrawDish(process.env);
+
 const pool = getPool();
 
 // Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
@@ -105,12 +112,13 @@ try {
 
 const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail, google });
 
-const app = buildApp({ pool, auth, baseURL, llm });
+const app = buildApp({ pool, auth, baseURL, llm, drawDish });
 await app.listen({ port, host });
 console.log(
   `Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL}, `
     + `mail : ${mail === null ? 'aucun' : process.env['TABLEE_MAIL']}, `
-    + `google : ${google === null ? 'non' : 'oui'}, IA : ${llm === null ? 'non' : 'oui'})`,
+    + `google : ${google === null ? 'non' : 'oui'}, IA : ${llm === null ? 'non' : 'oui'}, `
+    + `images : ${drawDish === null ? 'non' : 'oui'})`,
 );
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

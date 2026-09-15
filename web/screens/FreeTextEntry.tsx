@@ -31,7 +31,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  api, ApiError, type FoodSearchResponse, type FoodSummary, type Slot,
+  api, ApiError, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
@@ -70,6 +70,8 @@ let prochaineClé = 0;
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
   const { eaters, ia } = useSession();
   const [description, setDescription] = useState('');
+  /** Les descriptions déjà découpées : le champ se vide, l'image du plat s'en sert. */
+  const [décrits, setDécrits] = useState<string[]>([]);
   const [découpage, setDécoupage] = useState(false);
   const [erreurIA, setErreurIA] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -130,6 +132,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         foods: ligne.foods,
       }));
       setItems((current) => [...current, ...nouvelles]);
+      setDécrits((current) => [...current, texte]);
       setDescription('');
     } catch (cause) {
       setErreurIA(cause instanceof ApiError ? cause.message : 'le découpage n’a pas abouti');
@@ -164,7 +167,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const save = async (): Promise<void> => {
     setSaving(true);
     try {
-      await api.post('/api/meals', {
+      const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
         eatenAt: new Date().toISOString(),
         slot,
         source: items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
@@ -181,6 +184,11 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           quantityG: item.grams,
         })),
       });
+      // Sans l'attendre : voir `POST /api/meals/:id/image`.
+      if (meal.source === 'ia') {
+        void api.post(`/api/meals/${meal.id}/image`, { description: décrits.join('\n') })
+          .catch(() => undefined);
+      }
       // L'accueil, pas le détail : même raison que dans `Share.tsx`.
       navigate('/', { replace: true });
     } catch {

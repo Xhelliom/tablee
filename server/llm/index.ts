@@ -3,7 +3,9 @@
  *
  * Trois usages passent par ici — le découpage d'un texte libre (`decoupage.ts`),
  * l'assistant (`conseil.ts`) et les recettes de l'accueil (`recettes.ts`) — et
- * un quatrième devra en faire autant. Ce que ce module garantit à tous :
+ * un quatrième devra en faire autant. L'image d'un plat part chez Google
+ * (`image.ts`), mais passe par le même `anonymize`. Ce que ce module garantit
+ * à tous :
  *
  * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`,
  *   `ChooseFoods`, `Advise` et `SuggestRecipes` n'acceptent que des

@@ -101,8 +101,8 @@ export function LeftoverScreen({ mealId }: { mealId: string }): React.ReactEleme
 
       <section style={{ padding: '14px 16px', background: 'var(--surface-2)' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {source.recipe?.imageUrl != null ? (
-            <img src={source.recipe.imageUrl} alt=""
+          {source.imageUrl !== null ? (
+            <img src={source.imageUrl} alt=""
                  style={{ width: 54, height: 54, borderRadius: 'var(--radius)', objectFit: 'cover' }} />
           ) : (
             <span className="thumb" style={{ width: 54, height: 54 }}><IconBowl size={24} /></span>

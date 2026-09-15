@@ -121,6 +121,7 @@ c'est nominal, pas un échec.
 | `GOOGLE_CLIENT_ID` | Avec `GOOGLE_CLIENT_SECRET`, les deux ou aucun : l'écran de connexion propose « Continuer avec Google ». Client OAuth « Application Web » de la console Google Cloud, avec pour URI de redirection autorisée `TABLEE_BASE_URL` suivi de `/api/auth/callback/google`, au caractère près. À moitié rempli, le serveur refuse de démarrer. |
 | `GOOGLE_CLIENT_SECRET` | Le secret de ce client. Une adresse déjà inscrite par mot de passe n'est reliée à Google que si elle est confirmée — donc seulement avec `TABLEE_MAIL` ; sinon, elle entre avec son mot de passe et lie Google depuis son profil (menu du compte, « Votre profil »). |
 | `ANTHROPIC_API_KEY` | Facultatif. Allume « Découper avec l'IA » dans la saisie libre et l'onglet « Conseils » (V3) ; absent, ni l'un ni l'autre. Poser une limite de dépense sur la clé côté console Anthropic : l'inscription étant ouverte, n'importe quel compte peut s'en servir (dette n° 17). |
+| `GEMINI_API_KEY` | Facultatif. Un repas décrit avec l'IA reçoit l'image de son plat, dessinée par Gemini 3.1 Flash Lite Image à l'enregistrement ; absent, sa carte garde le bol dessiné. Même conseil de limite de dépense, côté Google AI Studio (dette n° 21). Le modèle se change par `TABLEE_IMAGE_MODEL`. |
 
 ⚠️ L'inscription est **ouverte**, et c'est voulu : des amis doivent pouvoir
 créer leur foyer sans passer par vous. Ça veut dire que quiconque trouve l'URL
