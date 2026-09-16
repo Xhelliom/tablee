@@ -25,6 +25,7 @@ import type { ReactElement } from 'react';
 import { navigate } from '../router.tsx';
 import { IconBowl, IconCheck } from '../icons.tsx';
 import { Avatar } from '../components/Avatar.tsx';
+import { InstallBanner } from '../components/InstallBanner.tsx';
 
 /** Les parts suivent `suggestedCoef` : une dès 13 ans, trois quarts de 8 à 12, une demie avant. */
 const TABLÉE = [
@@ -66,6 +67,7 @@ export function LandingScreen(): ReactElement {
       </header>
 
       <main>
+        <InstallBanner />
         <section className="accroche">
           <h1 className="display apparait">Un plat,<br />chacun sa part.</h1>
         </section>

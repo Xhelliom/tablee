@@ -517,3 +517,8 @@ input[type='number']::-webkit-inner-spin-button {
 @media (prefers-reduced-motion: reduce) {
   .assiette__part { animation-name: fondu; }
 }
+
+/* L'invite d'installation : une carte, deux boutons, jamais une couleur de nutriment. */
+.install { margin: 12px 18px 0; padding: 14px; font-size: 14px; line-height: 1.5; }
+.install__actions { display: flex; gap: 8px; margin-top: 12px; }
+.install__actions .btn { padding: 10px; font-size: 14px; }
