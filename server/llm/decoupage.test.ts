@@ -10,20 +10,25 @@ import {
 import type { Anonymized } from './index.ts';
 
 describe('découpage par IA — ce qui revient', () => {
-  it('garde les lignes lisibles et laisse à préciser les poids absurdes', () => {
+  it('garde le titre et les lignes lisibles, et laisse à préciser les poids absurdes', () => {
     assert.deepEqual(
       readSplit({
+        title: '  Œufs au sel  ',
         items: [
           { label: '2 œufs', search: 'œuf', grams: 110.4 },
           { label: 'du sel', search: 'sel', grams: -3 },
           { label: '  ', search: 'rien', grams: 10 },
         ],
       }),
-      [
-        { label: '2 œufs', search: 'œuf', grams: 110 },
-        { label: 'du sel', search: 'sel', grams: null },
-      ],
+      {
+        title: 'Œufs au sel',
+        items: [
+          { label: '2 œufs', search: 'œuf', grams: 110 },
+          { label: 'du sel', search: 'sel', grams: null },
+        ],
+      },
     );
+    assert.equal(readSplit({ title: '', items: [] }).title, null, 'un titre vide n’est pas un titre');
   });
 
   it('refuse une réponse sans liste', () => {
@@ -36,7 +41,7 @@ describe('découpage par IA — ce qui revient', () => {
       envoyé = requête.messages[0]?.content ?? '';
       return Promise.resolve('{"items":[]}');
     });
-    assert.deepEqual(await découper('des pâtes' as Anonymized, 4), []);
+    assert.deepEqual(await découper('des pâtes' as Anonymized, 4), { title: null, items: [] });
     assert.equal(envoyé, 'Cuisiné pour 4 personnes\n\ndes pâtes');
   });
 });

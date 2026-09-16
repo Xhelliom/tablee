@@ -67,6 +67,8 @@ interface Draft {
 
 /** Ce que rend `POST /api/meals/decoupage`. */
 interface Découpage {
+  /** La description reformulée en titre de plat ; `null` si le modèle n'en a pas donné. */
+  title: string | null;
   items: { label: string; grams: number | null; foods: FoodSummary[]; foodId: string | null }[];
 }
 
@@ -77,6 +79,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const [description, setDescription] = useState('');
   /** Les descriptions déjà découpées : le champ se vide, l'image du plat s'en sert. */
   const [décrits, setDécrits] = useState<string[]>([]);
+  /** Le titre reformulé par l'IA au premier découpage : la description, elle, reste ce qui est découpé. */
+  const [titreIA, setTitreIA] = useState<string | null>(null);
   const [découpage, setDécoupage] = useState(false);
   const [erreurIA, setErreurIA] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -134,7 +138,8 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setDécoupage(true);
     setErreurIA(null);
     try {
-      const { items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: texte, personnes: cooked });
+      const { title, items: lignes } = await api.post<Découpage>('/api/meals/decoupage', { text: texte, personnes: cooked });
+      setTitreIA((current) => current ?? title);
       // Le serveur dit quel aliment présélectionner — aucun quand l'IA n'en voit
       // pas qui convienne ; la liste permet d'en changer.
       const nouvelles = lignes.map((ligne): Draft => ({
@@ -197,6 +202,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         // n'est mangé par personne, et attend au frigo (§6bis).
         ...split(cooked, remains),
         guestCount,
+        title: titreIA,
         participants: [...present].map((eaterId) => ({ eaterId, present: true })),
         items: items.map((item) => ({
           foodId: item.foodId,

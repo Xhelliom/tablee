@@ -15,7 +15,7 @@ import { buildApp } from './app.ts';
 import { withHousehold } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import type { Turn } from './llm/conseil.ts';
-import type { ProposedItem } from './llm/decoupage.ts';
+import type { SplitResult } from './llm/decoupage.ts';
 import {
   buildTestAuth, signUpWithHousehold, TEST_BASE_URL, type TestHousehold,
 } from './test-support/auth.ts';
@@ -76,13 +76,16 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     pool = await testPool();
     auth = buildTestAuth(pool);
     const llm = {
-      splitMeal: (text: string, personnes: number): Promise<ProposedItem[]> => {
+      splitMeal: (text: string, personnes: number): Promise<SplitResult> => {
         découpés.push(text);
         cuisinésPour.push(personnes);
-        return Promise.resolve([
-          { label: '2 œufs', search: 'oeuf', grams: 110 },
-          { label: 'une truffe', search: 'truffe', grams: null },
-        ]);
+        return Promise.resolve({
+          title: 'Œufs à la truffe',
+          items: [
+            { label: '2 œufs', search: 'oeuf', grams: 110 },
+            { label: 'une truffe', search: 'truffe', grams: null },
+          ],
+        });
       },
       chooseFoods: (lines: string): Promise<unknown> => {
         choisis.push(lines);
@@ -170,6 +173,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
     it('rapproche chaque ligne de Ciqual, et n’invente rien quand il ne connaît pas', async () => {
       const { body } = await call(avecIA, 'POST', '/api/meals/decoupage', { text: '2 œufs et une truffe' });
+      assert.equal(body.title, 'Œufs à la truffe', 'la description reformulée en titre');
       assert.equal(body.items[0].label, '2 œufs');
       assert.equal(body.items[0].grams, 110);
       assert.equal(body.items[0].foods[0].name, 'Oeuf, cru');
@@ -198,10 +202,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { status, body } = await call(avecIA, 'POST', '/api/meals', {
         eatenAt: new Date().toISOString(), slot: 'petit_dej', source: 'ia',
         participants: [{ eaterId: fiche.eater.id, present: true }],
-        items: [await oeuf('2 œufs')],
+        items: [await oeuf('2 œufs')], title: 'Œufs à la truffe',
       });
       assert.equal(status, 201);
       assert.equal(body.meal.nutrition.confidence, 'moyenne');
+      assert.equal(body.meal.title, 'Œufs à la truffe', 'le titre reformulé est celui du repas (016)');
     });
   });
 

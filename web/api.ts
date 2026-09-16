@@ -241,6 +241,8 @@ export interface Meal {
   guestCount: number;
   leftoverOf: string | null;
   note: string | null;
+  /** Le titre d'un repas sans recette, reformulé par l'IA au découpage. */
+  title: string | null;
   recipe: { id: string; title: string; nutriScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA. */
   imageUrl: string | null;

@@ -623,6 +623,28 @@ jamais une valeur fausse. Quelques centaines de Ko par plat distinct en base.
 rafraîchir l'accueil quand l'image arrive ; réduire l'image avant de la garder
 (une dépendance de plus, `sharp`, pour quelques Ko).
 
+## 22. Le titre d'un repas décrit avec l'IA n'est ni relu ni modifiable
+
+**Où** — `server/llm/decoupage.ts` (`title`), `POST /api/meals` (`title`),
+migration 016, `web/screens/FreeTextEntry.tsx`.
+
+**Le foyer ne le voit qu'après.** Le modèle reformule la description en titre
+au moment du découpage, et l'écran de saisie l'enregistre tel quel avec le
+repas : il n'est ni affiché ni éditable avant « Enregistrer », et rien ne le
+modifie ensuite. Un titre à côté de la plaque reste sur la carte. Les lignes,
+elles, se relisent et se corrigent ; le titre est la seule sortie du modèle
+qui n'a pas ce filet.
+
+**Le premier découpage l'emporte.** Un plat décrit en deux fois (« des pâtes »
+puis « et une salade ») garde le titre du premier texte.
+
+**Ce que ça coûte.** Un libellé maladroit sur une carte, jamais une valeur.
+Le modèle ne reçoit que la description passée par `anonymize` (dette n° 17) :
+un prénom qui traverse le filtre peut donc finir dans le titre.
+
+**Ce qui le lèverait.** Un champ « Titre » sous la description, prérempli par
+le découpage et corrigeable, et `PATCH /api/meals/:id` qui l'accepte.
+
 ---
 
 ## Levées

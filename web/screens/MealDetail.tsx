@@ -80,7 +80,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
     if (meal === null) return;
     const name = window.prompt(
       'Nom de l’habitude (il apparaîtra dans l’ajout rapide)',
-      meal.recipe?.title ?? SLOT_LABELS[meal.slot],
+      meal.recipe?.title ?? meal.title ?? SLOT_LABELS[meal.slot],
     );
     if (name === null || name.trim().length === 0) return;
     await api.post('/api/templates', { mealId, name: name.trim() });
@@ -92,7 +92,7 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
 
   const present = new Set(meal.participants.map((p) => p.eaterId));
   const nutrition = meal.nutrition;
-  const title = meal.recipe?.title ?? meal.items.map((i) => i.label).join(', ') ?? '';
+  const title = meal.recipe?.title ?? meal.title ?? meal.items.map((i) => i.label).join(', ');
   const isLeftover = meal.leftoverOf !== null;
   /** Ce qu'on avait devant soi : ce qui a été mangé, plus ce qui reste. */
   const base = meal.servings + (meal.remainingServings ?? 0);
