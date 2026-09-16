@@ -14,6 +14,7 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { IconBowl, IconChat, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
 import { Avatar, accountSeed } from './Avatar.tsx';
+import { InstallBanner } from './InstallBanner.tsx';
 
 export type Tab = 'accueil' | 'semaine' | 'historique' | 'conseils' | 'membres';
 
@@ -66,7 +67,10 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
         </div>
       </header>
 
-      <main style={{ flex: 1 }}>{children}</main>
+      <main style={{ flex: 1 }}>
+        <InstallBanner />
+        {children}
+      </main>
 
       <nav className="nav" aria-label="Navigation principale">
         {/* Sans clé API côté serveur, pas d'onglet qui mènerait à un refus. */}
