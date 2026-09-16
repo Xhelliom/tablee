@@ -1,0 +1,12 @@
+-- 016 — le titre d'un repas décrit avec l'IA (16/09/2026).
+--
+-- Un repas sans recette se présentait par ses trois premiers libellés :
+-- « 2 œufs, du sel, une tartine ». La description tapée est écrite au fil de
+-- l'eau et ne fait pas non plus un titre. Le modèle qui découpe la description
+-- la reformule donc en titre de plat, et c'est lui qu'on garde ici.
+--
+-- Sur le repas, et pas dans une recette : une recette est une composition
+-- réutilisable (Jow, ou écrite par le foyer) ; un repas décrit une fois n'en
+-- est pas une. La description d'origine, elle, reste ce qui est découpé et ce
+-- qui dessine l'image (015) : le titre s'y ajoute, il ne la remplace pas.
+alter table meal add column title text check (length(title) <= 120);

@@ -53,12 +53,25 @@ export interface ProposedItem {
   grams: number | null;
 }
 
-export type SplitMeal = (text: Anonymized, personnes: number) => Promise<ProposedItem[]>;
+/** Ce que rend le découpage : un titre de plat, et les lignes. */
+export interface SplitResult {
+  /**
+   * La description reformulée en titre présentable — « des pates bolo et une
+   * salade » devient « Pâtes bolognaise et salade verte ». C'est un libellé,
+   * jamais une teneur ; `null` quand le modèle n'en a pas donné.
+   */
+  title: string | null;
+  items: ProposedItem[];
+}
+
+export type SplitMeal = (text: Anonymized, personnes: number) => Promise<SplitResult>;
 
 /** Le modèle a décliné, ou rendu quelque chose d'inexploitable. Réessayer n'y changera rien. */
 export class SplitRefused extends Error {}
 
-const CONSIGNE = `Tu reçois la description d'un repas, écrite en français par un membre d'une famille. Découpe-la en aliments.
+const CONSIGNE = `Tu reçois la description d'un repas, écrite en français par un membre d'une famille. Découpe-la en aliments, et donne-lui un titre.
+
+title : la description reformulée en titre de plat, court et présentable, comme sur une carte de recettes (« Pâtes bolognaise et salade verte »). Corrige l'orthographe, retire ce qui n'est pas le plat (qui a mangé, quand, les hésitations). Ne nomme personne.
 
 Pour chaque aliment :
 - label : l'aliment tel que le texte le dit, avec sa quantité s'il y en a une (« 2 œufs », « un bol de lait »).
@@ -71,6 +84,7 @@ N'ajoute aucun aliment que le texte ne mentionne pas. Les boissons comptent.`;
 const FORMAT = {
   type: 'object',
   properties: {
+    title: { type: 'string' },
     items: {
       type: 'array',
       items: {
@@ -85,7 +99,7 @@ const FORMAT = {
       },
     },
   },
-  required: ['items'],
+  required: ['title', 'items'],
   additionalProperties: false,
 };
 
@@ -120,11 +134,13 @@ export function mealSplitter(ask: Ask): SplitMeal {
  * La sortie structurée garantit la forme, pas le bon sens. Ce qui revient du
  * modèle est une entrée comme une autre : vérifié ici, pas cru sur parole.
  */
-export function readSplit(raw: unknown): ProposedItem[] {
-  const items = (raw as { items?: unknown } | null)?.items;
+export function readSplit(raw: unknown): SplitResult {
+  const { items, title } = (raw as { items?: unknown; title?: unknown } | null) ?? {};
   if (!Array.isArray(items)) throw new SplitRefused('réponse sans liste d’aliments');
 
-  return items.slice(0, 20).flatMap((item: unknown): ProposedItem[] => {
+  return {
+    title: typeof title === 'string' && title.trim() !== '' ? title.trim().slice(0, 120) : null,
+    items: items.slice(0, 20).flatMap((item: unknown): ProposedItem[] => {
     const { label, search, grams } = (item ?? {}) as Record<string, unknown>;
     if (typeof label !== 'string' || label.trim() === '') return [];
     const mots = typeof search === 'string' && search.trim() !== '' ? search : label;
@@ -135,7 +151,8 @@ export function readSplit(raw: unknown): ProposedItem[] {
       // à préciser plutôt que d'être corrigé en silence.
       grams: typeof grams === 'number' && grams > 0 && grams <= 5000 ? Math.round(grams) : null,
     }];
-  });
+    }),
+  };
 }
 
 /** Une ligne découpée et ses candidats Ciqual, le plus probable en tête. */

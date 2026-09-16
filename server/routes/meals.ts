@@ -51,7 +51,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     // modèle. La recherche qui suit lit `food`, référentiel public, sur le pool.
     await request.releaseDb();
 
-    const proposed = await splitMeal(envoyé, personnes).catch((cause: unknown) => {
+    const { title, items: proposed } = await splitMeal(envoyé, personnes).catch((cause: unknown) => {
       if (cause instanceof SplitRefused) {
         throw new ApiError(
           422, 'decoupage_impossible',
@@ -71,7 +71,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     // Et passé 45 s, on n'attend plus : l'ingress coupe à 60 (défaut de nginx),
     // et le découpage déjà payé partirait avec le choix.
     const tard = Date.now() - début > 45_000;
-    if (tard || !items.some((item) => item.foods.length > 0)) return { items: applyChoices(items, null) };
+    if (tard || !items.some((item) => item.foods.length > 0)) return { title, items: applyChoices(items, null) };
 
     // Seuls les libellés viennent du foyer. Les noms Ciqual, publics, ne passent
     // pas au filtre des prénoms : pour un compte nommé Blanc, « Riz blanc »
@@ -84,7 +84,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
       request.log.error(cause);
       return null;
     });
-    return { items: applyChoices(items, choix) };
+    return { title, items: applyChoices(items, choix) };
   });
 
   app.post('/api/meals', async (request, reply) => {
@@ -109,6 +109,8 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
         ...(input['items'] !== undefined && { items: mealItems(input['items']) }),
         participants: participants(input['participants'] ?? []),
         note: optionalStr(input['note'], 'note', { max: 1000 }),
+        // Le titre reformulé par l'IA (016) ; un repas Jow a celui de sa recette.
+        title: optionalStr(input['title'], 'title', { max: 120 }),
         // I6 : expurgé une seconde fois par `createMeal`, avant l'insertion.
         rawInput: optionalStr(input['raw_input'] ?? input['rawInput'], 'raw_input', { max: 4000 }),
         // Qui a saisi le repas se lit dans la **session**, jamais dans le

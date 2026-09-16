@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Props): React.ReactElement {
-  const title = meal.recipe?.title ?? mealTitle(meal);
+  const title = meal.recipe?.title ?? meal.title ?? mealTitle(meal);
 
   if (!hero) {
     return (
