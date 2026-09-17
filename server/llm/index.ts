@@ -7,7 +7,8 @@
  * (`image.ts`), mais passe par le même `anonymize`. Ce que ce module garantit
  * à tous :
  *
- * - **Rien ne part sans être passé par `anonymize`.** `SplitMeal`,
+ * - **Rien ne part sans être passé par `anonymize`.** — sauf la photo d'un
+ *   plat (`DishPhoto`), qu'aucun filtre ne sait relire. `SplitMeal`,
  *   `ChooseFoods`, `Advise` et `SuggestRecipes` n'acceptent que des
  *   `Anonymized`, une marque que seul
  *   `anonymize` pose — la même idée que `HouseholdDb` pour la RLS : un oubli ne
@@ -31,6 +32,22 @@ import { recipeSuggester, type SuggestRecipes } from './recettes.ts';
 /** Un texte dont les prénoms du foyer et les jetons Jow ont été retirés. */
 export type Anonymized = string & { readonly __anonymized: true };
 
+/**
+ * La photo d'un plat, telle que l'écran l'a réduite. Elle ne passe par aucun
+ * filtre : rien ne retire un visage d'une image. C'est l'écran qui demande de
+ * ne cadrer que l'assiette, et rien n'en est conservé (dette n° 23).
+ */
+export interface DishPhoto {
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  /** En base64, 4 Mo au plus une fois décodée. */
+  data: string;
+}
+
+/** Ce que reçoit le modèle dans un tour : du texte, ou du texte et une image. */
+export type Content =
+  | string
+  | ({ type: 'text'; text: string } | { type: 'image'; source: { type: 'base64'; media_type: DishPhoto['mimeType']; data: string } })[];
+
 export interface Llm {
   splitMeal: SplitMeal;
   chooseFoods: ChooseFoods;
@@ -41,7 +58,7 @@ export interface Llm {
 /** Un appel au modèle : le texte de la réponse, ou `null` s'il a décliné. */
 export type Ask = (request: {
   system: string;
-  messages: { role: 'user' | 'assistant'; content: string }[];
+  messages: { role: 'user' | 'assistant'; content: Content }[];
   effort: 'low' | 'medium';
   /** En millisecondes : c'est un téléphone qui attend. */
   timeout: number;

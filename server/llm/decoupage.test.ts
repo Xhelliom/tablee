@@ -36,13 +36,20 @@ describe('découpage par IA — ce qui revient', () => {
   });
 
   it('dit au modèle pour combien le plat a été préparé, avant la description', async () => {
-    let envoyé = '';
+    let envoyé: unknown;
     const découper = mealSplitter((requête) => {
-      envoyé = requête.messages[0]?.content ?? '';
+      envoyé = requête.messages[0]?.content;
       return Promise.resolve('{"items":[]}');
     });
     assert.deepEqual(await découper('des pâtes' as Anonymized, 4), { title: null, items: [] });
     assert.equal(envoyé, 'Cuisiné pour 4 personnes\n\ndes pâtes');
+
+    // Avec une photo : l'image d'abord, puis la même consigne — texte vide compris.
+    await découper('' as Anonymized, 2, { mimeType: 'image/jpeg', data: 'AAAA' });
+    assert.deepEqual(envoyé, [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'AAAA' } },
+      { type: 'text', text: 'Cuisiné pour 2 personnes\n\n' },
+    ]);
   });
 });
 

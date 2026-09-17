@@ -250,6 +250,11 @@ export function buildApp(
     if (error instanceof ApiError) {
       return reply.code(error.status).send(error.toBody());
     }
+    // Un corps au-delà de `bodyLimit` est refusé par Fastify avant la route :
+    // une photo trop lourde se dit comme telle, pas comme une panne du serveur.
+    if ((error as { code?: unknown }).code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+      return reply.code(413).send({ error: { code: 'corps_trop_lourd', message: 'envoi trop lourd — une photo fait 4 Mo au plus' } });
+    }
     // Un message d'erreur interne peut contenir une requête SQL ou un chemin :
     // il ne sort pas. Le détail reste dans les logs du serveur, qui est chez
     // l'utilisateur.

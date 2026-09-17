@@ -16,6 +16,7 @@ import { withHousehold } from './db.ts';
 import type { Auth } from './auth/auth.ts';
 import type { Turn } from './llm/conseil.ts';
 import type { SplitResult } from './llm/decoupage.ts';
+import type { DishPhoto } from './llm/index.ts';
 import {
   buildTestAuth, signUpWithHousehold, TEST_BASE_URL, type TestHousehold,
 } from './test-support/auth.ts';
@@ -40,6 +41,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
   /** Ce que les faux modèles ont reçu : exactement ce qui serait parti chez Anthropic. */
   let découpés: string[] = [];
   let cuisinésPour: number[] = [];
+  let photos: (DishPhoto | undefined)[] = [];
   let choisis: string[] = [];
   let conseillé: { facts: string; conversation: Turn[] } | null = null;
   /** Le faux assistant lâche après son premier morceau. */
@@ -76,9 +78,10 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     pool = await testPool();
     auth = buildTestAuth(pool);
     const llm = {
-      splitMeal: (text: string, personnes: number): Promise<SplitResult> => {
+      splitMeal: (text: string, personnes: number, photo?: DishPhoto): Promise<SplitResult> => {
         découpés.push(text);
         cuisinésPour.push(personnes);
+        photos.push(photo);
         return Promise.resolve({
           title: 'Œufs à la truffe',
           items: [
@@ -130,6 +133,7 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     foyer = await signUpWithHousehold(auth, pool, 'papa@exemple.test');
     découpés = [];
     cuisinésPour = [];
+    photos = [];
     choisis = [];
     conseillé = null;
     enPanne = false;
@@ -161,6 +165,31 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
       assert.equal(status, 200);
       assert.deepEqual(découpés, ['quelqu’un a mangé 2 œufs et une truffe']);
+    });
+
+    it('transmet la photo du plat telle quelle, et se passe alors de texte', async () => {
+      const photo = { mimeType: 'image/jpeg', data: Buffer.from('jpeg').toString('base64') };
+      assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { photo })).status, 200);
+      assert.deepEqual(photos, [photo]);
+      assert.deepEqual(découpés, ['']);
+      assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', {})).status, 400, 'ni texte ni photo');
+      assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { photo: { mimeType: 'image/gif', data: 'AAAA' } })).status, 400);
+      assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { photo: { mimeType: 'image/png', data: 'pas du base64 !' } })).status, 400);
+      assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { text: '2 œufs', photo: null })).status, 200, 'null vaut absent');
+      assert.deepEqual(photos, [photo, undefined], 'aucun envoi refusé n’a atteint le modèle');
+    });
+
+    it('refuse une photo trop lourde avant le modèle, et le dit', async () => {
+      const lourde = { mimeType: 'image/jpeg', data: 'A'.repeat(Math.ceil(4 * 1024 * 1024 * 4 / 3) + 4) };
+      const refus = await call(avecIA, 'POST', '/api/meals/decoupage', { photo: lourde });
+      assert.equal(refus.status, 413);
+      assert.equal(refus.body.error.code, 'photo_trop_lourde');
+      // Au-delà de la limite du corps, c'est Fastify qui refuse : même clarté.
+      const énorme = { mimeType: 'image/jpeg', data: 'A'.repeat(6 * 1024 * 1024) };
+      const coupé = await call(avecIA, 'POST', '/api/meals/decoupage', { photo: énorme });
+      assert.equal(coupé.status, 413);
+      assert.equal(coupé.body.error.code, 'corps_trop_lourd');
+      assert.deepEqual(photos, [], 'rien n’est parti');
     });
 
     it('dit au modèle pour combien le plat a été préparé — une personne à défaut', async () => {
@@ -256,6 +285,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const àLaMain = await repas(léa, { source: 'texte', items: [truffe('une truffe')] });
       assert.equal((await call(avecIA, 'POST', `/api/meals/${àLaMain.id}/image`, {})).status, 409);
       assert.deepEqual(dessinés, [], 'rien ne part');
+
+      // Un repas photographié n'a pas gardé sa photo : sa couverture se dessine comme pour un texte.
+      const photographié = await repas(léa, { source: 'photo', items: [truffe('une truffe')] });
+      assert.equal((await call(avecIA, 'POST', `/api/meals/${photographié.id}/image`, {})).status, 200);
+      assert.equal(dessinés.length, 1);
 
       const décrit = await repas(léa, { items: [truffe('une truffe')] });
       const { body } = await call(avecIA, 'POST', `/api/meals/${décrit.id}/image`, {});

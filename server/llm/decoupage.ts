@@ -41,7 +41,7 @@
  * modèle pour une règle de trois.
  */
 import type { FoodSummary } from '../repo/foods.ts';
-import type { Anonymized, Ask } from './index.ts';
+import type { Anonymized, Ask, DishPhoto } from './index.ts';
 
 /** Une ligne proposée par le modèle, avant tout rapprochement avec `food`. */
 export interface ProposedItem {
@@ -64,7 +64,8 @@ export interface SplitResult {
   items: ProposedItem[];
 }
 
-export type SplitMeal = (text: Anonymized, personnes: number) => Promise<SplitResult>;
+/** Le texte peut être vide quand une photo l'accompagne : c'est elle qu'on découpe alors. */
+export type SplitMeal = (text: Anonymized, personnes: number, photo?: DishPhoto) => Promise<SplitResult>;
 
 /** Le modèle a décliné, ou rendu quelque chose d'inexploitable. Réessayer n'y changera rien. */
 export class SplitRefused extends Error {}
@@ -79,7 +80,9 @@ Pour chaque aliment :
 - grams : le poids en grammes pour le plat entier, préparé pour le nombre de personnes indiqué avant la description. Sans quantité précisée, une portion courante par personne. Une quantité qui décrit l'assiette de chacun (« un yaourt ») vaut pour chacun ; une quantité partagée (« une pizza », « un plat de lasagnes ») vaut pour le plat entier. null seulement si rien ne permet de l'estimer.
 
 Un plat nommé sans autre détail reste une seule ligne (« lasagnes »). Quand le texte en nomme les composants (« tartine beurrée »), une ligne par composant.
-N'ajoute aucun aliment que le texte ne mentionne pas. Les boissons comptent.`;
+N'ajoute aucun aliment que le texte ne mentionne pas. Les boissons comptent.
+
+Quand une photo accompagne le texte, ou le remplace : découpe ce que l'assiette montre, et estime les poids à l'œil, pour le nombre de personnes indiqué. Le texte, s'il y en a un, précise ou corrige la photo. Ignore tout ce qui n'est pas de la nourriture — personnes, table, arrière-plan — et ne décris jamais une personne.`;
 
 const FORMAT = {
   type: 'object',
@@ -104,14 +107,18 @@ const FORMAT = {
 };
 
 export function mealSplitter(ask: Ask): SplitMeal {
-  return async (text, personnes) => {
+  return async (text, personnes, photo) => {
+    const consigne = `Cuisiné pour ${personnes} personne${personnes > 1 ? 's' : ''}\n\n${text}`;
     // Effort bas et 30 s : la tâche est courte, et au-delà la personne a déjà
     // tapé ses aliments un par un.
     const réponse = await ask({
       system: CONSIGNE,
       messages: [{
         role: 'user',
-        content: `Cuisiné pour ${personnes} personne${personnes > 1 ? 's' : ''}\n\n${text}`,
+        content: photo === undefined ? consigne : [
+          { type: 'image', source: { type: 'base64', media_type: photo.mimeType, data: photo.data } },
+          { type: 'text', text: consigne },
+        ],
       }],
       effort: 'low',
       timeout: 30_000,
