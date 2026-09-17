@@ -320,6 +320,13 @@ l'invérifiable.
 > rien de plus. Une image par ensemble d'ingrédients **et par foyer** : elle
 > dessine un texte du foyer, ne pas la mutualiser comme une recette Jow. Ce
 > qu'elle approxime : dette n° 21.
+>
+> **Le 17/09/2026, la photo d'un plat** (bouton « Photographier le plat »,
+> même route de découpage, `DishPhoto` dans `server/llm/index.ts`). L'image
+> réduite part chez Anthropic avec la consigne, **sans filtre** — rien ne
+> retire une personne d'une image, l'écran demande de ne cadrer que
+> l'assiette — et **n'est pas conservée**. Le repas porte la source `photo`,
+> à confiance « basse » (§11), pas `ia`. Dette n° 23.
 
 ---
 

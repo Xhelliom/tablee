@@ -12,7 +12,7 @@ import {
   applyChoices, CANDIDATES, describeCandidates, SplitRefused, type MatchedItem,
 } from '../llm/decoupage.ts';
 import { dishPrompt, dishTag } from '../llm/image.ts';
-import { anonymize, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index.ts';
+import { anonymize, type DishPhoto, LLM_RATE_LIMIT, namesToHide, requireLlm } from '../llm/index.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { searchFoods } from '../repo/foods.ts';
 import { dishImageUrl, loadDishImage, reuseDishImage, saveDishImage } from '../repo/images.ts';
@@ -24,6 +24,23 @@ import { householdTimezone } from '../repo/dashboard.ts';
 import { nextDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
+/** Une photo réduite par l'écran pèse moins de 500 Ko ; au-delà de 4 Mo décodés, ce n'est pas la nôtre. */
+const PHOTO_MAX_BYTES = 4 * 1024 * 1024;
+const PHOTO_BODY_LIMIT = Math.ceil(PHOTO_MAX_BYTES * 4 / 3) + 64 * 1024;
+const PHOTO_TYPES = new Set<DishPhoto['mimeType']>(['image/jpeg', 'image/png', 'image/webp']);
+
+/** `undefined` sans photo ; sinon une image d'un type que le modèle accepte, dans la limite. */
+function dishPhoto(value: unknown): DishPhoto | undefined {
+  if (value === undefined || value === null) return undefined;
+  const { mimeType, data } = body(value) as { mimeType?: unknown; data?: unknown };
+  if (!PHOTO_TYPES.has(mimeType as DishPhoto['mimeType'])) throw new ApiError(400, 'photo_invalide', 'photo : JPEG, PNG ou WebP');
+  if (typeof data !== 'string' || data === '' || !/^[A-Za-z0-9+/]+=*$/.test(data)) {
+    throw new ApiError(400, 'photo_invalide', 'photo : image en base64 attendue');
+  }
+  if (data.length * 3 / 4 > PHOTO_MAX_BYTES) throw new ApiError(413, 'photo_trop_lourde', 'photo : 4 Mo au plus');
+  return { mimeType: mimeType as DishPhoto['mimeType'], data };
+}
+
 export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
   /**
    * V3, §5 voie 2 — un texte libre découpé en aliments, **à valider**.
@@ -33,13 +50,18 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
    * personne a gardé. Deux appels au modèle : le découpage, puis le choix de
    * l'aliment parmi les candidats de la recherche. Ce qui part chez Anthropic,
    * et pourquoi : en-tête de `server/llm/decoupage.ts`.
+   *
+   * Avec une photo du plat (17/09/2026), le texte devient facultatif. La photo
+   * part telle quelle, n'est pas conservée, et le repas qui en sort porte la
+   * source `photo`, à confiance « basse » (§11).
    */
-  app.post('/api/meals/decoupage', { config: { rateLimit: LLM_RATE_LIMIT } }, async (request) => {
+  app.post('/api/meals/decoupage', { config: { rateLimit: LLM_RATE_LIMIT }, bodyLimit: PHOTO_BODY_LIMIT }, async (request) => {
     const début = Date.now();
     const { splitMeal, chooseFoods } = requireLlm(ctx.llm);
     const identity = request.identity();
     const input = body(request.body);
-    const text = str(input['text'], 'text', { max: 500 });
+    const photo = dishPhoto(input['photo']);
+    const text = photo === undefined ? str(input['text'], 'text', { max: 500 }) : optionalStr(input['text'], 'text') ?? '';
     // « Cuisiné pour », au demi près comme à l'écran. Absent : une personne, ce
     // que le modèle supposait avant le 15/09/2026.
     const personnes = input['personnes'] === undefined ? 1 : num(input['personnes'], 'personnes', { min: 0.5, max: 99 });
@@ -51,7 +73,7 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
     // modèle. La recherche qui suit lit `food`, référentiel public, sur le pool.
     await request.releaseDb();
 
-    const { title, items: proposed } = await splitMeal(envoyé, personnes).catch((cause: unknown) => {
+    const { title, items: proposed } = await splitMeal(envoyé, personnes, photo).catch((cause: unknown) => {
       if (cause instanceof SplitRefused) {
         throw new ApiError(
           422, 'decoupage_impossible',

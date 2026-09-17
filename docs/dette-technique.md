@@ -647,6 +647,35 @@ le découpage et corrigeable, et `PATCH /api/meals/:id` qui l'accepte.
 
 ---
 
+## 23. La photo d'un plat part sans filtre, et ne laisse rien
+
+**Où** — `server/llm/index.ts` (`DishPhoto`), `POST /api/meals/decoupage`
+(`photo`), `web/screens/FreeTextEntry.tsx` (`réduire`).
+
+**Aucun filtre ne relit une image.** `anonymize` retire les prénoms et les
+jetons Jow d'un texte ; une photo n'a ni l'un ni l'autre, mais peut cadrer une
+personne — et I3 interdit d'envoyer des photos de personnes au modèle. Le seul
+filet est la phrase sous le bouton (« Ne cadrez que l'assiette, sans
+personne ») et la consigne au modèle de ne décrire aucune personne. C'est un
+usage demandé, pas une garantie.
+
+**La photo n'est pas conservée.** Ni en base, ni sur disque : elle sert au
+découpage et disparaît. La carte du repas n'a donc pas d'image, et
+`POST /api/meals/:id/image` ne dessine que les repas de source `ia`. Garder
+la vraie photo serait mieux qu'une image générée — mais c'est stocker une
+photo prise dans une cuisine, avec ce qu'elle cadre.
+
+**Ce que ça coûte.** Une image de personne peut partir chez Anthropic si
+l'écran est ignoré. Une confiance « basse » sur tout repas photographié, même
+corrigé ligne à ligne : c'est la règle du §11, elle ne distingue pas.
+
+**Ce qui le lèverait.** Une passe de détection de visages **côté téléphone**
+avant l'envoi (`FaceDetector` n'est pas disponible partout) ; et pour la
+conservation, décider si une photo de repas est une donnée du foyer comme une
+autre, puis la stocker dans `dish_image` avec le même consentement.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
