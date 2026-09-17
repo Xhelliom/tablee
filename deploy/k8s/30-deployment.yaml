@@ -80,8 +80,11 @@ spec:
             - { name: ciqual, mountPath: /ciqual }
           resources:
             requests: { cpu: 100m, memory: 256Mi }
-            # Le XML est lu en flux, mais l'ETL garde les 3 185 aliments en
-            # mémoire le temps des écritures par lots.
+            # Le XML est lu en flux, mais l'ETL garde les 3 484 aliments en
+            # mémoire le temps des écritures par lots, et le téléchargement
+            # vérifie chaque fichier avant de l'écrire — dont un `compo` de
+            # 66 Mio. Pic mesuré le 17/09/2026 sur la table 2025, du premier
+            # octet au dernier lot : 315 Mio.
             limits:   { memory: 1Gi }
 
       containers:
@@ -200,7 +203,8 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        # L'export Ciqual décompressé, le temps du seed. Jeté avec le pod :
+        # L'export Ciqual, le temps du seed — 71 Mo pour la table 2025. Jeté
+        # avec le pod :
         # ce qui compte est en base, et le prochain démarrage n'en aura besoin
         # que si la source épinglée a changé.
         - name: ciqual

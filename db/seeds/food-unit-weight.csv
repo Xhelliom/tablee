@@ -37,6 +37,31 @@
 # La cuillère à soupe de l'USDA vaut 14,8 mL, la française 15 mL : 1 % d'écart,
 # sous la précision de la mesure.
 #
+#
+# ── ⚠️ Recodé le 17/09/2026, avec la montée à Ciqual 2025 ───────────────────
+#
+# La table 2025 a retiré 182 aliments et en a ajouté 481. Six lignes d'ici
+# pointaient un code disparu ; le chargeur les signalait « introuvables », sans
+# rien charger. Ce qui a été fait, ligne par ligne :
+#
+#   20047 « Tomate, crue »        → 20385 « Tomate sans précision, crue
+#                                   (aliment moyen) ». Même aliment, renommé et
+#                                   recodé : la source dit « Tomate (Moyenne) »,
+#                                   elle ne bouge pas.
+#   13050 « Pomme, pulpe, crue »  → 13396 « Pomme, chair sans peau, crue
+#                                   (aliment moyen) ». Idem — « pulpe » est
+#                                   devenu « chair » dans toute la table.
+#
+# Et quatre lignes **retirées**, parce que leur aliment n'existe plus et qu'un
+# voisin déjà présent ici couvre le cas. Les recoller sur un aliment
+# approchant serait un rattachement par ressemblance de nom, que l'en-tête
+# interdit :
+#
+#   7112  « Pain de mie, au son »              — aucun équivalent en 2025
+#   22501 « Oeuf, au plat, frit, salé »        — 22505 est déjà là
+#   23421 « Pâte feuilletée, surgelée, crue »  — 23425 est déjà là
+#   25918 « Bouillon ... déshydraté »          — 25970 et 25971 sont déjà là
+#
 ciqual_code,aliment,unit,grams,source
 19041,"Lait demi-écrémé, UHT",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
 19042,"Lait demi-écrémé, pasteurisé",Litre,1034,"FAO/INFOODS Density DB v2.0, « Milk, liquid, partially skimmed » : 1,034 g/ml (DK)"
@@ -110,7 +135,7 @@ ciqual_code,aliment,unit,grams,source
 20313,"Courgette, pulpe et peau, rôtie/cuite au four",Pièce,250,"Retenu d'office. Aprifel, fiche courgette : « Une courgette pèse en moyenne 250 g »"
 20097,"Échalote, crue",Pièce,25,"Retenu d'office. Aprifel, fiche échalote : « Une échalote pèse en moyenne 25 g »"
 20034,"Oignon, cru",Pièce,100,"Retenu d'office. bloc-notes-culinaire.com, poids moyen des fruits et légumes : « Oignon M 0,100 » (kg) ; Université Lyon 1 : « Oignon 0.100 100 »"
-20047,"Tomate, crue",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
+20385,"Tomate sans précision, crue (aliment moyen)",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
 20242,"Tomate, pulpe et peau, bouillie/cuite à l'eau",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
 20289,"Tomate, pulpe et peau, rôtie/cuite au four",Pièce,130,"Retenu d'office. Université Lyon 1, tableau du poids moyen des fruits et légumes : « Tomate (Moyenne) 0.130 130 »"
 4008,"Pomme de terre, sans peau, crue",Pièce,160,"Retenu d'office. Aprifel, fiche pomme de terre : « 160 g lorsqu'elle est de calibre moyen » — avant épluchage"
@@ -121,7 +146,7 @@ ciqual_code,aliment,unit,grams,source
 20300,"Aubergine, pulpe et peau, rôtie/cuite au four",Pièce,240,"Retenu d'office. Aprifel, fiche aubergine : « pèse en moyenne 225 à 250 g selon le calibre » → 240"
 13009,"Citron, pulpe, cru",Pièce,120,"Retenu d'office. Aprifel, fiche citron : « Un citron pèse en moyenne 120 g » — avec écorce"
 13039,"Pomme, pulpe et peau, crue",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
-13050,"Pomme, pulpe, crue",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
+13396,"Pomme, chair sans peau, crue (aliment moyen)",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
 13176,"Pomme, pulpe, bouillie/cuite à l'eau",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
 13175,"Pomme, pulpe, rôtie/cuite au four",Pièce,150,"Retenu d'office. bloc-notes-culinaire.com : « Pomme M 0,150 » (kg) ; Université Lyon 1 : « Pomme 0.150 150 »"
 13005,"Banane, pulpe, crue",Pièce,120,"Retenu d'office. Aprifel, fiche banane : « Une banane pèse en moyenne 120 g » — avec peau"
@@ -148,7 +173,6 @@ ciqual_code,aliment,unit,grams,source
 25232,"Saucisse végétale au blé ou seitan, préemballé",Pièce,35,"Retenu d'office. herta.fr, Knacki Veggie : « 6 saucisses | Poids : | 210g »"
 11001,"Bouillon de boeuf, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
 11174,"Bouillon de volaille, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
-25918,"Bouillon de viande et légumes type pot-au-feu, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
 25970,"Bouillon de viande et légumes type pot-au-feu, non dégraissé, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
 25971,"Bouillon de viande et légumes type pot-au-feu, dégraissé, déshydraté",Pièce,10,"Retenu d'office. Open Food Facts 7613035952331 (Maggi Kub) : « 150g - 15 tablettes » — un petit cube Kub Or pèse 4 g"
 23410,"Pâte brisée, crue",Pièce,230,"Retenu d'office. herta.fr, pâte brisée : « 1 pâte à tarte | Poids : | 230 » — un rouleau"
@@ -156,7 +180,6 @@ ciqual_code,aliment,unit,grams,source
 23415,"Pâte brisée, pur beurre, surgelée, crue",Pièce,230,"Retenu d'office. herta.fr, pâte brisée : « 1 pâte à tarte | Poids : | 230 » — un rouleau"
 23420,"Pâte feuilletée, matière grasse végétale, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
 23424,"Pâte feuilletée pur beurre, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
-23421,"Pâte feuilletée, surgelée, crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
 23425,"Pâte feuilletée pur beurre, surgelée crue",Pièce,230,"Retenu d'office. herta.fr : « TARTE EN OR Pâte Feuilletée Rectangulaire - 230g » — un rouleau"
 20272,"Mesclun ou salade, mélange de jeunes pousses",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
 20031,"Laitue, crue",Poignée,20,"Retenu d'office. landrycourbet-dietetique.fr : « Une petite poignée de salade verte ? Autour de 20g »"
@@ -176,7 +199,6 @@ ciqual_code,aliment,unit,grams,source
 11093,"Aneth, frais",Bouquet,30,"Retenu d'office. comptoirdesrestaurateurs.fr : « Aneth 30g Cat1 », « 0.030 kg »"
 7200,"Pain de mie, courant",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
 7111,"Pain de mie, complet",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
-7112,"Pain de mie, au son",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
 7113,"Pain de mie, multicéréale",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
 7201,"Pain de mie, sans croûte, préemballé",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
 7210,"Pain de mie brioché, préemballé",Tranche,25,"Retenu d'office. Open Food Facts 3228857000852 (Harrys 100 % mie) : portion « 25g » ; 3228850004055 : « 500 g (20 tranches ) »"
@@ -213,7 +235,6 @@ ciqual_code,aliment,unit,grams,source
 22011,"Oeuf, poché",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
 22014,"Oeuf, à la coque",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
 22505,"Oeuf, au plat, sans matière grasse",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
-22501,"Oeuf, au plat, frit, salé",Pièce,50,"Retenu d'office (14/09/2026). mesures-cuisine.fr/poids-oeuf : calibre « M — Moyen (53-63 g) » avec coquille, « 50 g » sans"
 11000,"Ail, cru",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
 11306,"Ail, rôti/cuit au four",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"
 11307,"Ail, sauté/poêlé, sans matière grasse",Gousse,5,"Retenu d'office (14/09/2026). gustant.fr, carnet d'ingrédients « Tête d'ail » : « une gousse, 4 à 7 g »"

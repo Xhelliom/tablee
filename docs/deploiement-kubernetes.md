@@ -95,13 +95,17 @@ Job de seed.
 
 ### Ce qui n'est pas dans l'image, volontairement
 
-**L'export Ciqual** — 57 Mo de XML publiés par l'ANSES, inchangés depuis 2020.
-Les embarquer alourdirait chaque image de chaque déploiement pour une donnée
-qui ne bouge pas.
+**L'export Ciqual** — 71 Mo de XML publiés par l'ANSES, deux fichiers, table
+2025. Les embarquer alourdirait chaque image de chaque déploiement pour une
+donnée qui bouge une fois tous les cinq ans.
 
 Ce qui est dans l'image, en revanche, c'est son **empreinte** :
-`db/seeds/ciqual-source.json`. Le seed va chercher l'archive au premier
-démarrage qui en a besoin et refuse de l'importer si elle ne correspond pas.
+`db/seeds/ciqual-source.json`, une par fichier. Le seed va les chercher au
+premier démarrage qui en a besoin et refuse d'importer ce qui ne correspond
+pas. Depuis la table 2025 (17/09/2026) ils viennent de l'entrepôt de la
+recherche (`entrepot.recherche.data.gouv.fr`, DOI 10.57745/RDMHWY) et non plus
+de `ciqual.anses.fr`, qui ne publie plus de ZIP : **c'est un hôte de plus à
+pouvoir joindre depuis le cluster**, et rien d'autre à changer.
 C'est donc l'image qui décide quelle table Ciqual tourne, et un déploiement
 suffit à en changer — voir « Le référentiel alimentaire » plus bas.
 

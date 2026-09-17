@@ -71,6 +71,11 @@ const SUBGROUPS: Record<string, Subgroup> = {
   '0301': { category: 'cereale', plant: true },
   '0302': { category: 'pain', plant: true },
   '0303': { category: 'biscuit_aperitif', plant: null, why: 'biscuits apéritifs : souvent au fromage' },
+  // 0304 « farines » apparaît dans l'export 2025 : Ciqual a détaché du 0305 les
+  // 22 farines, fécules et amidons, qui y étaient mêlés aux flocons. Même
+  // classement, pour la même raison — blé, riz, seigle, épeautre, maïs, pomme
+  // de terre.
+  '0304': { category: 'cereale', plant: true },
   // 0305 n'est déclaré nulle part dans `alim_grp_2020_07_07.xml` — trou de
   // l'export, pas de notre lecture. Les 44 aliments qui le portent ont été
   // relus un par un : ce sont des farines, fécules, amidons et flocons, tous
@@ -88,6 +93,9 @@ const SUBGROUPS: Record<string, Subgroup> = {
   '0408': { category: 'fruit_de_mer', plant: false },
   '0409': { category: 'poisson', plant: false },
   '0410': { category: 'oeuf', plant: false },
+  // 0411 a disparu de la table 2025 : ses tofus et ses protéines de soja sont
+  // passés en 1009. Le code reste classé pour les `food` importés d'un export
+  // antérieur, que le seed ne supprime pas.
   '0411': { category: 'substitut_vegetal', plant: true },
 
   // ── 05 produits laitiers et assimilés ────────────────────────────────────
@@ -137,9 +145,22 @@ const SUBGROUPS: Record<string, Subgroup> = {
   // sens de la barre « Végétal », qui oppose origine végétale et animale.
   '1007': { category: 'algue', plant: true },
   '1008': { category: 'alimentation_particuliere', plant: null, why: 'régimes spécifiques : composition variable' },
-  // Deux libellés portent ce code dans l'export 2020 (« ingrédients divers »
-  // et « aides culinaires et ingrédients pour végétariens ») : mixte.
-  '1009': { category: 'aide_culinaire', plant: null, why: 'code partagé par deux libellés dans l’export 2020' },
+  // ⚠️ Reclassé le 17/09/2026, avec la table 2025. Deux libellés partageaient
+  // ce code en 2020 — « ingrédients divers » (son, levure, gélatine) et
+  // « aides culinaires et ingrédients pour végétariens » —, d'où un fourre-tout
+  // sans origine. La 2025 a séparé les deux : le son, la levure et la gélatine
+  // sont passés en 1003, et il ne reste ici que huit aliments, tous à base de
+  // soja ou de blé. C'est le sous-groupe qui a changé, pas notre lecture.
+  //
+  // Sur un export **2020** posé à la main (`--dir`), ce classement rangerait la
+  // gélatine en substitut végétal. La table épinglée est la 2025 ; `etl` est là
+  // pour ça.
+  '1009': { category: 'substitut_vegetal', plant: true },
+  // 1010 « tartinables végétariens », nouveau en 2025 : houmous, guacamole,
+  // caviar d'aubergine — mais aussi tzatziki et ktipiti au fromage frais. Ils
+  // sortent du 1001 et en gardent le classement : **végétarien n'est pas
+  // végétal**, et deux des sept sont laitiers.
+  '1010': { category: 'sauce', plant: null, why: 'tartinables végétariens : le tzatziki est au fromage frais' },
 
   // ── 00 sans sous-groupe ──────────────────────────────────────────────────
   // Deux « aliments moyens » (Dessert, Glace) que Ciqual ne rattache à rien.

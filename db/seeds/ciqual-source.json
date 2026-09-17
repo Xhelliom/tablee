@@ -1,28 +1,51 @@
 {
   "_lisezmoi": [
-    "L'archive de la table Ciqual, épinglée. Ce fichier est à `food` ce que les",
-    "CSV voisins sont à `nutrient_reference` : la source, versionnée, relisible",
-    "en diff. Il n'est pas un CSV parce que l'ANSES publie un ZIP de 3,5 Mo et",
-    "non une liste de valeurs — mais la règle est la même, et c'est `sha256`",
-    "qui la tient : une archive qui ne correspond pas à cette empreinte n'est",
-    "pas importée. Sans elle, « télécharger au démarrage » voudrait dire que le",
-    "contenu de `food` peut changer sans qu'aucun diff ne le montre.",
+    "La table Ciqual, épinglée. Ce fichier est à `food` ce que les CSV voisins",
+    "sont à `nutrient_reference` : la source, versionnée, relisible en diff. Il",
+    "n'est pas un CSV parce que l'ANSES publie des dizaines de Mo de XML et non",
+    "une liste de valeurs — mais la règle est la même, et c'est `sha256` qui la",
+    "tient : un fichier qui ne correspond pas à son empreinte n'est pas importé.",
+    "Sans elle, « télécharger au démarrage » voudrait dire que le contenu de",
+    "`food` peut changer sans qu'aucun diff ne le montre.",
     "",
-    "Mettre à jour la table de l'ANSES = changer `version`, `url`, `sha256` et",
-    "`bytes` ici, dans un commit qui se relit. Au déploiement suivant, le seed",
-    "voit que l'empreinte importée n'est plus celle-ci et réimporte tout seul.",
+    "⚠️ Changé le 17/09/2026 : passage de Ciqual 2020 à Ciqual 2025, et la",
+    "distribution a changé de forme avec elle. L'ANSES ne publie plus un ZIP sur",
+    "`ciqual.anses.fr` mais les fichiers XML un par un sur l'entrepôt de la",
+    "recherche, sous DOI et licence Etalab 2.0. D'où `files` au lieu d'une URL",
+    "unique — et deux empreintes au lieu d'une. Ce que ça achète : l'énergie",
+    "passe de 2 298 aliments sur 3 185 à 3 339 sur 3 484. Le détail de la mesure",
+    "est dans docs/indicateurs-possibles.md §1.",
     "",
-    "`etl` n'a rien à voir avec l'ANSES : c'est notre propre lecture de",
-    "l'archive (colonnes retenues, classement des groupes dans",
+    "Mettre à jour la table = changer `version`, les trois champs de chaque",
+    "fichier et `source` ici, dans un commit qui se relit. Au déploiement",
+    "suivant, le seed voit que l'empreinte importée n'est plus celle-ci et",
+    "réimporte tout seul.",
+    "",
+    "`etl` n'a rien à voir avec l'ANSES : c'est notre propre lecture des",
+    "fichiers (colonnes retenues, classement des groupes dans",
     "`server/food/groups.ts`). L'incrémenter force une réimportation à la mise",
     "à jour suivante, sans changer de source — c'est ce qu'il faut faire quand",
     "le mapping change et que les lignes déjà en base seraient différentes",
-    "aujourd'hui."
+    "aujourd'hui.",
+    "",
+    "Les empreintes MD5 publiées par l'entrepôt ont été vérifiées à la capture ;",
+    "ce sont les SHA-256 ci-dessous qui font foi au moment de l'import."
   ],
-  "version": "2020-07-07",
-  "url": "https://ciqual.anses.fr/cms/sites/default/files/inline-files/XML_2020_07_07.zip",
-  "sha256": "cab13941ca693b7007c2f0fed2288fd5b94073fe6d598c9773297cf37aa59ca8",
-  "bytes": 3554394,
-  "etl": 1,
-  "source": "ANSES. Table de composition nutritionnelle des aliments Ciqual 2020. https://ciqual.anses.fr/"
+  "version": "2025-11-03",
+  "files": {
+    "alim": {
+      "file": "alim_2025_11_03.xml",
+      "url": "https://entrepot.recherche.data.gouv.fr/api/access/datafile/666252",
+      "sha256": "e0b1de25b3039028205e9d54a96892e403e1b313c2efeb41180fabe132627478",
+      "bytes": 1581031
+    },
+    "compo": {
+      "file": "compo_2025_11_03.xml",
+      "url": "https://entrepot.recherche.data.gouv.fr/api/access/datafile/666249",
+      "sha256": "8c46a9032ece4eab4ffccc9dfcb0c490ec2f416aa664cc1ee013b241c6bdd4af",
+      "bytes": 69243149
+    }
+  },
+  "etl": 2,
+  "source": "ANSES. Table de composition nutritionnelle des aliments Ciqual 2025. Entrepôt-Catalogue Recherche Data Gouv, DOI 10.57745/RDMHWY, publiée le 19/11/2025, licence Etalab 2.0. https://ciqual.anses.fr/"
 }

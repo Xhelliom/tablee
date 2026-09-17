@@ -14,11 +14,11 @@
  * instance fraîchement déployée servait une recherche d'aliments vide, sans
  * que rien n'indique qu'il manquait une étape faite à la main dans un
  * conteneur. Le seed tourne donc maintenant à chaque déploiement
- * (`deploy/k8s/30-deployment.yaml`), et va chercher l'archive lui-même.
+ * (`deploy/k8s/30-deployment.yaml`), et va chercher les fichiers lui-même.
  *
  * Ce que l'objection d'origine avait de juste est conservé : ce qui est
- * versionné, c'est l'empreinte (`db/seeds/ciqual-source.json`). Une archive
- * qui ne lui correspond pas n'est pas importée — `food` ne peut donc pas
+ * versionné, c'est l'empreinte (`db/seeds/ciqual-source.json`). Un fichier
+ * qui ne lui correspond pas n'est pas importé — `food` ne peut donc pas
  * changer de contenu sans qu'un diff le dise. Voir `server/food/ciqual-source.ts`.
  *
  * Idempotent, et à deux étages : l'import lui-même est un `on conflict do
@@ -34,10 +34,12 @@
 import { createReadStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { TextDecoder } from 'node:util';
 import pg from 'pg';
 import {
   CIQUAL_NUTRIENTS,
   decodeCiqual,
+  decoderFor,
   parseCompoChunk,
   parseFoods,
   type CiqualFood,
@@ -104,24 +106,32 @@ async function déjàFait(verrou: pg.Client | null, state: ImportState | null): 
 }
 
 /**
- * Lit `compo_*.xml` en flux. 57 Mo tiendraient en mémoire, mais le fichier
- * grossit à chaque édition de la table et rien n'oblige à le charger entier :
- * on découpe sur `</COMPO>`, qui ne peut pas apparaître ailleurs.
+ * Lit `compo_*.xml` en flux. 66 Mio tiendraient en mémoire, mais le fichier
+ * grossit à chaque édition de la table — il a pris 14 Mio entre 2020 et 2025 —
+ * et rien n'oblige à le charger entier : on découpe sur `</COMPO>`, qui ne
+ * peut pas apparaître ailleurs.
+ *
+ * L'encodage se lit sur le premier morceau, comme `decodeCiqual` le fait sur
+ * le fichier entier : les deux tables n'ont pas le même, et le supposer
+ * donnerait ici des nombres illisibles plutôt que des accents abîmés.
  */
 async function readCompo(
   file: string,
   onRow: (row: ReturnType<typeof parseCompoChunk>[number]) => void,
 ): Promise<void> {
-  const decoder = new TextDecoder('windows-1252');
+  let decoder: TextDecoder | null = null;
   let buffer = '';
   for await (const chunk of createReadStream(file)) {
+    decoder ??= decoderFor(chunk as Uint8Array);
     buffer += decoder.decode(chunk as Uint8Array, { stream: true });
     const cut = buffer.lastIndexOf('</COMPO>');
     if (cut === -1) continue;
     for (const row of parseCompoChunk(buffer.slice(0, cut + 8))) onRow(row);
     buffer = buffer.slice(cut + 8);
   }
-  buffer += decoder.decode();
+  // Un fichier vide n'a jamais donné de morceau, donc pas de décodeur : il n'y
+  // a rien à vider, et l'appelant refusera l'export plus loin.
+  if (decoder !== null) buffer += decoder.decode();
   for (const row of parseCompoChunk(buffer)) onRow(row);
 }
 
@@ -144,8 +154,8 @@ async function main(): Promise<void> {
 
   // Des fichiers déjà sur place l'emportent sur le téléchargement : `--dir`
   // sert précisément à apporter un export autrement, réseau coupé. Leur
-  // empreinte n'est calculée que si l'archive épinglée n'a pas déjà répondu —
-  // sans quoi on relirait 57 Mo pour découvrir qu'il n'y a rien à faire.
+  // empreinte n'est calculée que si l'export épinglé n'a pas déjà répondu —
+  // sans quoi on relirait 70 Mo pour découvrir qu'il n'y a rien à faire.
   const local = await locateExports(dir);
   const identité = local === null
     ? épinglé
@@ -155,7 +165,7 @@ async function main(): Promise<void> {
   const { alim: alimFile, compo: compoFile } = local ?? await downloadCiqual(dir, { download });
   console.log(
     local === null
-      ? `Archive Ciqual ${source.version} téléchargée et vérifiée (${source.sha256.slice(0, 12)}…).`
+      ? `Table Ciqual ${source.version} téléchargée et vérifiée (${source.sha256.slice(0, 12)}…).`
       : `Export lu depuis ${dir} — posé à la main, donc non vérifié à la source.`,
   );
 

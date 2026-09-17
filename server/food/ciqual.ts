@@ -1,12 +1,17 @@
 /**
  * Lecture de l'export XML de la table Ciqual (ANSES).
  *
- * L'export est composé de quatre fichiers plats, encodés en windows-1252 :
+ * L'export est composé de cinq fichiers plats :
  *
  *   alim_<date>.xml      un aliment par ligne (code, nom, groupe, sous-groupe)
+ *   alim_grp_<date>.xml  les libellés des groupes, non utilisés ici
  *   const_<date>.xml     le catalogue des constituants (code → libellé)
  *   compo_<date>.xml     la composition : (aliment, constituant) → teneur
  *   sources_<date>.xml   la traçabilité des mesures, non utilisée ici
+ *
+ * ⚠️ **L'encodage n'est pas le même d'une table à l'autre** : 2020 est en
+ * windows-1252, 2025 en UTF-8 avec BOM. Il se lit, il ne se suppose pas — voir
+ * `decoderFor`.
  *
  * Le module ne fait que **lire** : il ne complète rien, ne convertit rien et
  * n'invente rien. Une teneur que Ciqual ne publie pas ressort à `null`.
@@ -16,10 +21,15 @@
  * d'origine sur le site de l'ANSES.
  */
 
+// `TextDecoder` est global depuis Node 11 ; c'est son **type** qui vit dans
+// `node:util`, et `decoderFor` en rend un.
+import { TextDecoder } from 'node:util';
+
 /**
  * Constituants retenus pour la V1 — les cinq macros du §9 de la spec.
  *
- * Les codes sont ceux du catalogue Ciqual (`const_2020_07_07.xml`) :
+ * Les codes sont ceux du catalogue Ciqual (`const_<date>.xml`), stables de
+ * la table 2020 à la table 2025 :
  *
  *   328    Energie, Règlement UE N° 1169/2011 (kcal/100 g)
  *   25000  Protéines, N x facteur de Jones (g/100 g)
@@ -115,13 +125,42 @@ function toNumber(text: string): number | null {
 }
 
 /**
- * Décode un buffer Ciqual. Les fichiers se déclarent en windows-1252 et le
- * sont réellement — vérifié sur les libellés accentués (« Protéines »,
- * « Cendres »). Décoder en UTF-8 donnerait des libellés abîmés qui finiraient
- * affichés tels quels dans l'app.
+ * Décode un buffer Ciqual, dans l'encodage que le fichier **déclare**.
+ *
+ * ⚠️ Il a changé entre deux tables : 2020 est en windows-1252, 2025 en UTF-8
+ * avec BOM. Supposer l'un ou l'autre donne des libellés abîmés qui finissent
+ * affichés tels quels dans l'app — « Protéines » d'un côté, « ProtÃ©ines » de
+ * l'autre. On lit donc la déclaration XML plutôt que de parier, et
+ * windows-1252 ne reste que le défaut d'un fichier qui ne dirait rien : c'est
+ * ce qu'était la table jusqu'ici, et un octet > 0x7F y est toujours un
+ * caractère valide, là où UTF-8 rendrait des � sur le même fichier.
  */
 export function decodeCiqual(buffer: Uint8Array): string {
-  return new TextDecoder('windows-1252').decode(buffer);
+  return decoderFor(buffer).decode(buffer);
+}
+
+/**
+ * Le décodeur d'un export, décidé sur ses premiers octets — BOM d'abord, puis
+ * la déclaration XML. Séparé de `decodeCiqual` parce que `compo_*.xml` est lu
+ * en flux : il lui faut le décodeur avant d'avoir le fichier entier, et le
+ * même que les autres.
+ */
+export function decoderFor(début: Uint8Array): TextDecoder {
+  if (début[0] === 0xef && début[1] === 0xbb && début[2] === 0xbf) {
+    return new TextDecoder('utf-8');
+  }
+  // La déclaration est en ASCII pur quel que soit l'encodage du reste : la
+  // lire en latin1 est sûr, et ne dépend pas de ce qu'on cherche à établir.
+  const tête = Buffer.from(début.slice(0, 200)).toString('latin1');
+  const déclaré = /<\?xml[^>]*\bencoding\s*=\s*["']([\w-]+)["']/i.exec(tête)?.[1];
+  if (déclaré === undefined) return new TextDecoder('windows-1252');
+  try {
+    return new TextDecoder(déclaré);
+  } catch {
+    // Un encodage que Node ne connaît pas : on ne devine pas à sa place, on
+    // reprend le défaut historique et le seed dira ce qu'il a lu.
+    return new TextDecoder('windows-1252');
+  }
 }
 
 const ENTITIES: Record<string, string> = {
