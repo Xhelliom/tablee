@@ -176,6 +176,20 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { photo: { mimeType: 'image/gif', data: 'AAAA' } })).status, 400);
       assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { photo: { mimeType: 'image/png', data: 'pas du base64 !' } })).status, 400);
       assert.equal((await call(avecIA, 'POST', '/api/meals/decoupage', { text: '2 œufs', photo: null })).status, 200, 'null vaut absent');
+      assert.deepEqual(photos, [photo, undefined], 'aucun envoi refusé n’a atteint le modèle');
+    });
+
+    it('refuse une photo trop lourde avant le modèle, et le dit', async () => {
+      const lourde = { mimeType: 'image/jpeg', data: 'A'.repeat(Math.ceil(4 * 1024 * 1024 * 4 / 3) + 4) };
+      const refus = await call(avecIA, 'POST', '/api/meals/decoupage', { photo: lourde });
+      assert.equal(refus.status, 413);
+      assert.equal(refus.body.error.code, 'photo_trop_lourde');
+      // Au-delà de la limite du corps, c'est Fastify qui refuse : même clarté.
+      const énorme = { mimeType: 'image/jpeg', data: 'A'.repeat(6 * 1024 * 1024) };
+      const coupé = await call(avecIA, 'POST', '/api/meals/decoupage', { photo: énorme });
+      assert.equal(coupé.status, 413);
+      assert.equal(coupé.body.error.code, 'corps_trop_lourd');
+      assert.deepEqual(photos, [], 'rien n’est parti');
     });
 
     it('dit au modèle pour combien le plat a été préparé — une personne à défaut', async () => {
