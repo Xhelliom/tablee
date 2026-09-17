@@ -27,7 +27,9 @@ import {
   requiredText,
   SeedError,
 } from '../server/food/seeds.ts';
-import { deriveTargets, type EnergyReference, type PercentReference } from '../server/nutrition/derive.ts';
+import {
+  deriveTargets, energyTargets, type EnergyReference, type PercentReference,
+} from '../server/nutrition/derive.ts';
 import { normalizeUnit } from '../server/nutrition/units.ts';
 import { closePool, getPool } from '../server/db.ts';
 
@@ -136,7 +138,8 @@ async function loadEnergy(db: pg.Pool): Promise<void> {
 }
 
 /**
- * Traduit les intervalles en % de l'AET en cibles en grammes.
+ * Traduit les intervalles en % de l'AET en cibles en grammes, et recopie le
+ * besoin énergétique des majeurs en repère affichable (017).
  *
  * Rejouée à chaque seed et **remplacée intégralement** : ces lignes sont un
  * produit, pas une saisie. Si un intervalle ou un besoin énergétique change,
@@ -153,7 +156,13 @@ async function deriveAbsoluteTargets(db: pg.Pool): Promise<void> {
      from energy_reference`,
   );
 
-  const derived = deriveTargets(percents, energies);
+  // Les cibles en grammes portent leur unité, l'énergie la sienne : `unit` ne
+  // peut plus être écrit en dur à l'insertion depuis que les deux cohabitent.
+  const derived: { sex: string; ageMin: number; ageMax: number; nutrient: string;
+    kind: string; value: number; unit: string; source: string }[] = [
+    ...deriveTargets(percents, energies).map((row) => ({ ...row, unit: 'g' })),
+    ...energyTargets(energies),
+  ];
 
   if (!dryRun) {
     await db.query("delete from nutrient_reference where derived and basis = 'absolu'");
@@ -161,11 +170,12 @@ async function deriveAbsoluteTargets(db: pg.Pool): Promise<void> {
       await db.query(
         `insert into nutrient_reference
            (sex, age_min, age_max, nutrient, kind, basis, value, unit, source, derived)
-         values ($1, $2, $3, $4, $5, 'absolu', $6, 'g', $7, true)
+         values ($1, $2, $3, $4, $5, 'absolu', $6, $7, $8, true)
          on conflict (sex, age_min, age_max, nutrient, kind, basis) do update set
            value = excluded.value, unit = excluded.unit,
            source = excluded.source, derived = true`,
-        [row.sex, row.ageMin, row.ageMax, row.nutrient, row.kind, row.value, row.source],
+        [row.sex, row.ageMin, row.ageMax, row.nutrient, row.kind,
+         row.value, row.unit, row.source],
       );
     }
   }
@@ -365,11 +375,12 @@ async function main(): Promise<void> {
     console.log(dryRun ? 'Simulation — rien n’a été écrit.\n' : '');
     for (const report of reports) {
       if (report.file === '(dérivé)') {
-        console.log('cibles dérivées');
+        console.log('repères écrits par le seed');
         console.log(
-          `  ${report.written} repère(s) en grammes, calculés depuis les intervalles\n` +
-            '  en % de l’AET et les besoins énergétiques. Marqués `derived` en base,\n' +
-            '  avec leur chaîne de calcul complète en source.',
+          `  ${report.written} repère(s), tous marqués \`derived\` en base :\n` +
+            '  les cibles en grammes, calculées depuis les intervalles en % de l’AET\n' +
+            '  et les besoins énergétiques, avec leur chaîne de calcul en source ;\n' +
+            '  et le repère d’énergie des majeurs, recopié tel quel (017).',
         );
         continue;
       }

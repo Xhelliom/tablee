@@ -14,7 +14,7 @@
  */
 import type { DailyBalance, Nutrient } from '../api.ts';
 import { useState } from 'react';
-import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, NUTRIENT_SHORT } from '../design/vocabulary.ts';
+import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, NUTRIENT_SHORT } from '../design/vocabulary.ts';
 import { formatPercentRange } from '../design/quantities.ts';
 import { IconInfo } from '../icons.tsx';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
@@ -50,9 +50,13 @@ export function NutrientBars({
   firstName?: string;
 }): React.ReactElement {
   const [explaining, setExplaining] = useState(false);
-  const columns = BAR_NUTRIENTS.map((nutrient): Colonne => {
+  const columns = BILAN_NUTRIENTS.flatMap((nutrient): Colonne[] => {
     const bar = balance.bars.find((b) => b.nutrient === nutrient);
-    return {
+    // Pas de colonne « Énergie » sur un profil mineur (I5) : le serveur ne
+    // construit pas la barre, et une colonne vide à sa place laisserait
+    // entendre qu'elle est seulement indisponible.
+    if (bar === undefined && nutrient === 'kcal') return [];
+    return [{
       key: nutrient,
       short: NUTRIENT_SHORT[nutrient],
       label: NUTRIENT_LABELS[nutrient],
@@ -67,7 +71,7 @@ export function NutrientBars({
           : null,
       standing: bar?.standing ?? null,
       hasTarget: true,
-    };
+    }];
   });
   columns.push({
     key: 'plant',

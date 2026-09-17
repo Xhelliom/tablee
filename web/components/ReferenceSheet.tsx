@@ -8,14 +8,21 @@
  * être contestées. Cet écran est donc le pendant visible de la colonne
  * `source` — il rend la chaîne consultable sans ouvrir la base.
  *
- * ⚠️ **Aucun chiffre de calories ici** (I5). Les cibles en grammes dérivent
- * d'un besoin énergétique, mais c'est l'intervalle d'origine qu'on montre
- * (« 10 à 20 % de l'énergie de la journée ») et les documents cités — jamais
- * le terme en kcal. Il reste en base pour qui veut refaire le calcul.
+ * ⚠️ **Les calories, et seulement celles d'un majeur** (I5). Sur un profil
+ * mineur il n'y a pas de barre « Énergie » — le serveur ne la construit pas —
+ * donc pas de section ici non plus, et la boucle ci-dessous saute une barre
+ * absente sans rien afficher à sa place.
+ *
+ * Ce qui n'a pas changé le 17/09/2026 : la **chaîne de dérivation** des cibles
+ * en grammes ne s'affiche toujours pas. Elle contient un besoin énergétique
+ * (« × 2263 kcal »), et c'est l'intervalle d'origine qu'on montre en face des
+ * macros (« 10 à 20 % de l'énergie de la journée »), pas ce terme-là. Le
+ * chiffre de calories d'un majeur est le repère de sa propre barre, pas une
+ * étape de calcul recopiée sur celle d'un enfant.
  */
 import type { DailyBalance, NutrientBar } from '../api.ts';
-import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
-import { formatGrams } from '../design/quantities.ts';
+import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
+import { formatQuantity } from '../design/quantities.ts';
 import { IconClose } from '../icons.tsx';
 // Import circulaire avec `Bilan`, qui ouvre cette feuille : sans danger tant
 // que ces trois noms ne servent qu'au rendu, jamais au chargement du module.
@@ -83,7 +90,7 @@ export function ReferenceSheet({ balance, firstName, onClose }: Props): React.Re
             </ul>
           </section>
 
-          {BAR_NUTRIENTS.map((nutrient) => {
+          {BILAN_NUTRIENTS.map((nutrient) => {
             const bar = balance.bars.find((b) => b.nutrient === nutrient);
             return bar === undefined ? null : (
               <Explanation key={nutrient} bar={bar} />
@@ -134,9 +141,9 @@ function Explanation({ bar }: { bar: NutrientBar }): React.ReactElement {
         <>
           <p style={text}>
             {bar.referenceMax === null
-              ? `Objectif du jour : ${formatGrams(bar.reference.value)}.`
-              : `Objectif du jour : ${formatGrams(bar.reference.value)}, ` +
-                `à ne pas dépasser ${formatGrams(bar.referenceMax.value)}.`}
+              ? `Objectif du jour : ${formatQuantity(bar.reference.value, bar.reference.unit)}.`
+              : `Objectif du jour : ${formatQuantity(bar.reference.value, bar.reference.unit)}, `
+                + `à ne pas dépasser ${formatQuantity(bar.referenceMax.value, bar.referenceMax.unit)}.`}
           </p>
 
           {bar.energyShare !== null && bar.energyShare.min !== null ? (
@@ -154,16 +161,27 @@ function Explanation({ bar }: { bar: NutrientBar }): React.ReactElement {
             </p>
           ) : null}
 
+          {bar.reference.kind === 'BNM' ? (
+            <p style={text}>
+              C’est un <b>besoin moyen</b>, pour une population et une activité
+              physique moyenne — pas une ration à atteindre, et encore moins à
+              ne pas dépasser. Deux personnes du même âge n’ont pas le même
+              besoin, et il change d’un jour à l’autre.
+            </p>
+          ) : null}
+
           <ul style={sources}>
             {bar.reference.citations.map((citation) => (
               <li key={citation}>{citation}</li>
             ))}
           </ul>
 
-          {bar.reference.derived ? (
+          {bar.reference.derived && bar.reference.kind !== 'BNM' ? (
             // Répété par nutriment, et pas ramassé en note de bas de page :
             // les fibres, elles, sont recopiées telles quelles. La distinction
-            // doit se lire en face de la valeur concernée.
+            // doit se lire en face de la valeur concernée. L'énergie est dans
+            // le même cas que les fibres — `derived` dit qu'elle est écrite par
+            // le seed, pas qu'elle est calculée (017).
             <p style={{ ...text, color: 'var(--text-muted)', marginTop: 3, fontSize: 11 }}>
               Valeur calculée à partir de ces sources, pas recopiée d’un tableau.
             </p>

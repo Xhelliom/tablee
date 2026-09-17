@@ -675,6 +675,87 @@ avant l'envoi (`FaceDetector` n'est pas disponible partout).
 
 ---
 
+## 24. L'énergie est chiffrée par personne, et 145 aliments n'en ont pas
+
+**Où** — `db/migrations/017_repere_energie.sql`, `server/nutrition/derive.ts`
+(`energyTargets`), `server/nutrition/daily.ts`, `web/design/vocabulary.ts`
+(`BILAN_NUTRIENTS`).
+
+**La décision, et par qui.** Le propriétaire a demandé un indicateur énergie le
+17/09/2026 et tranché, après mesure, sur une **barre chiffrée dans le bilan
+d'une personne, majeurs seulement**. Deux objections lui ont été présentées et
+écartées en connaissance de cause : le §9 s'interdisait de faire sortir
+`energy_reference` à l'écran, et R7 dit que le vocabulaire du produit parle
+qualité et variété, pas calories. Les encarts datés du §8 et du §9 de la spec
+portent le renversement ; l'en-tête de la 017 porte le raisonnement.
+
+**Ce que ça coûte, et qu'on assume.**
+
+- **Une barre d'énergie ressemble à un objectif**, même sans le mot. Elle se
+  remplit, elle a un repère à 100 %, et « il manque 400 kcal » se lit comme une
+  consigne. Le repère est pourtant un besoin **moyen de population** à activité
+  physique moyenne (`BNM`) : deux adultes du même âge n'ont pas le même besoin,
+  et il change d'un jour à l'autre. La feuille « D'où viennent ces repères » le
+  dit en toutes lettres ; la barre, elle, ne peut pas le dire.
+- **Les tranches prolongées valent pour l'énergie aussi.** Le besoin d'un homme
+  de 80 ans est celui d'un homme de 40 (dette n° 1) — et cette fois il est
+  affiché tel quel, plus seulement utilisé comme terme de calcul.
+- **145 aliments sur 3 484 n'ont pas d'énergie publiée** par l'ANSES (vinaigre
+  de cidre, câpres, gousse de vanille, jarret de bœuf cru). Ils restent à
+  `NULL`, un repas qui en contient ressort en « au moins X », et c'est le
+  comportement voulu (§9).
+
+**Ce qui a été essayé pour ces 145, et écarté.** Deux façons de combler le trou
+ont été mesurées avant de choisir de ne rien dériver :
+
+1. **Prendre un aliment voisin.** Testée sur les 2 196 aliments dont on connaît
+   la vraie valeur : le plus bas de la famille se trompe de −39 % en médiane,
+   la médiane de la famille passe **au-dessus** de la vraie valeur une fois sur
+   deux. Un aliment voisin est un autre aliment.
+2. **Recalculer avec la formule du Règlement (UE) n° 1169/2011.** Elle retrouve
+   92 % des énergies publiées à ±2 % — mais c'est un test circulaire. Ciqual
+   2025 publie l'énergie de 716 aliments que Ciqual 2020 laissait vides :
+   appliquée à ces 716, la même formule ne tombe à ±2 % que dans **57 % des
+   cas**, dépasse la vraie valeur une fois sur trois, et rate des édulcorants
+   d'un facteur 70. Un aliment dont l'ANSES retient l'énergie est précisément
+   un aliment qu'elle connaît mal.
+
+Le détail chiffré est dans `docs/indicateurs-possibles.md` §1, avec le piège
+qui fausse la formule d'un facteur 2 sur les produits « sans sucres » : chez
+Ciqual, **les polyols sont déjà comptés dans les glucides**.
+
+**Ce qui le lèverait.** La table Ciqual suivante, et rien d'autre. Le trou est
+passé de 887 aliments à 145 entre 2020 et 2025 sans qu'on écrive une ligne de
+calcul ; c'est le bon rythme pour un référentiel public.
+
+---
+
+## 25. Un export Ciqual posé à la main l'emporte, même s'il est plus vieux
+
+**Où** — `scripts/seed-food.ts` (`locateExports` avant `downloadCiqual`).
+
+Le seed préfère les fichiers déjà présents dans `data/ciqual/` (ou `--dir`) à
+la source épinglée. C'est voulu — `--dir` sert à apporter un export sur un
+cluster sans sortie réseau — et c'était sans conséquence tant que la table ne
+changeait pas.
+
+Depuis la montée à Ciqual 2025, un poste de développement qui a encore les
+fichiers de 2020 sur son disque **réimporte la table 2020**, avec ses 887 trous
+d'énergie, en écrasant la 2025. Le journal le dit (« Export lu depuis … — posé
+à la main, donc non vérifié à la source ») et `referential_import` garde la
+trace (`version = 'local'`), mais il faut lire.
+
+**Ce que ça coûte.** Une confusion de dix minutes en développement, et rien en
+production : un pod neuf a un `emptyDir` vide, et il n'existe pas de cas où il
+tourne avec le disque d'un autre déploiement.
+
+**Ce qui le lèverait.** Comparer les noms de fichiers trouvés à ceux du
+manifeste et refuser les dépareillés — au prix de casser le seul usage de
+`--dir` qui compte, celui d'un export qu'on apporte parce qu'on ne peut pas le
+télécharger. À faire le jour où quelqu'un s'y fait prendre deux fois.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

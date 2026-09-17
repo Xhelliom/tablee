@@ -44,6 +44,10 @@ const REPERES_DE_TEST: ReferenceTable[] = [
   // il ne doit jamais servir de dénominateur à une consommation en grammes.
   { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MIN', basis: 'pct_aet', derived: false, value: 35, unit: '%', source: 'fixture de test' },
   { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'fat_g', kind: 'IR_MAX', basis: 'pct_aet', derived: false, value: 40, unit: '%', source: 'fixture de test' },
+  // Le repère d'énergie (017) : majeurs seulement, en kcal, nature BNM. Il
+  // n'existe volontairement pour aucune tranche de mineur — le seed n'en
+  // écrit pas, et la barre ne doit pas dépendre de ça pour disparaître.
+  { sex: 'ALL', ageMin: 18, ageMax: 120, nutrient: 'kcal', kind: 'BNM', basis: 'absolu', derived: true, value: 2100, unit: 'kcal', source: 'fixture de test' },
 ];
 
 const bar = (result: ReturnType<typeof bilanJournalier>, nutrient: string) => {
@@ -53,6 +57,30 @@ const bar = (result: ReturnType<typeof bilanJournalier>, nutrient: string) => {
 };
 
 describe('bilanJournalier', () => {
+  // ── I5 : pas de chiffre de calories sur un profil mineur ───────────────────
+  it('ne construit pas de barre « Énergie » sous 18 ans', () => {
+    const repas1 = repas({ kcal: 700, proteinG: 25 });
+    const mineur = bilanJournalier({
+      sex: 'F', age: 17, references: REPERES_DE_TEST, meals: [repas1],
+    });
+    assert.equal(
+      mineur.bars.find((b) => b.nutrient === 'kcal'), undefined,
+      'aucune barre kcal, pas même une barre « indisponible » : I5',
+    );
+    // Le reste du bilan est intact — ce n'est pas le bilan qu'on ampute.
+    assert.equal(bar(mineur, 'proteinG').consumed, 25);
+
+    // Un jour de plus, et la barre existe : c'est la majorité qui décide, pas
+    // la présence de la valeur, qui était là dans les deux cas.
+    const majeur = bilanJournalier({
+      sex: 'F', age: 18, references: REPERES_DE_TEST, meals: [repas1],
+    });
+    assert.equal(bar(majeur, 'kcal').consumed, 700);
+    assert.equal(bar(majeur, 'kcal').reference?.value, 2100);
+    assert.equal(bar(majeur, 'kcal').reference?.unit, 'kcal');
+    assert.equal(bar(majeur, 'kcal').percent, 33.3);
+  });
+
   it('somme les repas de la journée au prorata de la part figée', () => {
     const result = bilanJournalier({
       sex: 'M', age: 40, references: REPERES_DE_TEST,

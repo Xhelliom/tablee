@@ -37,6 +37,8 @@
  * Un adolescent très sportif en dépense davantage.
  */
 
+import { MAJORITE } from './age.ts';
+
 /**
  * Facteurs de conversion énergétique — Règlement (UE) n° 1169/2011, Annexe
  * XIV. Les fibres (2 kcal/g) n'y figurent pas parce que leur repère est déjà
@@ -79,6 +81,21 @@ export interface DerivedReference extends AgeRange {
   kind: string;
   /** Grammes par jour. */
   value: number;
+  source: string;
+}
+
+/**
+ * Le besoin énergétique d'une tranche, prêt à entrer dans `nutrient_reference`
+ * comme repère de la barre « Énergie ». Séparé de `DerivedReference` parce
+ * qu'il n'est pas en grammes et qu'il ne se dérive de rien : il se recopie.
+ */
+export interface EnergyTarget extends AgeRange {
+  sex: 'F' | 'M';
+  nutrient: 'kcal';
+  kind: 'BNM';
+  /** Kilocalories par jour. */
+  value: number;
+  unit: 'kcal';
   source: string;
 }
 
@@ -148,6 +165,50 @@ export function deriveTargets(
 }
 
 /**
+ * Le besoin énergétique, recopié en repère affichable — **majeurs seulement**.
+ *
+ * ⚠️ Renversement du §9, décidé par le propriétaire le 17/09/2026 : le besoin
+ * énergétique ne sortait jamais à l'écran, il n'était qu'un terme de calcul
+ * pour `deriveTargets`. Il devient la cinquième barre. Lire l'en-tête de la
+ * migration 017 avant d'y toucher — les deux objections écartées y sont, et
+ * ce qui ne l'est pas non plus.
+ *
+ * **I5 tient entièrement.** Aucune ligne n'est produite avant 18 ans : la
+ * boucle commence à la majorité, et une tranche de la source qui l'enjamberait
+ * serait coupée là plutôt que d'être écartée en entier. C'est le premier des
+ * trois filets ; les deux autres sont dans `bilanJournalier` et dans l'écran.
+ *
+ * Rien n'est calculé ici, à la différence de `deriveTargets` : la valeur est
+ * celle d'`energy_reference`, au kcal près, et sa `source` est celle de la
+ * ligne d'origine. Elle porte quand même `derived` en base — non qu'elle soit
+ * un produit arithmétique, mais parce qu'elle est **écrite par le seed** et
+ * réécrite à chaque passage, comme ses voisines, et non saisie dans un CSV.
+ */
+export function energyTargets(energies: EnergyReference[]): EnergyTarget[] {
+  const out: EnergyTarget[] = [];
+
+  for (const sex of ['F', 'M'] as const) {
+    const perYear: (EnergyTarget | null)[] = [];
+    for (let age = MAJORITE; age <= MAX_AGE; age += 1) {
+      const energy = pick(energies, sex, age, () => true);
+      perYear[age] = energy === null ? null : {
+        sex,
+        ageMin: age,
+        ageMax: age,
+        nutrient: 'kcal',
+        kind: 'BNM',
+        value: energy.kcal,
+        unit: 'kcal',
+        source: energy.source,
+      };
+    }
+    out.push(...merge(perYear));
+  }
+
+  return out.sort((a, b) => a.sex.localeCompare(b.sex) || a.ageMin - b.ageMin);
+}
+
+/**
  * La ligne qui couvre cet âge pour ce sexe. Une ligne propre au sexe l'emporte
  * sur une ligne `ALL` : les repères de l'ANSES se sexuent à l'adolescence, et
  * retomber sur la ligne générique alors qu'une ligne précise existe donnerait
@@ -167,9 +228,11 @@ function pick<T extends AgeRange & { sex: 'F' | 'M' | 'ALL' }>(
 }
 
 /** Recolle les années consécutives de même valeur en une seule tranche. */
-function merge(perYear: (DerivedReference | null)[]): DerivedReference[] {
-  const out: DerivedReference[] = [];
-  let current: DerivedReference | null = null;
+function merge<T extends AgeRange & { value: number; source: string }>(
+  perYear: (T | null)[],
+): T[] {
+  const out: T[] = [];
+  let current: T | null = null;
 
   for (let age = 0; age <= MAX_AGE; age += 1) {
     const row = perYear[age] ?? null;

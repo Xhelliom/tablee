@@ -67,11 +67,37 @@ export const NUTRIENT_SHORT: Record<Nutrient, string> = {
 };
 
 /**
- * Les quatre barres chiffrées de l'accueil. `kcal` n'en fait pas partie : les
- * calories existent en base, elles ne sont jamais la métrique mise en avant
- * (R7), et jamais un objectif sur un profil mineur (I5).
+ * Les quatre barres de macronutriments, partout où le bilan se résume : le
+ * cercle d'une personne, les compteurs du foyer, la fiche d'un repas.
+ *
+ * `kcal` n'y est pas, et l'anneau dit pourquoi mieux qu'un commentaire : il a
+ * **cinq** emplacements, quatre macros et le végétal, qui sont les cinq barres
+ * du §8 et les cinq couleurs du §8ter. L'énergie n'est pas une sixième
+ * couleur, et elle n'est jamais ce qu'on résume en premier (R7).
  */
 export const BAR_NUTRIENTS: Nutrient[] = ['proteinG', 'carbG', 'fatG', 'fiberG'];
+
+/**
+ * Le bilan **détaillé** d'une personne — la carte de l'accueil et la fiche
+ * d'un convive. C'est le seul endroit où l'énergie est chiffrée.
+ *
+ * ⚠️ **Ajoutée le 17/09/2026**, à la demande du propriétaire : le §9 de la
+ * spec s'interdisait de faire sortir le besoin énergétique de la base, et R7
+ * rappelle que le vocabulaire du produit parle qualité et variété. Lire
+ * l'en-tête de la migration 017 : les deux objections y sont, et ce qu'elles
+ * n'emportent pas non plus.
+ *
+ * Deux choses tiennent, et ne se négocient pas :
+ *
+ * - **L'énergie est en dernier**, après les quatre macros, et son point est
+ *   gris (`--text-secondary`) là où les autres portent leur couleur du §8ter.
+ *   Elle est dans le bilan ; elle n'en est pas la tête.
+ * - **Elle est absente d'un profil mineur** (I5). Le serveur ne construit pas
+ *   la barre sous 18 ans : un composant qui boucle sur cette liste doit donc
+ *   accepter qu'une barre manque et ne rien afficher à sa place — surtout pas
+ *   « indisponible », qui laisserait entendre qu'elle viendra.
+ */
+export const BILAN_NUTRIENTS: Nutrient[] = [...BAR_NUTRIENTS, 'kcal'];
 
 /** Les cinq couleurs — sur des données nutritionnelles, et nulle part ailleurs. */
 export const NUTRIENT_COLOR: Record<Nutrient | 'plant', string> = {

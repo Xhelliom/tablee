@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { deriveTargets, KCAL_PER_GRAM, type EnergyReference, type PercentReference } from './derive.ts';
+import {
+  deriveTargets, energyTargets, KCAL_PER_GRAM,
+  type EnergyReference, type PercentReference,
+} from './derive.ts';
 
 const pct = (
   nutrient: string, kind: string, value: number, ageMin: number, ageMax: number,
@@ -160,5 +163,51 @@ describe('tranches prolongées', () => {
     }
     // Et toujours rien là où aucune source ne parle.
     assert.equal(couvre(3), false, 'aucune prolongation vers le bas');
+  });
+});
+
+describe('energyTargets', () => {
+  it('recopie le besoin énergétique d’un majeur, sans le recalculer', () => {
+    const cibles = energyTargets([energy('M', 18, 69, 2600)]);
+    assert.equal(cibles.length, 1);
+    assert.deepEqual(
+      { ...cibles[0], source: '' },
+      { sex: 'M', ageMin: 18, ageMax: 69, nutrient: 'kcal', kind: 'BNM', value: 2600, unit: 'kcal', source: '' },
+    );
+    // La source est celle de la ligne d'origine, pas une chaîne de calcul :
+    // rien n'a été dérivé de rien.
+    assert.equal(cibles[0]?.source, 'BE M');
+  });
+
+  it('ne produit aucune ligne avant 18 ans (I5)', () => {
+    // Les besoins énergétiques des enfants sont chargés et servent à dériver
+    // les cibles en grammes. Ils ne doivent jamais devenir un repère affiché.
+    const cibles = energyTargets([
+      energy('M', 4, 6, 1521), energy('M', 7, 10, 1851),
+      energy('M', 11, 14, 2263), energy('M', 15, 17, 2826),
+      energy('F', 15, 17, 2253),
+    ]);
+    assert.deepEqual(cibles, []);
+  });
+
+  it('coupe à la majorité une tranche qui l’enjamberait', () => {
+    // Aucune source ne publie une telle tranche aujourd'hui. Si l'une le
+    // faisait, la moitié mineure ne doit pas passer avec l'autre.
+    const cibles = energyTargets([energy('F', 15, 59, 2100)]);
+    assert.equal(cibles.length, 1);
+    assert.equal(cibles[0]?.ageMin, 18);
+    assert.equal(cibles[0]?.ageMax, 59);
+  });
+
+  it('recolle les tranches de même valeur, comme les cibles en grammes', () => {
+    // 18-69 et 70-120 portent la même valeur mais **pas** la même source : la
+    // seconde est une prolongation assumée (dette n° 1). Elles restent deux
+    // lignes, sinon la nuance disparaîtrait du repère affiché.
+    const cibles = energyTargets([
+      energy('M', 18, 69, 2600),
+      { sex: 'M', ageMin: 70, ageMax: 120, kcal: 2600, source: 'BE M prolongé' },
+    ]);
+    assert.equal(cibles.length, 2);
+    assert.equal(cibles[1]?.source, 'BE M prolongé');
   });
 });
