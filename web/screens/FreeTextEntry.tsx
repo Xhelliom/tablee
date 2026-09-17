@@ -239,7 +239,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         })),
       });
       // Sans l'attendre : voir `POST /api/meals/:id/image`.
-      if (meal.source === 'ia') {
+      if (meal.source === 'ia' || meal.source === 'photo') {
         void api.post(`/api/meals/${meal.id}/image`, { description: décrits.join('\n') })
           .catch(() => undefined);
       }

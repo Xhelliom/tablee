@@ -1502,7 +1502,8 @@ on accumule, on ne juge personne.
       encart du §5
 - [ ] Synthèse hebdomadaire + `facts_used`
 - [ ] `family_note` (saisie et relecture)
-- [ ] Photo en fallback
+- [x] Photo en fallback — 17/09/2026, source `photo`, photo non conservée, couverture
+      redessinée par l'IA (dette n° 23)
 - [ ] **Revue manuelle** : 4 synthèses successives relues — aucun jugement sur
       personne, aucun chiffre inventé
 

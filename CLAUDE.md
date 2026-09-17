@@ -325,8 +325,9 @@ l'invérifiable.
 > même route de découpage, `DishPhoto` dans `server/llm/index.ts`). L'image
 > réduite part chez Anthropic avec la consigne, **sans filtre** — rien ne
 > retire une personne d'une image, l'écran demande de ne cadrer que
-> l'assiette — et **n'est pas conservée**. Le repas porte la source `photo`,
-> à confiance « basse » (§11), pas `ia`. Dette n° 23.
+> l'assiette — et **n'est pas conservée** : la couverture est redessinée par
+> l'IA depuis les lignes. Le repas porte la source `photo`, à confiance
+> « basse » (§11), pas `ia`. Dette n° 23.
 
 ---
 

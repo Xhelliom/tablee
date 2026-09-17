@@ -167,7 +167,9 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
 
       const meal = await getMeal(request.db, householdId, id);
       if (meal === null) throw ApiError.notFound('repas introuvable');
-      if (meal.source !== 'ia' || meal.items.length === 0) {
+      // `photo` aussi (17/09/2026) : la vraie photo n'est pas conservée, la
+      // couverture se dessine depuis les lignes, comme pour un texte.
+      if ((meal.source !== 'ia' && meal.source !== 'photo') || meal.items.length === 0) {
         throw new ApiError(409, 'repas_sans_ia', 'seul un repas décrit avec l’IA reçoit une image');
       }
       if (meal.imageUrl !== null) return { imageUrl: meal.imageUrl };

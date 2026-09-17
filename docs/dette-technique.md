@@ -660,19 +660,18 @@ personne ») et la consigne au modèle de ne décrire aucune personne. C'est un
 usage demandé, pas une garantie.
 
 **La photo n'est pas conservée.** Ni en base, ni sur disque : elle sert au
-découpage et disparaît. La carte du repas n'a donc pas d'image, et
-`POST /api/meals/:id/image` ne dessine que les repas de source `ia`. Garder
-la vraie photo serait mieux qu'une image générée — mais c'est stocker une
-photo prise dans une cuisine, avec ce qu'elle cadre.
+découpage et disparaît ; `meal.photo_path` reste vide. Tranché par le
+propriétaire le 17/09/2026 : la couverture est **redessinée** par l'IA depuis
+les lignes, comme pour un texte. Une image générée à la place de la vraie,
+c'est le prix de ne pas stocker une photo prise dans une cuisine, avec ce
+qu'elle cadre.
 
 **Ce que ça coûte.** Une image de personne peut partir chez Anthropic si
 l'écran est ignoré. Une confiance « basse » sur tout repas photographié, même
 corrigé ligne à ligne : c'est la règle du §11, elle ne distingue pas.
 
 **Ce qui le lèverait.** Une passe de détection de visages **côté téléphone**
-avant l'envoi (`FaceDetector` n'est pas disponible partout) ; et pour la
-conservation, décider si une photo de repas est une donnée du foyer comme une
-autre, puis la stocker dans `dish_image` avec le même consentement.
+avant l'envoi (`FaceDetector` n'est pas disponible partout).
 
 ---
 

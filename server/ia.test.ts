@@ -272,6 +272,11 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal((await call(avecIA, 'POST', `/api/meals/${àLaMain.id}/image`, {})).status, 409);
       assert.deepEqual(dessinés, [], 'rien ne part');
 
+      // Un repas photographié n'a pas gardé sa photo : sa couverture se dessine comme pour un texte.
+      const photographié = await repas(léa, { source: 'photo', items: [truffe('une truffe')] });
+      assert.equal((await call(avecIA, 'POST', `/api/meals/${photographié.id}/image`, {})).status, 200);
+      assert.equal(dessinés.length, 1);
+
       const décrit = await repas(léa, { items: [truffe('une truffe')] });
       const { body } = await call(avecIA, 'POST', `/api/meals/${décrit.id}/image`, {});
       const voisin = await signUpWithHousehold(auth, pool, 'voisin@exemple.test');
