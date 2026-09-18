@@ -28,8 +28,8 @@ import { useState } from 'react';
 import type { BarState, DailyBalance, Nutrient, NutrientBar, PlantBar } from '../api.ts';
 import { Avatar } from './Avatar.tsx';
 import { IconCheckCircle, IconInfo, IconPlusCircle, IconUpCircle } from '../icons.tsx';
-import { BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
-import { formatGrams, formatPercentRange } from '../design/quantities.ts';
+import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
+import { formatPercentRange, formatQuantity } from '../design/quantities.ts';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
 
 /** Le haut de l'échelle, en % du repère. */
@@ -101,14 +101,21 @@ export function BilanCard({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 8 }}>
-        {BAR_NUTRIENTS.map((nutrient) => (
-          <NutrientRow
-            key={nutrient}
-            nutrient={nutrient}
-            bar={balance.bars.find((b) => b.nutrient === nutrient)}
-            referencesLoaded={referencesLoaded}
-          />
-        ))}
+        {BILAN_NUTRIENTS.map((nutrient) => [
+          nutrient, balance.bars.find((b) => b.nutrient === nutrient),
+        ] as const)
+          // Un bilan de mineur n'a pas de barre « Énergie » (I5) : pas de ligne
+          // grise à la place, pas de ligne du tout. Les quatre macros, elles,
+          // gardent leur ligne même sans valeur — c'est l'absence qu'on montre.
+          .filter(([nutrient, bar]) => nutrient !== 'kcal' || bar !== undefined)
+          .map(([nutrient, bar]) => (
+            <NutrientRow
+              key={nutrient}
+              nutrient={nutrient}
+              bar={bar}
+              referencesLoaded={referencesLoaded}
+            />
+          ))}
       </div>
 
       <PlantRow plant={balance.plant} />
@@ -343,14 +350,15 @@ function standingOf(bar: NutrientBar | undefined, referencesLoaded: boolean): { 
   }
   if (bar.percent === null) return { tone: 'unknown', text: 'Donnée indisponible' };
   if (bar.standing === 'au_dela' && bar.excess !== null) {
-    return { tone: 'over', text: `${formatGrams(bar.excess)} au-delà` };
+    return { tone: 'over', text: `${formatQuantity(bar.excess, bar.reference.unit)} au-delà` };
   }
   if (bar.standing === 'sous' && bar.remaining !== null && bar.remaining > 0) {
     // Le reste se compte depuis la borne basse : quand la valeur est encadrée
     // ou partielle, il en manque peut-être moins. On ne réclame pas ce qui a
     // peut-être déjà été mangé.
     const nuance = bar.state === 'disponible' ? '' : ' au plus';
-    return { tone: 'todo', text: `Il manque ${formatGrams(bar.remaining)}${nuance}` };
+    const manque = formatQuantity(bar.remaining, bar.reference.unit);
+    return { tone: 'todo', text: `Il manque ${manque}${nuance}` };
   }
   return { tone: 'ok', text: 'Dans le repère' };
 }

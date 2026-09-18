@@ -20,10 +20,18 @@
 # Dehors aussi, et ça ne se négocie pas : aucun secret. `TABLEE_SECRET` et
 # `DATABASE_URL` viennent de l'environnement, jamais d'un `ENV` de ce fichier.
 
+# ⚠️ **L'image de base est épinglée par empreinte depuis le 18/09/2026**, et pas
+# par confort. `node:22-alpine` a été republiée le 17/09 à 22 h 19 — même Node
+# 22.23.2, reconstruit — et son binaire arm64 meurt sur une instruction
+# illégale sous QEMU dès `npm ci`. Or l'arm64 n'est pas une option : la prod
+# tourne sur un Raspberry Pi. Celle-ci est l'image du 29/07, celle que la prod
+# fait tourner. Avant de la « mettre à jour » : dette n° 26.
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Construction du front
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:22-alpine AS build
+FROM ${NODE_IMAGE} AS build
 
 WORKDIR /app
 
@@ -42,7 +50,7 @@ RUN npm run build:web
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Dépendances de service
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:22-alpine AS deps
+FROM ${NODE_IMAGE} AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -54,7 +62,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. L'image de service
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM ${NODE_IMAGE} AS runtime
 
 ENV NODE_ENV=production \
     PORT=3000 \

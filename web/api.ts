@@ -166,9 +166,15 @@ export interface NutrientReference {
   nutrient: string;
   value: number;
   unit: string;
-  kind: 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX';
+  /** `BNM` est le besoin **moyen** — celui de l'énergie, et lui seul (017). */
+  kind: 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX' | 'BNM';
   basis: 'absolu' | 'pct_aet';
-  /** Calculée à partir d'autres lignes sourcées, pas recopiée d'un tableau. */
+  /**
+   * Écrite par le seed plutôt que saisie dans un CSV. Vrai des cibles en
+   * grammes, qui sont **calculées** à partir d'autres lignes sourcées, comme
+   * du repère d'énergie, qui n'est que **recopié** d'`energy_reference` :
+   * c'est `kind` qui distingue les deux, pas ce booléen.
+   */
   derived: boolean;
   source: string;
   /**

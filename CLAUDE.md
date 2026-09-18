@@ -114,6 +114,13 @@ pas filtré par la RLS.
   une cible. Sur un profil mineur le champ n'est pas grisé, il est absent :
   l'API refuse (422), la lecture masque, et une date corrigée qui rend le profil
   mineur efface la valeur. Ne pas « harmoniser » ces trois filets en un seul.
+  **Depuis la 017, l'énergie a une barre chiffrée — majeurs seulement**, sur
+  demande du propriétaire, et avec les mêmes trois filets : le seed n'écrit
+  aucun repère `kcal` avant 18 ans, `bilanJournalier` ne construit pas la barre
+  sous 18 ans, l'écran n'affiche rien à sa place. Elle reste la dernière du
+  bilan, en gris, et n'apparaît ni dans l'anneau, ni dans les compteurs du
+  foyer, ni sur la fiche d'un repas. Lire l'en-tête de la 017 avant d'y
+  toucher : c'est un renversement du §9, pas un oubli.
 - **Ne jamais envoyer au LLM** : prénoms, dates de naissance, allergènes, poids,
   photos de personnes. Uniquement des libellés d'aliments, des agrégats et des
   tranches d'âge.
@@ -176,15 +183,25 @@ Les valeurs se chargent depuis `db/seeds/*.csv`, versionnés, avec une colonne
 en manque une. Rien n'est téléchargé au démarrage : un fichier versionné se
 relit en diff, un fetch au boot ne se relit pas.
 
-> **Précisé le 14/09/2026 — la table Ciqual, et elle seule.** Les ~3 000
-> aliments de `food` ne sont pas une valeur qu'on saisit : c'est une archive de
-> 3,5 Mo publiée par l'ANSES, qu'aucun humain ne relit en diff de toute façon.
-> Le seed va donc la chercher tout seul. Ce que l'objection ci-dessus a de
-> juste est conservé : c'est l'**empreinte** qui est versionnée
-> (`db/seeds/ciqual-source.json`), et une archive qui ne lui correspond pas
-> n'est pas importée. `food` ne peut donc pas changer de contenu sans qu'un
+> **Précisé le 14/09/2026 — la table Ciqual, et elle seule.** Les ~3 500
+> aliments de `food` ne sont pas une valeur qu'on saisit : ce sont des dizaines
+> de Mo de XML publiés par l'ANSES, qu'aucun humain ne relit en diff de toute
+> façon. Le seed va donc les chercher tout seuls. Ce que l'objection ci-dessus
+> a de juste est conservé : c'est l'**empreinte** qui est versionnée
+> (`db/seeds/ciqual-source.json`), et un fichier qui ne lui correspond pas
+> n'est pas importé. `food` ne peut donc pas changer de contenu sans qu'un
 > commit le dise. Les quatre CSV, eux, ne bougent pas d'un pouce : ils restent
 > saisis à la main, source par source.
+>
+> **Mise à jour du 17/09/2026 — la table 2025.** L'export épinglé était celui
+> de 2020, qui ne publiait l'énergie que pour 2 298 aliments sur 3 185. La 2025
+> en couvre 3 339 sur 3 484. Ce qui change dans le code, et qui se voit :
+> l'ANSES ne publie plus de ZIP sur `ciqual.anses.fr` mais les fichiers XML un
+> par un sur l'entrepôt de la recherche (DOI `10.57745/RDMHWY`, Etalab 2.0),
+> **en UTF-8 et non plus en windows-1252** — l'encodage se lit désormais dans
+> la déclaration du fichier, il ne se suppose plus. Avant de « simplifier »
+> `decoderFor` ou de remettre une URL unique : la mesure qui a mené là est dans
+> `docs/indicateurs-possibles.md` §1.
 
 Le reste est tranché dans la spec. Les décisions y sont motivées pour pouvoir
 être contestées en connaissance de cause, pas pour être réouvertes par défaut.

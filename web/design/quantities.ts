@@ -48,6 +48,19 @@ export function formatGrams(grams: number | null): string {
   return grams >= 1000 ? `${nf.format(grams / 1000)} kg` : `${nf.format(grams)} g`;
 }
 
+/**
+ * Une quantité avec l'unité de son nutriment : des grammes pour les quatre
+ * macros, des kilocalories pour l'énergie (017).
+ *
+ * L'unité vient du repère, pas d'un test sur le nom du nutriment : c'est la
+ * source qui dit dans quoi elle compte, et une sixième ligne un jour n'aurait
+ * pas à venir se déclarer ici.
+ */
+export function formatQuantity(value: number | null, unit = 'g'): string {
+  if (value === null) return 'quantité inconnue';
+  return unit === 'g' ? formatGrams(value) : `${nf.format(value)}\u00a0${unit}`;
+}
+
 const nf2 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
 
 /** Un nombre nu — « 0,25 pièce », « 1,5 part » : la fraction se lit mieux en décimal. */

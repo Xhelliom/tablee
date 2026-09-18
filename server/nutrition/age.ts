@@ -14,9 +14,23 @@ export function ageAt(birthDate: string, on: Date = new Date()): number {
   return age;
 }
 
+/**
+ * L'âge à partir duquel un profil cesse d'être mineur.
+ *
+ * Nommé plutôt que recopié : I5 s'applique à plusieurs endroits — le poids
+ * (009), le repère énergétique et la barre « Énergie » (017) — et un 18 en
+ * dur dans chacun est un 18 qu'on oublie de changer dans l'un d'eux.
+ */
+export const MAJORITE = 18;
+
 /** Un profil mineur : I5 y interdit tout objectif chiffré de calories ou de poids. */
 export function isMinor(birthDate: string, on: Date = new Date()): boolean {
-  return ageAt(birthDate, on) < 18;
+  return isMinorAge(ageAt(birthDate, on));
+}
+
+/** Le même test, quand l'âge est déjà calculé. */
+export function isMinorAge(age: number): boolean {
+  return age < MAJORITE;
 }
 
 /**

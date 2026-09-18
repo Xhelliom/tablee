@@ -22,8 +22,12 @@ export const REFERENCE_KEYS = {
   kcal: 'kcal',
 } as const satisfies Record<Nutrient, string>;
 
-/** Vocabulaire de l'ANSES. `IR_MIN`/`IR_MAX` bornent un intervalle. */
-export type ReferenceKind = 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX';
+/**
+ * Vocabulaire de l'ANSES. `IR_MIN`/`IR_MAX` bornent un intervalle ; `BNM` est
+ * un besoin **moyen**, celui de l'énergie et de lui seul (017) — une RNP
+ * couvrirait 97,5 % de la population, ce qui n'a pas de sens pour l'énergie.
+ */
+export type ReferenceKind = 'AS' | 'RNP' | 'RN' | 'IR_MIN' | 'IR_MAX' | 'BNM';
 
 /**
  * Ce à quoi la valeur se rapporte.
@@ -138,7 +142,10 @@ export function findReference(
   // d'intervalle n'est qu'un plancher. `IR_MAX` est exclu d'emblée : un
   // plafond n'est pas une cible, et le prendre pour tel ferait viser le
   // maximum.
-  const order: ReferenceKind[] = ['RNP', 'RN', 'AS', 'IR_MIN'];
+  // `BNM` après `AS` : il ne concurrence rien — l'énergie n'a pas d'autre
+  // nature — mais un `indexOf` à −1 le ferait passer devant sans qu'on l'ait
+  // décidé, et la liste est ce qui documente l'ordre.
+  const order: ReferenceKind[] = ['RNP', 'RN', 'AS', 'BNM', 'IR_MIN'];
   const row = [...matches].sort(
     (a, b) => order.indexOf(a.kind) - order.indexOf(b.kind),
   )[0];

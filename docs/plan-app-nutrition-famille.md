@@ -585,6 +585,22 @@ Mot de passe hashé en argon2id. Pas de JWT — inutile ici, et plus dur à rév
 
 ## 8. Les 5 barres — **décidé**
 
+> ⚠️ **Une sixième s'ajoute le 17/09/2026 : l'énergie, majeurs seulement.**
+> Décidée par le propriétaire, contre les deux objections qui lui ont été
+> présentées — le §9 s'interdisait de faire sortir `energy_reference` de la
+> base, et R7 dit que le vocabulaire parle qualité et variété. Le texte
+> d'origine est conservé tel quel ci-dessous : les **cinq** barres restent
+> celles de l'anneau, des compteurs du foyer et de la fiche d'un repas, et ce
+> sont elles qui portent les cinq couleurs du §8ter.
+>
+> L'énergie n'est chiffrée que dans le **bilan détaillé** d'une personne, en
+> dernière position, en gris, et **jamais sur un profil mineur** (I5, trois
+> filets — voir l'en-tête de la migration 017). Ce qui l'a rendue possible est
+> une autre décision du même jour : la montée à la table Ciqual 2025, qui
+> publie l'énergie de 3 339 aliments sur 3 484 là où la 2020 en couvrait 2 298
+> sur 3 185. La mesure complète, y compris les deux façons de combler ce trou
+> qui ont été essayées et écartées, est dans `docs/indicateurs-possibles.md`.
+
 **Protéines · Glucides · Lipides · Fibres · Végétal**
 
 Affichage : **% du repère du jour**, par personne (R3).
@@ -779,9 +795,21 @@ vocabulaire système est la moitié de l'effet tableau de bord.
 > de calcul complète en `source`. Voir `db/seeds/` et
 > `server/nutrition/derive.ts`.
 >
-> Le besoin énergétique vit dans sa propre table (`energy_reference`) et **ne
-> sort jamais à l'écran** : I5 interdit un objectif chiffré de calories sur un
+> Le besoin énergétique vit dans sa propre table (`energy_reference`) et ~~**ne
+> sort jamais à l'écran**~~ : I5 interdit un objectif chiffré de calories sur un
 > profil mineur, et il ne sert ici qu'au calcul.
+>
+> ⚠️ **Renversé le 17/09/2026, par le propriétaire.** Il sort à l'écran, pour
+> les **majeurs seulement**, comme repère de la barre « Énergie » (§8). Le seed
+> le recopie alors dans `nutrient_reference` sous la nature `BNM` — un besoin
+> **moyen**, et pas une RNP : une RNP couvrirait 97,5 % de la population, ce
+> qui pour l'énergie ferait manger la moitié des gens au-delà de leur besoin.
+>
+> Ce que le renversement n'emporte pas, et qui tient toujours : **aucune ligne
+> n'est écrite avant 18 ans**, `bilanJournalier` ne construit pas la barre sous
+> 18 ans, et la **chaîne de dérivation** des cibles en grammes ne s'affiche
+> toujours pas — elle contient un nombre de calories (« × 2263 kcal ») qui
+> serait, lui, celui d'un enfant. Lire l'en-tête de la migration 017.
 >
 > Le point 4 ci-dessous tient intégralement : une tranche non couverte reste
 > absente et l'UI affiche « repère indisponible ». C'est le cas des 0-3 ans.

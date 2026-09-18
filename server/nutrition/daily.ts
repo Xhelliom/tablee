@@ -19,6 +19,7 @@
  * sans pourcentage. On ne remplace jamais un repère absent par celui de la
  * tranche d'âge voisine.
  */
+import { isMinorAge } from './age.ts';
 import { NUTRIENTS, type Macros, type Nutrient } from './compute.ts';
 import {
   findCeiling, findEnergyShareRange, findReference,
@@ -110,7 +111,14 @@ export interface BalanceInput {
 }
 
 export function bilanJournalier(input: BalanceInput): DailyBalance {
-  const bars = NUTRIENTS.map((nutrient) => bar(nutrient, input));
+  // I5 : pas de chiffre de calories sur un profil mineur. Pas une barre grise,
+  // pas une barre à zéro — **pas de barre**. Le filtre est ici, et pas dans
+  // l'écran, parce que tout ce qui lit un bilan passe par cette fonction : la
+  // route, l'assistant, la semaine. Deuxième des trois filets ; le premier est
+  // au seed (aucune ligne `kcal` avant 18 ans), le troisième à l'affichage.
+  const bars = NUTRIENTS
+    .filter((nutrient) => nutrient !== 'kcal' || !isMinorAge(input.age))
+    .map((nutrient) => bar(nutrient, input));
   return {
     bars,
     plant: plantBar(input),
