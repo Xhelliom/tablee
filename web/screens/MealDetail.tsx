@@ -28,7 +28,9 @@ import {
 } from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
-import { IconBowl, IconClose, IconPlus, IconStar, IconTrash } from '../icons.tsx';
+import {
+  IconBowl, IconChevron, IconClose, IconPlus, IconSearch, IconStar, IconTrash,
+} from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
   SLOT_WHEN, longDate,
@@ -462,21 +464,29 @@ function Composition({
  * automatiquement par ressemblance de chaîne produirait des rattachements faux
  * — et un rattachement faux fausse la part végétale sans le dire. On propose,
  * l'utilisateur tranche (§6, dernière étape).
+ *
+ * Le libellé Jow n'est qu'un point de départ, et il tombe parfois loin : il
+ * remplit un champ qui se réécrit. Sans lui, un ingrédient que la recherche
+ * rate reste non rattaché pour toujours — aucun autre écran ne permet de le
+ * reprendre.
  */
 function IngredientRow({
   ingredient, onLinked,
 }: { ingredient: RecipeIngredient; onLinked: () => void }): React.ReactElement {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(ingredient.label);
   const [results, setResults] = useState<FoodSummary[]>([]);
   const [done, setDone] = useState<string | null>(null);
 
-  const search = async (): Promise<void> => {
+  // Le libellé Jow sert de requête de départ, puis c'est ce qui est tapé. Ce
+  // sont des suggestions : la confirmation reste humaine, un rattachement faux
+  // faussant la part végétale sans le dire.
+  const search = async (text: string): Promise<void> => {
+    setQuery(text);
     setOpen(true);
-    // Le libellé Jow sert de requête de départ. Ce sont des suggestions : la
-    // confirmation reste humaine, un rattachement faux faussant la part
-    // végétale sans le dire.
+    if (text.trim().length < 2) { setResults([]); return; }
     const { foods } = await api.get<{ foods: FoodSummary[] }>(
-      `/api/foods/search?q=${encodeURIComponent(ingredient.label)}&limit=6`,
+      `/api/foods/search?q=${encodeURIComponent(text)}&limit=6`,
     );
     setResults(foods);
   };
@@ -514,33 +524,72 @@ function IngredientRow({
       </div>
       {done !== null ? (
         <span className="chip chip--success" style={{ marginTop: 5 }}>{done}</span>
+      ) : open ? (
+        // Un puits en retrait sous l'ingrédient, et non la suite de la liste :
+        // posées à plat, les propositions se lisaient comme des ingrédients de
+        // plus. Il remplace la pastille qui l'a ouvert, et reprend ses mots.
+        <div className="apparait" style={puits}>
+          <div className="spread">
+            <span className="label" style={{ margin: 0 }}>Rattacher à un aliment</span>
+            <button type="button" className="appbar__action"
+                    style={{ color: 'var(--text-muted)' }}
+                    aria-label="Fermer la recherche"
+                    onClick={() => setOpen(false)}>
+              <IconClose size={16} />
+            </button>
+          </div>
+          <label style={champ}>
+            <IconSearch size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <input
+              value={query}
+              aria-label={`Chercher l’aliment de ${ingredient.label}`}
+              placeholder="Chercher un aliment…"
+              onChange={(e) => { void search(e.target.value); }}
+              style={{
+                border: 0, outline: 'none', flex: 1, minWidth: 0, fontSize: 15,
+                background: 'transparent', fontFamily: 'inherit', color: 'var(--text-primary)',
+              }}
+            />
+          </label>
+          {results.length > 0 ? (
+            <div className="card groupe" style={{ marginTop: 8 }}>
+              {results.map((food) => (
+                <button key={food.id} type="button" className="row porte"
+                        onClick={() => { void link(food.id); }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 14 }}>{food.name}</span>
+                  {/* Rattacher un aliment sans teneur ne rendrait rien au bilan : le dire avant le tap. */}
+                  {food.nutrientsKnown ? null : <span className="meta">valeur inconnue</span>}
+                  <IconChevron size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                </button>
+              ))}
+            </div>
+          ) : query.trim().length >= 2 ? (
+            // Sous deux caractères rien n'a été cherché : ne pas annoncer un échec.
+            <p className="meta" style={{ marginTop: 8 }}>Aucun aliment trouvé.</p>
+          ) : null}
+        </div>
       ) : ingredient.foodId === null ? (
         <button type="button" className="chip chip--warning"
                 style={{ marginTop: 5, cursor: 'pointer' }}
-                onClick={() => { void search(); }}>
+                onClick={() => { void search(ingredient.label); }}>
           Rattacher à un aliment
         </button>
-      ) : null}
-      {open ? (
-        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0' }}>
-          {results.map((food) => (
-            <li key={food.id}>
-              <button type="button" onClick={() => { void link(food.id); }}
-                      style={{
-                        width: '100%', textAlign: 'left', padding: '7px 2px', fontSize: 13,
-                        background: 'none', border: 0, borderBottom: '.5px solid var(--border)',
-                        cursor: 'pointer',
-                      }}>
-                {food.name}
-              </button>
-            </li>
-          ))}
-          {results.length === 0 ? <li className="meta">Aucun aliment trouvé.</li> : null}
-        </ul>
       ) : null}
     </div>
   );
 }
+
+/** En retrait sur la ligne : `--surface-1` sous `--surface-2`, de jour comme de nuit. */
+const puits: React.CSSProperties = {
+  marginTop: 8, padding: '8px 10px 10px', borderRadius: 'var(--radius-card)',
+  background: 'var(--surface-1)',
+};
+
+const champ: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, padding: '10px 12px',
+  borderRadius: 'var(--radius)', border: '.5px solid var(--border-strong)',
+  background: 'var(--surface-2)',
+};
 
 const row: React.CSSProperties = {
   padding: '12px 16px',

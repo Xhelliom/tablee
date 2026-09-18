@@ -153,6 +153,22 @@ repas Jow, qui sont la majorité.
 **Ce qui l'allégerait.** Un écran listant les ingrédients non rattachés les
 plus fréquents, pour les traiter en série plutôt qu'au fil des repas.
 
+**Précisé le 17/09/2026 — la proposition se corrige, et ce qu'elle rate.** Le
+libellé Jow ne remplit plus une liste figée mais un champ qu'on réécrit : une
+proposition à côté de la plaque se rattrape sans quitter l'écran. Ce qui l'avait
+motivé : « Pâtes (orzo) » proposait « Pâté de campagne », le dictionnaire
+français réduisant les deux au même radical. Le tri fait désormais passer les
+mots retrouvés tels quels devant ceux que le dictionnaire a rapprochés, ce qui
+règle cette famille de cas.
+
+Reste un plafond, dont la recherche à la main ne sort pas : `to_tsvector`
+travaille sur le texte accentué. « pates » ne rend que des patates, « oeuf »
+trouve 38 aliments quand « œuf » les trouve aussi, mais « pate » ne trouvera
+jamais « pâtes ». Le clavier d'un téléphone met les accents, celui d'un
+ordinateur pressé non. **Ce qui le lèverait** : l'extension `unaccent` en tête
+de la configuration de recherche — une migration, et la même normalisation
+appliquée à la requête.
+
 ---
 
 ## 7. Une adresse e-mail n'est pas vérifiée
