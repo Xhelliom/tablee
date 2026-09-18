@@ -55,6 +55,40 @@ describe('recherche d’aliments', { skip: enabled ? false : SKIP_MESSAGE }, () 
     assert.deepEqual(await noms('Sauce tomate'), ['Sauce tomate']);
   });
 
+  it('ne propose pas « Pâté de campagne » pour « Pâtes (orzo) »', async () => {
+    // Le dictionnaire français réduit les deux au même radical, et le pâté est
+    // le nom le plus court : sans la correspondance littérale, il passait en
+    // tête. C'est le cas qui a motivé le champ de recherche du rattachement.
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'pate-campagne', 'Pâté de campagne', false),
+              ('manuel', 'pates-seches', 'Pâtes sèches standard, crues', true)`,
+    );
+    assert.equal((await noms('Pâtes (orzo)'))[0], 'Pâtes sèches standard, crues');
+    // Et en tapant soi-même, sans le « (orzo) » qui ne trouve rien.
+    assert.equal((await noms('pâtes'))[0], 'Pâtes sèches standard, crues');
+  });
+
+  it('trouve les pâtes tapées sans accents, et pas des patates', async () => {
+    // Un clavier d'ordinateur ne met pas les accents : « pates » ne rendait que
+    // « Patate douce », seul nom dont le radical commence ainsi sans accent.
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'patate', 'Patate douce, crue', true),
+              ('manuel', 'creme', 'Crème fraîche épaisse', false)`,
+    );
+    assert.match((await noms('pates'))[0] ?? '', /^Pâtes /);
+    assert.deepEqual(await noms('creme fraiche'), ['Crème fraîche épaisse']);
+  });
+
+  it('ne fait pas de « à » un mot exigé une fois l’accent retiré', async () => {
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'poulet', 'Poulet, moutarde', false)`,
+    );
+    assert.deepEqual(await noms('Poulet à la moutarde'), ['Poulet, moutarde']);
+  });
+
   it('ne dit « valeur inconnue » que sans aucune teneur : l’énergie absente n’y suffit pas', async () => {
     // Le muffin de Ciqual : protéines, glucides, lipides publiés, énergie « - ».
     await pool.query(

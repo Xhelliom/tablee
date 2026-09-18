@@ -88,10 +88,9 @@ export async function hasFoodReferential(db: UnscopedDb): Promise<boolean> {
 }
 
 export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Promise<FoodSummary[]> {
-  // Ciqual écrit « Oeuf », « Boeuf » : aucun nom du référentiel ne porte de
-  // ligature (vérifié). Celle d'un libellé Jow ou d'une saisie ne trouvait rien.
-  const trimmed = query.trim()
-    .replace(/œ/g, 'oe').replace(/Œ/g, 'Oe').replace(/æ/g, 'ae').replace(/Æ/g, 'Ae');
+  // Ni accents ni ligatures à retirer ici : `french_unaccent` (018) le fait des
+  // deux côtés, et « Œuf » trouve le « Oeuf » de Ciqual comme « pates » ses pâtes.
+  const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
   // Tous les mots d'abord. À défaut, n'importe lequel, ceux qui en portent le
@@ -110,11 +109,19 @@ export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Pr
 }
 
 /**
- * L'ordre : le plus de termes de la recherche d'abord — le dernier compté comme
- * un préfixe, sans quoi « cour » rangerait « courant » devant « courgette » —,
- * puis le nom le plus court. Pas `ts_rank`, qui préfère un mot répété : « Oeuf,
- * jaune (jaune d'oeuf), cru » passait devant « Oeuf, cru », alors que chez
- * Ciqual le nom le plus court est l'aliment de base.
+ * L'ordre : les mots retrouvés tels quels d'abord, puis le plus de termes de la
+ * recherche — le dernier compté comme un préfixe, sans quoi « cour » rangerait
+ * « courant » devant « courgette » —, puis le nom le plus court. Pas `ts_rank`,
+ * qui préfère un mot répété : « Oeuf, jaune (jaune d'oeuf), cru » passait devant
+ * « Oeuf, cru », alors que chez Ciqual le nom le plus court est l'aliment de
+ * base.
+ *
+ * Le premier critère existe parce que le dictionnaire français réduit « pâtes »
+ * et « pâté » au même radical : « Pâtes (orzo) » proposait « Pâté de campagne »,
+ * plus court, en tête. Une correspondance littérale n'est pas une ressemblance
+ * de chaîne — elle ne rapproche rien, elle départage ce que le dictionnaire a
+ * confondu. Sans accents elle aussi (`unaccent`), sinon « pates » tapé sans
+ * eux ne départagerait plus rien.
  */
 async function matchFoods(
   db: UnscopedDb,
@@ -128,15 +135,17 @@ async function matchFoods(
     plant_based: boolean | null; nutrients_known: boolean; unit_weights: Record<string, number>;
   }>(
     `with q as (
-       select websearch_to_tsquery('french', $1) as exact,
-              to_tsquery('french', $2) as prefix
+       select websearch_to_tsquery('french_unaccent', $1) as exact,
+              to_tsquery('french_unaccent', $2) as prefix
      )
      select f.id, f.name, f.source, f.category, f.plant_based, f.unit_weights,
             coalesce(f.protein_100g, f.carb_100g, f.fat_100g, f.fiber_100g) is not null as nutrients_known
      from food f, q
-     where to_tsvector('french', f.name) @@ coalesce(q.prefix, q.exact)
+     where to_tsvector('french_unaccent', f.name) @@ coalesce(q.prefix, q.exact)
      order by (select count(*) from unnest($4::text[]) terme
-                where to_tsvector('french', f.name) @@ to_tsquery('french', terme)) desc,
+                where position(unaccent(lower(replace(terme, ':*', ''))) in unaccent(lower(f.name))) > 0) desc,
+              (select count(*) from unnest($4::text[]) terme
+                where to_tsvector('french_unaccent', f.name) @@ to_tsquery('french_unaccent', terme)) desc,
               length(f.name) asc
      limit $3`,
     [raw, tsquery, limit, termes],
