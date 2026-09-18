@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import {
-  downloadCiqual, fingerprintExports, locateExports, readCiqualSource,
+  downloadCiqual, fingerprintExports, locateExports, readCiqualSource, retenirLocal,
 } from './ciqual-source.ts';
 
 const dossiers: string[] = [];
@@ -122,6 +122,20 @@ describe('téléchargement de l’export', () => {
 });
 
 describe('export posé à la main', () => {
+  it('n’impose un export dépareillé que si --dir le désigne', async () => {
+    // La règle de la dette n° 25. Dans `data/ciqual/`, où le seed écrit
+    // lui-même, un export laissé par un déploiement précédent n'écrase pas la
+    // table épinglée ; avec `--dir`, il reste souverain — c'est le seul usage
+    // de l'option qui compte, l'export qu'on apporte réseau coupé.
+    const épinglée = (await readCiqualSource()).sha256;
+    const autre = '0'.repeat(64);
+
+    assert.equal(retenirLocal(épinglée, épinglée, false), true, 'l’export épinglé passe');
+    assert.equal(retenirLocal(autre, épinglée, false), false, 'dépareillé, dossier par défaut');
+    assert.equal(retenirLocal(autre, épinglée, true), true, 'dépareillé, mais --dir explicite');
+    assert.equal(retenirLocal(null, épinglée, true), false, 'rien sur le disque, rien à retenir');
+  });
+
   it('ne confond pas alim_grp_*.xml avec alim_*.xml', async () => {
     const dir = await dossier();
     await writeFile(path.join(dir, 'alim_grp_2020_07_07.xml'), '<groupes/>');

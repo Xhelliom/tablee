@@ -47,7 +47,7 @@ import {
   type TeneurKind,
 } from '../server/food/ciqual.ts';
 import {
-  downloadCiqual, fingerprintExports, locateExports, readCiqualSource,
+  downloadCiqual, fingerprintExports, locateExports, readCiqualSource, retenirLocal,
 } from '../server/food/ciqual-source.ts';
 import {
   VERSION_LOCALE, isUpToDate, readImportState, recordImport, type ImportState,
@@ -81,7 +81,10 @@ const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const force = args.includes('--force');
 const download = !args.includes('--no-download');
-const dir = args.find((a) => a.startsWith('--dir='))?.slice('--dir='.length) ?? DEFAULT_DIR;
+// `--dir` explicite ou dossier par défaut : la distinction décide si un export
+// trouvé sur place l'emporte sur la source épinglée (`retenirLocal`).
+const dirArg = args.find((a) => a.startsWith('--dir='))?.slice('--dir='.length);
+const dir = dirArg ?? DEFAULT_DIR;
 
 interface FoodRow {
   externalId: string;
@@ -156,17 +159,35 @@ async function main(): Promise<void> {
   // sert précisément à apporter un export autrement, réseau coupé. Leur
   // empreinte n'est calculée que si l'export épinglé n'a pas déjà répondu —
   // sans quoi on relirait 70 Mo pour découvrir qu'il n'y a rien à faire.
-  const local = await locateExports(dir);
-  const identité = local === null
-    ? épinglé
-    : { version: VERSION_LOCALE, sha256: await fingerprintExports(local), etl: source.etl };
+  const trouvé = await locateExports(dir);
+  const empreinte = trouvé === null ? null : await fingerprintExports(trouvé);
+  const conforme = empreinte === source.sha256;
+  const local = retenirLocal(empreinte, source.sha256, dirArg !== undefined) ? trouvé : null;
+
+  // Un export posé à la main qui a l'empreinte du manifeste **est** l'export
+  // épinglé : il s'enregistre sous sa vraie version plutôt que sous « local »,
+  // et le raccourci d'en haut répondra seul au démarrage suivant au lieu de
+  // relire 70 Mo pour redécouvrir les mêmes fichiers.
+  const identité = local !== null && empreinte !== null && !conforme
+    ? { version: VERSION_LOCALE, sha256: empreinte, etl: source.etl }
+    : épinglé;
   if (pool !== null && !force && isUpToDate(state, identité)) return déjàFait(verrou, state);
+
+  if (trouvé !== null && local === null) {
+    console.warn(
+      `Export ignoré : ${trouvé.alim} n’a pas l’empreinte du manifeste, `
+      + `la table ${source.version} est téléchargée à sa place. `
+      + `Pour imposer un export apporté à la main : --dir=${dir}`,
+    );
+  }
 
   const { alim: alimFile, compo: compoFile } = local ?? await downloadCiqual(dir, { download });
   console.log(
     local === null
       ? `Table Ciqual ${source.version} téléchargée et vérifiée (${source.sha256.slice(0, 12)}…).`
-      : `Export lu depuis ${dir} — posé à la main, donc non vérifié à la source.`,
+      : conforme
+        ? `Export lu depuis ${dir} — empreinte conforme au manifeste (${source.sha256.slice(0, 12)}…).`
+        : `Export lu depuis ${dir} — posé à la main, donc non vérifié à la source.`,
   );
 
   const foods: CiqualFood[] = parseFoods(decodeCiqual(await readFile(alimFile)));

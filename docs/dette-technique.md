@@ -754,6 +754,28 @@ manifeste et refuser les dépareillés — au prix de casser le seul usage de
 `--dir` qui compte, celui d'un export qu'on apporte parce qu'on ne peut pas le
 télécharger. À faire le jour où quelqu'un s'y fait prendre deux fois.
 
+> **⚠️ Refermée pour le dossier par défaut le 18/09/2026**, dans la PR qui l'a
+> ouverte : livrer le piège en même temps que sa cause n'avait pas de sens.
+> `retenirLocal` (`server/food/ciqual-source.ts`) tranche la question une fois,
+> et pas par les noms de fichiers — par l'**empreinte**, qui est ce qui décide
+> partout ailleurs :
+>
+> - dans `data/ciqual/`, là où le seed écrit lui-même, un export dépareillé
+>   n'est plus retenu. La table épinglée se télécharge, et le journal nomme ce
+>   qui a été ignoré au lieu de le taire.
+> - un export posé à la main qui a l'empreinte du manifeste **est** l'export
+>   épinglé : il s'enregistre sous sa vraie version au lieu de `local`, de
+>   sorte qu'un pod avec `--dir` ne relit plus 70 Mo à chaque démarrage pour
+>   redécouvrir les mêmes fichiers. Ce n'était pas le sujet, c'était sur le
+>   chemin.
+>
+> **Ce qui reste, et qui est voulu** : un `--dir` explicite est souverain.
+> Pointer le seed sur un export 2020 donne la table 2020 — le journal le dit
+> (« posé à la main, donc non vérifié à la source »), `referential_import` garde
+> `version = 'local'`, et il faut lire. Refuser ce cas aussi casserait le seul
+> usage de l'option qui compte. La dette ne disparaît donc pas, elle se réduit
+> à un geste qu'on a tapé soi-même.
+
 ---
 
 ## Levées

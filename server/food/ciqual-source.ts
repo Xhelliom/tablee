@@ -162,6 +162,27 @@ export async function locateExports(dir: string): Promise<ExportFiles | null> {
 }
 
 /**
+ * Un export trouvé sur le disque l'emporte-t-il sur le téléchargement ?
+ *
+ * Oui dans deux cas seulement : il **est** l'export épinglé — même empreinte
+ * combinée, donc mêmes fichiers —, ou un `--dir` explicite le désigne, ce qui
+ * est tout l'objet de cette option : apporter un export sur un cluster sans
+ * sortie réseau, où l'on ne peut rien promettre de sa provenance.
+ *
+ * ⚠️ Non, en revanche, pour un export **dépareillé** resté dans `data/ciqual/`,
+ * là où le seed écrit lui-même. C'est la table d'un déploiement précédent, et
+ * elle écrasait la table épinglée sans que rien ne s'y oppose : un poste de
+ * développement a réimporté la table 2020, avec ses 887 trous d'énergie,
+ * par-dessus la 2025. Le journal le disait — après coup, et à qui le lisait.
+ */
+export function retenirLocal(
+  empreinte: string | null, épinglée: string, dirExplicite: boolean,
+): boolean {
+  if (empreinte === null) return false;
+  return empreinte === épinglée || dirExplicite;
+}
+
+/**
  * Empreinte d'un export **posé à la main**, pour que ce cas-là aussi soit
  * idempotent.
  *
