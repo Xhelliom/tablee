@@ -778,6 +778,37 @@ télécharger. À faire le jour où quelqu'un s'y fait prendre deux fois.
 
 ---
 
+## 26. L'image de base est épinglée, et ne reçoit plus ses correctifs toute seule
+
+**Où** — `Dockerfile`, `ARG NODE_IMAGE` ; `.github/workflows/image.yml`, la
+plateforme `linux/arm64` construite sous QEMU.
+
+`node:22-alpine` a été republiée le 17/09/2026 à 22 h 19 : même Node 22.23.2,
+reconstruit. Le lendemain matin, le job « Image » échouait deux fois de suite
+sur `npm ci`, en arm64 seulement : `qemu: uncaught target signal 4 (Illegal
+instruction)`. Rien d'autre n'avait bougé entre le dernier build vert et le
+premier rouge — même QEMU (`binfmt@sha256:400a4873…`), dépendances et
+Dockerfile identiques.
+
+L'arm64 ne se retire pas : **la prod tourne sur un Raspberry Pi** (cluster
+mixte, 4 nœuds amd64 et 2 arm64, et le déploiement préfère l'arm64). L'image
+est donc épinglée sur celle du 29/07 — celle que la prod fait tourner.
+
+**Ce que ça coûte.** Plus aucun correctif d'Alpine ni de Node n'arrive tout
+seul : l'image reste celle du 29/07 jusqu'à ce que quelqu'un change l'empreinte.
+Et la changer échouera de la même façon tant que l'arm64 se construit en
+émulation.
+
+**Ce qu'on ne sait pas.** Si la nouvelle image plante aussi sur un vrai Pi, ou
+seulement sous QEMU. Rien ici n'exécute de l'arm64 pour le dire.
+
+**Ce qui le lèverait.** Construire l'arm64 sur un runner arm64 natif
+(`ubuntu-24.04-arm`, gratuit pour un dépôt public) : plus d'émulation, un build
+nettement plus court, et l'épinglage peut sauter — ou se tenir à jour par
+Dependabot, puisqu'une empreinte qui bouge se relit alors en diff.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
