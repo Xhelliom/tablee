@@ -946,6 +946,8 @@ create table food (
 );
 
 create index on food using gin (to_tsvector('french', name));
+-- ⚠️ Remplacé le 18/09/2026 par la 018 : même index sur `french_unaccent`,
+-- pour que « pates » tapé sans accents trouve les pâtes (dette n° 5).
 create index on food (plant_based) where plant_based is not null;
 
 -- Saisonnalité (§8bis). Table statique, saisie une fois à la main :

@@ -169,6 +169,15 @@ ordinateur pressé non. **Ce qui le lèverait** : l'extension `unaccent` en têt
 de la configuration de recherche — une migration, et la même normalisation
 appliquée à la requête.
 
+> **⚠️ Levé le 18/09/2026 par la 018.** La configuration `french_unaccent`
+> retire accents et ligatures avant la racinisation, du côté du nom comme de ce
+> qu'on tape : « pates » trouve les pâtes, et le remplacement de « œ » fait à
+> la main dans `searchFoods` a disparu. « pate », lui, rend des pâtés : au
+> singulier et sans accent, rien ne distingue la pâte du pâté. Ce qui reste
+> n'est plus une affaire d'accents mais de vocabulaire : Ciqual dit « Crème de
+> lait, épaisse », jamais « crème fraîche », et aucune configuration n'y
+> changera rien — le champ de recherche est là pour ça.
+
 ---
 
 ## 7. Une adresse e-mail n'est pas vérifiée

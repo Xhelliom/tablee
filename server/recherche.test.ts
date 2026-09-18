@@ -69,6 +69,26 @@ describe('recherche d’aliments', { skip: enabled ? false : SKIP_MESSAGE }, () 
     assert.equal((await noms('pâtes'))[0], 'Pâtes sèches standard, crues');
   });
 
+  it('trouve les pâtes tapées sans accents, et pas des patates', async () => {
+    // Un clavier d'ordinateur ne met pas les accents : « pates » ne rendait que
+    // « Patate douce », seul nom dont le radical commence ainsi sans accent.
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'patate', 'Patate douce, crue', true),
+              ('manuel', 'creme', 'Crème fraîche épaisse', false)`,
+    );
+    assert.match((await noms('pates'))[0] ?? '', /^Pâtes /);
+    assert.deepEqual(await noms('creme fraiche'), ['Crème fraîche épaisse']);
+  });
+
+  it('ne fait pas de « à » un mot exigé une fois l’accent retiré', async () => {
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'poulet', 'Poulet, moutarde', false)`,
+    );
+    assert.deepEqual(await noms('Poulet à la moutarde'), ['Poulet, moutarde']);
+  });
+
   it('ne dit « valeur inconnue » que sans aucune teneur : l’énergie absente n’y suffit pas', async () => {
     // Le muffin de Ciqual : protéines, glucides, lipides publiés, énergie « - ».
     await pool.query(
