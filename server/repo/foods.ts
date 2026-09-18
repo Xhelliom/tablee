@@ -110,11 +110,18 @@ export async function searchFoods(db: UnscopedDb, query: string, limit = 20): Pr
 }
 
 /**
- * L'ordre : le plus de termes de la recherche d'abord — le dernier compté comme
- * un préfixe, sans quoi « cour » rangerait « courant » devant « courgette » —,
- * puis le nom le plus court. Pas `ts_rank`, qui préfère un mot répété : « Oeuf,
- * jaune (jaune d'oeuf), cru » passait devant « Oeuf, cru », alors que chez
- * Ciqual le nom le plus court est l'aliment de base.
+ * L'ordre : les mots retrouvés tels quels d'abord, puis le plus de termes de la
+ * recherche — le dernier compté comme un préfixe, sans quoi « cour » rangerait
+ * « courant » devant « courgette » —, puis le nom le plus court. Pas `ts_rank`,
+ * qui préfère un mot répété : « Oeuf, jaune (jaune d'oeuf), cru » passait devant
+ * « Oeuf, cru », alors que chez Ciqual le nom le plus court est l'aliment de
+ * base.
+ *
+ * Le premier critère existe parce que le dictionnaire français réduit « pâtes »
+ * et « pâté » au même radical : « Pâtes (orzo) » proposait « Pâté de campagne »,
+ * plus court, en tête. Une correspondance littérale n'est pas une ressemblance
+ * de chaîne — elle ne rapproche rien, elle départage ce que le dictionnaire a
+ * confondu.
  */
 async function matchFoods(
   db: UnscopedDb,
@@ -136,6 +143,8 @@ async function matchFoods(
      from food f, q
      where to_tsvector('french', f.name) @@ coalesce(q.prefix, q.exact)
      order by (select count(*) from unnest($4::text[]) terme
+                where position(lower(replace(terme, ':*', '')) in lower(f.name)) > 0) desc,
+              (select count(*) from unnest($4::text[]) terme
                 where to_tsvector('french', f.name) @@ to_tsquery('french', terme)) desc,
               length(f.name) asc
      limit $3`,

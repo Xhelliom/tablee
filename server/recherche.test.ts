@@ -55,6 +55,20 @@ describe('recherche d’aliments', { skip: enabled ? false : SKIP_MESSAGE }, () 
     assert.deepEqual(await noms('Sauce tomate'), ['Sauce tomate']);
   });
 
+  it('ne propose pas « Pâté de campagne » pour « Pâtes (orzo) »', async () => {
+    // Le dictionnaire français réduit les deux au même radical, et le pâté est
+    // le nom le plus court : sans la correspondance littérale, il passait en
+    // tête. C'est le cas qui a motivé le champ de recherche du rattachement.
+    await pool.query(
+      `insert into food (source, external_id, name, plant_based)
+       values ('manuel', 'pate-campagne', 'Pâté de campagne', false),
+              ('manuel', 'pates-seches', 'Pâtes sèches standard, crues', true)`,
+    );
+    assert.equal((await noms('Pâtes (orzo)'))[0], 'Pâtes sèches standard, crues');
+    // Et en tapant soi-même, sans le « (orzo) » qui ne trouve rien.
+    assert.equal((await noms('pâtes'))[0], 'Pâtes sèches standard, crues');
+  });
+
   it('ne dit « valeur inconnue » que sans aucune teneur : l’énergie absente n’y suffit pas', async () => {
     // Le muffin de Ciqual : protéines, glucides, lipides publiés, énergie « - ».
     await pool.query(
