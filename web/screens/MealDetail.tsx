@@ -14,7 +14,7 @@
  * R2 : modifier le repas recalcule la nutrition. Les parts ne bougent que si
  * l'on change qui était à table.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   api, type FoodSummary, type Meal, type MealItem, type RecipeIngredient,
 } from '../api.ts';
@@ -477,6 +477,9 @@ function IngredientRow({
   const [query, setQuery] = useState(ingredient.label);
   const [results, setResults] = useState<FoodSummary[]>([]);
   const [done, setDone] = useState<string | null>(null);
+  // Une requête par frappe : la réponse d'un « pom » arrivée après celle de
+  // « pomme » ne doit pas la recouvrir.
+  const dernière = useRef('');
 
   // Le libellé Jow sert de requête de départ, puis c'est ce qui est tapé. Ce
   // sont des suggestions : la confirmation reste humaine, un rattachement faux
@@ -484,11 +487,12 @@ function IngredientRow({
   const search = async (text: string): Promise<void> => {
     setQuery(text);
     setOpen(true);
+    dernière.current = text;
     if (text.trim().length < 2) { setResults([]); return; }
     const { foods } = await api.get<{ foods: FoodSummary[] }>(
       `/api/foods/search?q=${encodeURIComponent(text)}&limit=6`,
     );
-    setResults(foods);
+    if (dernière.current === text) setResults(foods);
   };
 
   const link = async (foodId: string): Promise<void> => {
