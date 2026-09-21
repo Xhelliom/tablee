@@ -10,7 +10,7 @@
  *   3. **Coller un lien Jow** — la même chaîne que `/share`, pour quand la
  *      feuille de partage d'Android n'est pas là : ordinateur, navigateur sans
  *      PWA installée, ou recette reçue par message.
- *   4. Décrire son plat (ou, sans IA, chercher un aliment), puis saisie
+ *   4. Décrire ou photographier son plat (ou, sans IA, chercher un aliment), puis saisie
  *      manuelle.
  *
  * « Si tu dois arbitrer entre un calcul plus fin et un tap de moins, prends le
@@ -23,6 +23,11 @@
  * son plat ». Désormais : un titre d'affichage, comme sur l'accueil ; les
  * raccourcis d'un tap seulement quand ils existent ; et chaque façon d'ajouter
  * dans une liste groupée, avec une ligne qui dit où elle mène.
+ *
+ * ⚠️ Fusionné le 21/09/2026 — « Photo » n'a plus sa ligne. Elle restait grisée
+ * (« Bientôt ») alors que la photo vivait déjà dans l'écran de description :
+ * deux portes pour un même écran, dont une qui avait l'air en panne. Une seule
+ * ligne, « Décrire ou photographier son plat », mène aux deux.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -33,7 +38,7 @@ import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { dishTitle, leftoverDetail } from '../components/Leftovers.tsx';
 import {
-  IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconPencil, IconSearch, IconStar,
+  IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconSearch, IconStar,
 } from '../icons.tsx';
 import { SLOT_LABELS, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
@@ -217,21 +222,16 @@ export function QuickAddScreen(): React.ReactElement {
 
           <Section title="Sans recette">
             {/* « Manuel » n'a plus sa ligne : il ouvrait ce même écran, où la
-                saisie à la main se trouve sous la description. */}
+                saisie à la main se trouve sous la description. « Photo » non
+                plus : elle s'y trouve aussi, à côté de « Découper avec l'IA ». */}
             <div className="card groupe">
               <Porte
-                icon={<span style={pastille}>{ia ? <IconPencil size={18} /> : <IconSearch size={18} />}</span>}
-                title={ia ? 'Décrire son plat' : 'Chercher un aliment'}
+                icon={<span style={pastille}>{ia ? <IconCamera size={18} /> : <IconSearch size={18} />}</span>}
+                title={ia ? 'Décrire ou photographier son plat' : 'Chercher un aliment'}
                 detail={ia
                   ? 'L’IA le découpe, ou aliment par aliment'
                   : 'Aliment par aliment, avec les quantités'}
                 onClick={() => setMode('manuel')}
-              />
-              <Porte
-                icon={<span style={pastille}><IconCamera size={18} /></span>}
-                title="Photo"
-                detail="Bientôt"
-                disabled
               />
             </div>
           </Section>
