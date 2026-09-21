@@ -63,12 +63,15 @@ export function BilanCard({
   firstName,
   balance,
   referencesLoaded,
+  when,
 }: {
   eaterId: string;
   firstName: string;
   balance: DailyBalance;
   /** Sans repères chargés, « indisponible pour cet âge » serait faux. */
   referencesLoaded: boolean;
+  /** « aujourd'hui », ou « ce jour-là » quand l'accueil montre un jour passé. */
+  when: string;
 }): React.ReactElement {
   const [explaining, setExplaining] = useState(false);
   const uncertain = balance.bars.filter((b) => b.state === 'encadre' || b.state === 'partiel');
@@ -82,8 +85,8 @@ export function BilanCard({
         </p>
         <p className="meta">
           {balance.mealCount === 0
-            ? 'Aucun repas enregistré aujourd’hui'
-            : `${balance.mealCount} repas aujourd’hui`}
+            ? `Aucun repas enregistré ${when}`
+            : `${balance.mealCount} repas ${when}`}
         </p>
       </div>
 

@@ -52,7 +52,9 @@ import { RemainsPicker, eatenHint, rescaled, split } from '../components/Leftove
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconClose, IconSearch } from '../icons.tsx';
-import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
+import {
+  SLOT_LABELS, SLOT_ORDER, SLOT_WHEN, currentSlot, eatenAt, longDate,
+} from '../design/vocabulary.ts';
 
 interface Draft {
   /**
@@ -95,7 +97,7 @@ async function réduire(file: File): Promise<{ mimeType: 'image/jpeg'; data: str
 }
 
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
-  const { eaters, ia } = useSession();
+  const { eaters, ia, day } = useSession();
   const [description, setDescription] = useState('');
   /** Les descriptions déjà découpées : le champ se vide, l'image du plat s'en sert. */
   const [décrits, setDécrits] = useState<string[]>([]);
@@ -221,7 +223,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setSaving(true);
     try {
       const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
-        eatenAt: new Date().toISOString(),
+        eatenAt: eatenAt(day),
         slot,
         source: photographié ? 'photo' : items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
         // Ce qui est saisi est le plat entier, cuisiné pour `cooked` ; le reste
@@ -479,7 +481,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
       ) : null}
 
       <section style={bloc}>
-        <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas</p>
+        <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas{day === null ? null : <span className="meta" style={{ display: 'block', marginTop: 2 }}>{longDate(day)}</span>}</p>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {SLOT_ORDER.map((option) => (
             <button
@@ -494,7 +496,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
                 color: option === slot ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
               }}
             >
-              {SLOT_WHEN[option]}
+              {(day === null ? SLOT_WHEN : SLOT_LABELS)[option]}
             </button>
           ))}
         </div>

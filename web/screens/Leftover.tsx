@@ -22,10 +22,10 @@ import {
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl } from '../icons.tsx';
-import { currentSlot, relativeDay } from '../design/vocabulary.ts';
+import { currentSlot, eatenAt, relativeDay } from '../design/vocabulary.ts';
 
 export function LeftoverScreen({ mealId }: { mealId: string }): React.ReactElement {
-  const { eaters } = useSession();
+  const { eaters, day } = useSession();
   const [source, setSource] = useState<Meal | null>(null);
   const [base, setBase] = useState(1);
   const [remains, setRemains] = useState(0);
@@ -65,7 +65,7 @@ export function LeftoverScreen({ mealId }: { mealId: string }): React.ReactEleme
     setSaving(true);
     try {
       await api.post('/api/meals', {
-        eatenAt: new Date().toISOString(),
+        eatenAt: eatenAt(day),
         slot: currentSlot(),
         source: source.source,
         recipeId: source.recipe?.id ?? null,

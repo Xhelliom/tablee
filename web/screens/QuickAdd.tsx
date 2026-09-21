@@ -40,13 +40,13 @@ import { dishTitle, leftoverDetail } from '../components/Leftovers.tsx';
 import {
   IconBowl, IconCamera, IconChevron, IconFridge, IconLink, IconSearch, IconStar,
 } from '../icons.tsx';
-import { SLOT_LABELS, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
+import { SLOT_LABELS, SLOT_WHEN, currentSlot, eatenAt, longDate } from '../design/vocabulary.ts';
 import { FreeTextEntry } from './FreeTextEntry.tsx';
 import { JowLink } from './JowLink.tsx';
 import { Recipes } from './Recipes.tsx';
 
 export function QuickAddScreen(): React.ReactElement {
-  const { ia } = useSession();
+  const { ia, day } = useSession();
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [leftovers, setLeftovers] = useState<Meal[]>([]);
   const [suggestions, setSuggestions] = useState<TemplateSuggestion[]>([]);
@@ -79,7 +79,7 @@ export function QuickAddScreen(): React.ReactElement {
     setBusy(true);
     try {
       const { meal } = await api.post<{ meal: Meal }>(`/api/templates/${template.id}/apply`, {
-        eatenAt: new Date().toISOString(),
+        eatenAt: eatenAt(day),
         slot: template.slot ?? currentSlot(),
       });
       navigate(`/repas/${meal.id}`, { replace: true });
@@ -105,9 +105,10 @@ export function QuickAddScreen(): React.ReactElement {
     <div className="app">
       <ModalHeader title="Ajouter un repas" onClose={() => navigate('/')} />
 
-      {/* Le sur-titre dit le créneau que prendront les raccourcis d'un tap. */}
+      {/* Le sur-titre dit le créneau que prendront les raccourcis d'un tap —
+          ou le jour choisi sur l'accueil, qui compte davantage. */}
       <div className="sec" style={{ paddingTop: 20 }}>
-        <p className="eyebrow">{SLOT_WHEN[currentSlot()]}</p>
+        <p className="eyebrow">{day === null ? SLOT_WHEN[currentSlot()] : longDate(day)}</p>
         <p className="display" style={{ marginTop: 6, fontSize: 28 }}>
           {'Qu’y avait-il\nau menu ?'}
         </p>
