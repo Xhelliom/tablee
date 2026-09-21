@@ -164,5 +164,21 @@ export function currentSlot(now = new Date()): Slot {
   return 'collation';
 }
 
+/** La date du jour, `AAAA-MM-JJ`, dans le fuseau du téléphone. */
+export function localDate(now = new Date()): string {
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * L'instant d'un repas saisi pour le jour choisi sur l'accueil : maintenant,
+ * ou midi ce jour-là. Midi, loin des deux bords de la journée : le créneau dit
+ * le moment du repas, l'heure ne sert qu'à le ranger dans son jour — et le
+ * serveur découpe les jours dans le fuseau du foyer, pas dans celui-ci.
+ */
+export function eatenAt(day: string | null): string {
+  return (day === null ? new Date() : new Date(`${day}T12:00:00`)).toISOString();
+}
+
 /** Initiale affichée dans l'anneau d'un membre. */
 export const initial = (firstName: string): string => firstName.slice(0, 1).toUpperCase();

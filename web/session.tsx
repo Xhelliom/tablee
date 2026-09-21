@@ -65,6 +65,14 @@ interface SessionValue {
   /** « Découper avec l'IA » est proposé : l'instance a une clé API. */
   ia: boolean;
   eaters: Eater[];
+  /**
+   * Le jour choisi sur l'accueil, `AAAA-MM-JJ` ; `null` : aujourd'hui. Ici et
+   * pas dans l'URL : il doit survivre à l'aller-retour par l'ajout d'un repas
+   * ou par son détail, qui reviennent tous à `/`. En mémoire seulement — l'app
+   * rouverte le lendemain repart d'aujourd'hui, pas d'un jour oublié.
+   */
+  day: string | null;
+  setDay: (day: string | null) => void;
   refreshEaters: () => Promise<void>;
   reload: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -81,6 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<Me>({ state: 'anonyme', google: false });
   const [eaters, setEaters] = useState<Eater[]>([]);
+  const [day, setDay] = useState<string | null>(null);
 
   const refreshEaters = useCallback(async () => {
     const { eaters: list } = await api.get<{ eaters: Eater[] }>('/api/eaters');
@@ -120,6 +129,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       google: me.google,
       ia: me.state === 'actif' && me.ia,
       eaters,
+      day,
+      setDay,
       refreshEaters,
       reload,
 
@@ -170,7 +181,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
         await reload();
       },
     };
-  }, [loading, me, eaters, refreshEaters, reload]);
+  }, [loading, me, eaters, day, refreshEaters, reload]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

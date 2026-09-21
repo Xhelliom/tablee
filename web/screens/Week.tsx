@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react';
 import { api, type WeekResponse } from '../api.ts';
 import { Avatar } from '../components/Avatar.tsx';
-import { NUTRIENT_COLOR, shortDay } from '../design/vocabulary.ts';
+import { NUTRIENT_COLOR, localDate, shortDay } from '../design/vocabulary.ts';
 
 /** La hauteur d'un graphe, pour 100 % de part végétale. */
 const PLOT = 96;
@@ -208,14 +208,8 @@ function shiftWeeks(weeks: number): string {
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + weeks * 7);
-  return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
+  return localDate(monday);
 }
-
-function localDate(now = new Date()): string {
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
-const pad = (n: number): string => String(n).padStart(2, '0');
 
 function weekLabel(from: string): string {
   const end = addDays(from, 6);

@@ -13,7 +13,7 @@
  * écarté des maquettes : pas de grille uniforme, pas de score, et le titre dit
  * toujours ce qui s'est passé.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ApiError, api, type AssistantRecipesResponse, type DashboardResponse, type Meal, type Nutrient,
 } from '../api.ts';
@@ -26,33 +26,39 @@ import { LeftoverRow } from '../components/Leftovers.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
-import { IconBowl, IconPlus } from '../icons.tsx';
-import { BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, longDate } from '../design/vocabulary.ts';
+import { IconBowl, IconChevron, IconPlus } from '../icons.tsx';
+import {
+  BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, localDate, longDate,
+} from '../design/vocabulary.ts';
 
 type Entry = DashboardResponse['dashboard'][number];
 
 export function TodayScreen(): React.ReactElement {
-  const { eaters } = useSession();
+  const { eaters, day, setDay } = useSession();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** La personne choisie. `null` : sa propre assiette, sinon la première. */
   const [chosen, setChosen] = useState<string | null>(null);
   const [fridge, setFridge] = useState<Meal[]>([]);
 
-  const load = useCallback(async () => {
-    // À côté de la journée, pas avant elle : un frigo illisible ne doit pas
-    // faire tomber l'accueil.
+  // À côté de la journée, pas avant elle : un frigo illisible ne doit pas
+  // faire tomber l'accueil. Le frigo est celui de maintenant, quel que soit
+  // le jour affiché : c'est de lui que sortent les restes.
+  useEffect(() => {
     void api.get<{ meals: Meal[] }>('/api/meals/leftovers?days=3')
       .then(({ meals }) => setFridge(meals))
       .catch(() => setFridge([]));
-    try {
-      setData(await api.get<DashboardResponse>('/api/dashboard'));
-    } catch {
-      setError('impossible de charger la journée');
-    }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    // Des jours choisis coup sur coup : seule compte la réponse du dernier.
+    let current = true;
+    setError(null);
+    void api.get<DashboardResponse>(`/api/dashboard${day === null ? '' : `?date=${day}`}`)
+      .then((next) => { if (current) setData(next); })
+      .catch(() => { if (current) setError('impossible de charger la journée'); });
+    return () => { current = false; };
+  }, [day]);
 
   if (error !== null) return <p className="empty">{error}</p>;
   if (data === null) return <p className="empty">Un instant…</p>;
@@ -69,7 +75,7 @@ export function TodayScreen(): React.ReactElement {
   return (
     <>
       <div className="sec" style={{ paddingTop: 20 }}>
-        <p className="eyebrow">{longDate(data.date)}</p>
+        <DayPicker date={data.date} past={day !== null} onChoose={setDay} />
         <p className="display" style={{ marginTop: 6 }}>{headline(meals.length)}</p>
       </div>
 
@@ -95,6 +101,7 @@ export function TodayScreen(): React.ReactElement {
             firstName={shown.eater.firstName}
             balance={shown.balance}
             referencesLoaded={data.referencesLoaded}
+            when={day === null ? 'aujourd’hui' : 'ce jour-là'}
           />
         </section>
       )}
@@ -143,7 +150,8 @@ export function TodayScreen(): React.ReactElement {
           </span>
           <span>
             <span style={{ fontSize: 14, display: 'block' }}>{addLabel(meals.length)}</span>
-            <span className="meta">Ou partage depuis Jow</span>
+            {/* Un partage depuis Android rouvre l'app, et donc aujourd'hui. */}
+            <span className="meta">{day === null ? 'Ou partage depuis Jow' : `Pour le ${longDate(day)}`}</span>
           </span>
         </button>
       </div>
@@ -151,6 +159,49 @@ export function TodayScreen(): React.ReactElement {
       <AssistantRecipes />
       <div className="fab-space" />
     </>
+  );
+}
+
+/**
+ * Le sur-titre est aussi le choix du jour : un calendrier natif, qui remonte
+ * aussi loin qu'on veut sans rien à charger, et que le téléphone sait déjà
+ * rendre agréable au pouce. Pas de jour futur : on n'y a encore rien mangé.
+ */
+function DayPicker({
+  date, past, onChoose,
+}: { date: string; past: boolean; onChoose: (day: string | null) => void }): React.ReactElement {
+  const today = localDate();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <label className="eyebrow" style={{
+        position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '6px 0', margin: '-6px 0', cursor: 'pointer',
+      }}>
+        {longDate(date)}
+        <IconChevron size={14} style={{ transform: 'rotate(90deg)' }} />
+        <input
+          type="date"
+          aria-label="Choisir le jour"
+          value={date}
+          max={today}
+          onChange={(event) => {
+            const chosen = event.target.value;
+            onChoose(chosen === '' || chosen >= today ? null : chosen);
+          }}
+          // Un ordinateur n'ouvre le calendrier que sur son icône ; un
+          // téléphone l'ouvre au tap, et `showPicker` n'y change rien.
+          onClick={(event) => {
+            try { event.currentTarget.showPicker(); } catch { /* déjà ouvert, ou pas pris en charge */ }
+          }}
+          style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+        />
+      </label>
+      {past ? (
+        <button type="button" className="chip" style={{ cursor: 'pointer' }} onClick={() => onChoose(null)}>
+          Revenir à aujourd’hui
+        </button>
+      ) : null}
+    </div>
   );
 }
 

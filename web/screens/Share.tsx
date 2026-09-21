@@ -37,7 +37,9 @@ import { RemainsPicker, eatenHint, split } from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import { IconBowl } from '../icons.tsx';
-import { SLOT_ORDER, SLOT_WHEN, currentSlot } from '../design/vocabulary.ts';
+import {
+  SLOT_LABELS, SLOT_ORDER, SLOT_WHEN, currentSlot, eatenAt, longDate,
+} from '../design/vocabulary.ts';
 import { formatGrams, formatNumber } from '../design/quantities.ts';
 
 export function ShareScreen(): React.ReactElement {
@@ -86,7 +88,7 @@ interface SharedRecipeProps {
 export function SharedRecipe(
   { source, heading, onClose, onManual }: SharedRecipeProps,
 ): React.ReactElement {
-  const { eaters } = useSession();
+  const { eaters, day } = useSession();
 
   const [state, setState] = useState<ResolveResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +144,7 @@ export function SharedRecipe(
     setSaving(true);
     try {
       await api.post('/api/meals', {
-        eatenAt: new Date().toISOString(),
+        eatenAt: eatenAt(day),
         slot,
         source: 'jow',
         recipeId: state?.recipe?.id ?? null,
@@ -235,7 +237,7 @@ export function SharedRecipe(
           </section>
 
           <section className="spread" style={row}>
-            <span style={{ fontSize: 14 }}>Quel repas</span>
+            <span style={{ fontSize: 14 }}>Quel repas{day === null ? null : <span className="meta" style={{ display: 'block', marginTop: 2 }}>{longDate(day)}</span>}</span>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {SLOT_ORDER.map((option) => (
                 <button
@@ -250,7 +252,7 @@ export function SharedRecipe(
                     cursor: 'pointer',
                   }}
                 >
-                  {SLOT_WHEN[option]}
+                  {(day === null ? SLOT_WHEN : SLOT_LABELS)[option]}
                 </button>
               ))}
             </div>
