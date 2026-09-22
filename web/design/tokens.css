@@ -388,6 +388,46 @@ input[type='number']::-webkit-inner-spin-button {
   object-fit: cover;
 }
 
+/* ── Le hero d'une recette (`web/components/RecipeHero.tsx`) ──────────────── */
+/* L'image en grand en tête de page, le titre en affichage dessous. Même
+   langue que la carte de l'accueil : aplat pleine largeur, coins arrondis,
+   sans cadre — ouvrir une recette déplie la carte qu'on venait de taper.
+   `aspect-ratio` plutôt qu'une hauteur : la photo Jow comme le dessin de l'IA
+   se recadrent tout seuls, quelle que soit leur forme d'origine. Sans image,
+   le bol dessiné occupe la même surface : la page ne saute pas. */
+.hero {
+  padding: 14px 16px;
+  background: var(--surface-2);
+}
+.hero__photo {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+.hero__photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.hero__vide {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Le titre est un moment d'affichage, pas une ligne de liste (§8ter). */
+.hero__titre {
+  margin: 12px 0 0;
+  font-family: var(--font-voice);
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -.005em;
+}
+/* Ce qui suit le titre (date, badge, ingrédients) s'en détache à 6 px. */
+.hero__titre + * { margin-top: 6px; }
+
 .nav {
   position: sticky; bottom: 0;
   border-top: .5px solid var(--border);

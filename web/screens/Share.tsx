@@ -34,9 +34,9 @@ import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge, Warnings } from '../components/Confidence.tsx';
 import { RemainsPicker, eatenHint, split } from '../components/Leftovers.tsx';
+import { RecipeHero } from '../components/RecipeHero.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
-import { IconBowl } from '../icons.tsx';
 import {
   SLOT_LABELS, SLOT_ORDER, SLOT_WHEN, currentSlot, eatenAt, longDate,
 } from '../design/vocabulary.ts';
@@ -189,33 +189,22 @@ export function SharedRecipe(
 
       {state !== null ? (
         <>
-          <section style={{ padding: '14px 16px', background: 'var(--surface-2)' }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              {recipe?.imageUrl != null ? (
-                <img src={recipe.imageUrl} alt=""
-                     style={{ width: 54, height: 54, borderRadius: 'var(--radius)', objectFit: 'cover', flexShrink: 0 }} />
-              ) : (
-                <span className="thumb" style={{ width: 54, height: 54 }}><IconBowl size={24} /></span>
-              )}
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{title}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                  <ConfidenceBadge confidence={confidence}
-                                   label={confidence === 'haute' ? 'Résolue' : undefined} />
-                  {recipe?.nutriScore != null ? (
-                    <span className="meta">Nutri-Score {recipe.nutriScore}</span>
-                  ) : null}
-                  {state.seasonal > 0 ? (
-                    <span className="meta">
-                      {state.seasonal} produit{state.seasonal > 1 ? 's' : ''} de saison
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+          <RecipeHero imageUrl={recipe?.imageUrl ?? null} title={title}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <ConfidenceBadge confidence={confidence}
+                               label={confidence === 'haute' ? 'Résolue' : undefined} />
+              {recipe?.nutriScore != null ? (
+                <span className="meta">Nutri-Score {recipe.nutriScore}</span>
+              ) : null}
+              {state.seasonal > 0 ? (
+                <span className="meta">
+                  {state.seasonal} produit{state.seasonal > 1 ? 's' : ''} de saison
+                </span>
+              ) : null}
             </div>
 
             {recipe !== null ? (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 14 }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                 {recipe.ingredients.map((ingredient) => (
                   <span
                     key={ingredient.id}
@@ -234,7 +223,7 @@ export function SharedRecipe(
 
             {/* « Une donnée manquante doit se voir » — §6 du contrat Jow. */}
             <Warnings warnings={state.warnings} />
-          </section>
+          </RecipeHero>
 
           <section className="spread" style={row}>
             <span style={{ fontSize: 14 }}>Quel repas{day === null ? null : <span className="meta" style={{ display: 'block', marginTop: 2 }}>{longDate(day)}</span>}</span>

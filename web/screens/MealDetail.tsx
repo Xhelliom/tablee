@@ -22,6 +22,7 @@ import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { RecipeHero } from '../components/RecipeHero.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
 import {
   RemainsPicker, UNCOUNTED_HINT, eatenHint, remainsOf, rescaled, split,
@@ -29,7 +30,7 @@ import {
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import {
-  IconBowl, IconChevron, IconClose, IconPlus, IconSearch, IconStar, IconTrash,
+  IconChevron, IconClose, IconPlus, IconSearch, IconStar, IconTrash,
 } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
@@ -105,42 +106,28 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
     <div className="app">
       <ModalHeader title={SLOT_LABELS[meal.slot]} onClose={() => navigate('/')} />
 
-      <section style={{ padding: '14px 16px', background: 'var(--surface-2)' }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          {meal.imageUrl !== null ? (
-            <img src={meal.imageUrl} alt=""
-                 style={{ width: 54, height: 54, borderRadius: 'var(--radius)', objectFit: 'cover' }} />
-          ) : (
-            <span className="thumb" style={{ width: 54, height: 54 }}><IconBowl size={24} /></span>
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 16, lineHeight: 1.35 }}>{title || 'Repas'}</p>
-            <p className="meta" style={{ marginTop: 4 }}>{longDate(meal.eatenAt.slice(0, 10))}</p>
-            {nutrition !== null ? (
-              <div style={{ marginTop: 8 }}>
-                {/* R6 : le badge dit d'où viennent les chiffres d'à côté —
-                    du snapshot publié par Jow, ou de la somme des aliments. */}
-                <ConfidenceBadge
-                  confidence={nutrition.confidence}
-                  label={
-                    nutrition.confidence === 'haute'
-                      ? meal.recipe !== null
-                        ? 'Valeurs de la recette'
-                        : 'Valeurs du référentiel'
-                      : undefined
-                  }
-                />
-              </div>
-            ) : null}
-          </div>
-        </div>
-
+      <RecipeHero imageUrl={meal.imageUrl} title={title || 'Repas'}>
+        {/* R6 : le badge dit d'où viennent les chiffres d'à côté — du snapshot
+            publié par Jow, ou de la somme des aliments. */}
+        <p className="meta">{longDate(meal.eatenAt.slice(0, 10))}</p>
+        {nutrition !== null ? (
+          <ConfidenceBadge
+            confidence={nutrition.confidence}
+            label={
+              nutrition.confidence === 'haute'
+                ? meal.recipe !== null
+                  ? 'Valeurs de la recette'
+                  : 'Valeurs du référentiel'
+                : undefined
+            }
+          />
+        ) : null}
         {meal.leftoverOf !== null ? (
-          <p className="meta" style={{ marginTop: 10 }}>
+          <p className="meta" style={{ marginTop: 6 }}>
             Deuxième service d’un plat déjà enregistré.
           </p>
         ) : null}
-      </section>
+      </RecipeHero>
 
       {/* ── Nutrition ─────────────────────────────────────────────────────── */}
       <section style={row}>
