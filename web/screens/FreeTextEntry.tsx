@@ -39,14 +39,19 @@
  * « basse » (§11) — une assiette vue de haut ne dit ni le poids ni la recette.
  * Aucun filtre ne retire une personne d'une image : l'écran demande de ne
  * cadrer que l'assiette (dette n° 23).
+ *
+ * ⚠️ Depuis le 22/09/2026, la description et la photo vivent dans le composant
+ * commun `DécrirePlat` — celui de la fiche d'un repas qui se complète après
+ * coup. Cet écran ne garde que l'ordre du geste et l'enregistrement.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  api, ApiError, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
+  api, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
+import { DécrirePlat, type LignesDécoupées } from '../components/DécrirePlat.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
 import { RemainsPicker, eatenHint, rescaled, split } from '../components/Leftovers.tsx';
 import { Stepper } from '../components/Stepper.tsx';
@@ -74,39 +79,18 @@ interface Draft {
   foods?: FoodSummary[];
 }
 
-/** Ce que rend `POST /api/meals/decoupage`. */
-interface Découpage {
-  /** La description reformulée en titre de plat ; `null` si le modèle n'en a pas donné. */
-  title: string | null;
-  items: { label: string; grams: number | null; foods: FoodSummary[]; foodId: string | null }[];
-}
-
 let prochaineClé = 0;
-
-/** Ce que le téléphone a pris, réduit : une photo brute pèse plusieurs Mo, le modèle n'en lit pas mieux. */
-async function réduire(file: File): Promise<{ mimeType: 'image/jpeg'; data: string }> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const ratio = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * ratio);
-  canvas.height = Math.round(bitmap.height * ratio);
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const url = canvas.toDataURL('image/jpeg', 0.8);
-  return { mimeType: 'image/jpeg', data: url.slice(url.indexOf(',') + 1) };
-}
 
 export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
   const { eaters, ia, day } = useSession();
-  const [description, setDescription] = useState('');
   /** Les descriptions déjà découpées : le champ se vide, l'image du plat s'en sert. */
   const [décrits, setDécrits] = useState<string[]>([]);
   /** Le titre reformulé par l'IA au premier découpage : la description, elle, reste ce qui est découpé. */
   const [titreIA, setTitreIA] = useState<string | null>(null);
+  /** Une découpe IA est en cours : les lignes attendues ne sont pas encore là, et les grammes valent pour `cooked`. */
   const [découpage, setDécoupage] = useState(false);
   /** Au moins une ligne vient d'une photo : le repas portera cette source, plafonnée plus bas que `ia`. */
   const [photographié, setPhotographié] = useState(false);
-  const [erreurIA, setErreurIA] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodSummary[]>([]);
   /** `null` tant qu'aucune recherche n'a abouti : on ne dit rien avant de savoir. */
@@ -156,36 +140,25 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setResults([]);
   };
 
-  const découper = async (file?: File): Promise<void> => {
-    const texte = description.trim();
-    if ((texte === '' && file === undefined) || découpage) return;
-    setDécoupage(true);
-    setErreurIA(null);
-    try {
-      const photo = file === undefined ? undefined : await réduire(file);
-      const { title, items: lignes } = await api.post<Découpage>('/api/meals/decoupage', {
-        text: texte, personnes: cooked, ...(photo === undefined ? {} : { photo }),
-      });
-      if (photo !== undefined) setPhotographié(true);
-      setTitreIA((current) => current ?? title);
-      // Le serveur dit quel aliment présélectionner — aucun quand l'IA n'en voit
-      // pas qui convienne ; la liste permet d'en changer.
-      const nouvelles = lignes.map((ligne): Draft => ({
-        key: prochaineClé++,
-        foodId: ligne.foodId,
-        label: ligne.label,
-        grams: ligne.grams,
-        foods: ligne.foods,
-      }));
-      setItems((current) => [...current, ...nouvelles]);
-      // Les grammes proposés valent pour ce nombre-là : il ne suit plus les cases.
-      setCookedFor(cooked);
-      if (texte !== '') setDécrits((current) => [...current, texte]);
-      setDescription('');
-    } catch (cause) {
-      setErreurIA(cause instanceof ApiError ? cause.message : 'le découpage n’a pas abouti');
-    }
-    setDécoupage(false);
+  /**
+   * `DécrirePlat` a découpé une description (ou une photo) : les lignes
+   * rejoignent celles déjà servies. Le serveur dit quel aliment présélectionner
+   * — aucun quand l'IA n'en voit pas qui convienne ; la liste permet d'en
+   * changer. La description découpée est retenue pour l'image du plat.
+   */
+  const ajouterDécoupage = ({ title, texte, items: lignes }: LignesDécoupées): void => {
+    setTitreIA((current) => current ?? title);
+    const nouvelles = lignes.map((ligne): Draft => ({
+      key: prochaineClé++,
+      foodId: ligne.foodId,
+      label: ligne.label,
+      grams: ligne.grams,
+      foods: ligne.foods,
+    }));
+    setItems((current) => [...current, ...nouvelles]);
+    // Les grammes proposés valent pour ce nombre-là : il ne suit plus les cases.
+    setCookedFor(cooked);
+    if (texte !== '') setDécrits((current) => [...current, texte]);
   };
 
   const addFreeText = (): void => {
@@ -265,55 +238,12 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
 
       <section style={{ ...bloc, borderTop: 0, paddingTop: 20, paddingBottom: 18 }}>
         {ia ? (
-          <form onSubmit={(e) => { e.preventDefault(); void découper(); }}>
-            <label className="display" htmlFor="description-plat" style={titre}>
-              Décrivez<br />votre plat
-            </label>
-            <p className="meta" style={{ margin: '8px 0 14px', lineHeight: 1.5 }}>
-              L’IA le découpe en aliments pour {cooked > 1 ? `${cooked} personnes` : 'une personne'}, vous
-              vérifiez avant d’enregistrer.
-            </p>
-            <textarea
-              id="description-plat" className="field" rows={3} maxLength={500}
-              value={description}
-              readOnly={découpage}
-              onChange={(e) => setDescription(e.target.value)}
-              onKeyDown={(e) => {
-                // Entrée valide, comme dans un champ d'une ligne ; Maj+Entrée va à la ligne.
-                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                void découper();
-              }}
-              placeholder="Des pâtes bolognaise, une salade verte et un yaourt"
-              style={{ resize: 'none', lineHeight: 1.45 }}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              <button type="submit" className="btn"
-                      disabled={découpage || description.trim() === ''}>
-                {découpage ? 'Découpage…' : 'Découper avec l’IA'}
-              </button>
-              {/* Un label, pas un bouton : c'est le champ fichier qui ouvre l'appareil photo. */}
-              <label className="btn btn--ghost" aria-disabled={découpage}
-                     style={découpage ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
-                Photographier le plat
-                <input
-                  type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                  disabled={découpage}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = '';
-                    if (file !== undefined) void découper(file);
-                  }}
-                />
-              </label>
-            </div>
-            <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
-              Ne cadrez que l’assiette, sans personne. La photo sert au découpage et n’est pas conservée.
-            </p>
-            {erreurIA !== null ? (
-              <p style={{ fontSize: 13, color: 'var(--text-warning)', marginTop: 8 }}>{erreurIA}</p>
-            ) : null}
-          </form>
+          <DécrirePlat
+            personnes={cooked}
+            onPhoto={() => setPhotographié(true)}
+            onChargement={setDécoupage}
+            onDécoupé={ajouterDécoupage}
+          />
         ) : (
           <p className="display" style={titre}>Qu’y avait-il<br />au menu&nbsp;?</p>
         )}

@@ -336,6 +336,13 @@ a { color: inherit; }
 /* Le liseré garde la taille du `--quiet` qu'il remplace sous le doigt. */
 .btn--danger { background: var(--danger); border: .5px solid var(--danger); }
 
+/* Le segment d'un contrôle segmenté (la fiche d'un repas) : pressé, il répond
+   sous le doigt comme un bouton, sans décoller son groupe. */
+.seg__button {
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 120ms ease;
+}
+.seg__button:active { transform: scale(.97); }
+
 .chip {
   font-size: 12px; padding: 4px 9px; border-radius: var(--radius);
   background: var(--surface-1); color: var(--text-secondary);
