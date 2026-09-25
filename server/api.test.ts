@@ -334,6 +334,88 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.deepEqual(modifie.meal.participants.map((p: any) => p.share), parts);
     });
 
+    /**
+     * « Compléter un repas déjà enregistré » : un bagel le matin, puis, dans un
+     * second temps, un dessert rejoint le **même** repas. Le PATCH écrit sur ce
+     * repas, il n'en crée pas un autre, et les lignes déjà là sont conservées.
+     */
+    it('complète un repas existant sans en créer un second', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const bagel = await insertFood(pool, 'Bagel', { kcal: 260, protein: 10 }, null);
+      const tarte = await insertFood(pool, 'Tarte aux pommes', { kcal: 190, protein: 2 }, true);
+
+      const { body: dabord } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
+        participants: [{ eaterId: adulte }],
+        items: [{ foodId: bagel, label: 'Bagel', quantity: 100, unit: 'g', quantityG: 100 }],
+      });
+      const mealId = dabord.meal.id;
+      assert.equal(dabord.meal.items.length, 1);
+
+      // Le client renvoie la liste entière : le bagel **et** le dessert.
+      const { body: complete } = await call('PATCH', `/api/meals/${mealId}`, {
+        items: [
+          { foodId: bagel, label: 'Bagel', quantity: 100, unit: 'g', quantityG: 100 },
+          { foodId: tarte, label: 'Tarte aux pommes', quantity: 120, unit: 'g', quantityG: 120 },
+        ],
+      });
+      assert.equal(complete.meal.id, mealId, 'pas de second repas : c’est le même');
+      assert.deepEqual(
+        complete.meal.items.map((i: any) => i.label).sort(),
+        ['Bagel', 'Tarte aux pommes'],
+      );
+      // 260 kcal du bagel + 120 g de tarte à 190 kcal/100 g.
+      assert.equal(complete.meal.nutrition.kcal, 260 + 190 * 1.2);
+
+      // La journée porte toujours un seul repas, désormais complet.
+      const { body: jour } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+      assert.equal(jour.meals.length, 1);
+      assert.equal(jour.meals[0].items.length, 2);
+    });
+
+    /**
+     * « Compléter un repas à recette (Jow) » : le dessert compte dans les
+     * totaux (renversé le 22/09/2026), et la recette elle-même ne bouge pas —
+     * les ajouts vivent dans `meal_item`, pas dans `recipe`.
+     */
+    it('complète un repas Jow sans toucher à la recette', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const tarte = await insertFood(pool, 'Tarte aux pommes', { kcal: 190, protein: 2 }, true);
+      const { rows: lignes } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings,
+                             kcal_serving, protein_serving, carb_serving,
+                             fat_serving, fiber_serving, confidence)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Galette complète', 1,
+                 320, 18, 30, 20, 12, 'haute') returning id`,
+      );
+      const recette = lignes[0] as { id: string };
+
+      const { body: dabord } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-14T12:30:00+02:00', slot: 'dejeuner', source: 'jow',
+        recipe_id: recette.id, servings: 1,
+        participants: [{ eaterId: adulte }],
+      });
+      assert.equal(dabord.meal.nutrition.kcal, 320);
+
+      const { body: complete } = await call('PATCH', `/api/meals/${dabord.meal.id}`, {
+        items: [{ foodId: tarte, label: 'Tarte aux pommes', quantity: 120, unit: 'g', quantityG: 120 }],
+      });
+      assert.equal(complete.meal.id, dabord.meal.id);
+      assert.equal(complete.meal.items.length, 1);
+      // 320 kcal de la galette + 120 g de tarte à 190 kcal/100 g.
+      assert.equal(complete.meal.nutrition.kcal, 320 + 190 * 1.2);
+
+      // « Mes recettes » : la recette et ses ingrédients n'ont pas bougé.
+      const [apres] = await sql<{ kcal_serving: number }>(
+        'select kcal_serving from recipe where id = $1', [recette.id],
+      );
+      const { rows: ingredients } = await pool.query(
+        'select count(*)::int as count from recipe_ingredient where recipe_id = $1', [recette.id],
+      );
+      assert.equal(apres?.kcal_serving, 320, 'le snapshot de la recette est figé');
+      assert.equal((ingredients[0] as { count: number } | undefined)?.count, 0, 'aucun ingrédient créé sur la recette');
+    });
+
     it('n’écrit jamais le jeton d’un lien de partage dans raw_input (I6)', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       await call('POST', '/api/meals', {

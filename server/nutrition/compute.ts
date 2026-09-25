@@ -184,12 +184,7 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
 
   const snapshot = meal.recipe;
   if (snapshot !== null && NUTRIENTS.some((n) => snapshot.perServing[n] !== null)) {
-    // Le snapshot Jow l'emporte : il est publié par portion et vérifié, là où
-    // la somme des ingrédients dépend d'unités que `unit_default` ne sait pas
-    // encore convertir. Un nutriment absent du snapshot reste absent — on ne
-    // va pas le chercher ailleurs, les deux bases ne sont pas comparables.
-    macros = scale(snapshot.perServing, servings);
-    maxima = { ...macros };
+    const snapshotMacros = scale(snapshot.perServing, servings);
     confidence = snapshot.confidence;
     const partial = NUTRIENTS.filter((n) => snapshot.perServing[n] === null);
     if (partial.length > 0) {
@@ -197,9 +192,18 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
       confidence = worst(confidence, 'moyenne');
     }
     if (meal.items.length > 0) {
-      warnings.push(
-        'les valeurs viennent de la recette ; les items ajoutés ne sont pas comptés dans les totaux',
-      );
+      // ⚠️ Renversé le 22/09/2026 : un ajout « complète » le repas — l'écran le
+      // montrait, l'application ne le comptait pas. Le snapshot publie des
+      // valeurs exactes par portion ; les items ajoutés s'y additionnent, et un
+      // ajout que le référentiel ne connaît pas déborne le haut sans effacer le
+      // minorant, comme n'importe quel item hors recette.
+      const summed = sum(eatenItems, warnings);
+      macros = add(snapshotMacros, summed.min);
+      maxima = addBorne(snapshotMacros, summed.max);
+      confidence = worst(confidence, summed.confidence);
+    } else {
+      macros = snapshotMacros;
+      maxima = { ...snapshotMacros };
     }
   } else {
     const summed = sum(eatenItems, warnings);
@@ -417,6 +421,32 @@ function scale(macros: Macros, factor: number): Macros {
   for (const nutrient of NUTRIENTS) {
     const value = macros[nutrient];
     out[nutrient] = value === null ? null : round(value * factor);
+  }
+  return out;
+}
+
+/** Deux bornes basses s'additionnent ; deux inconnues restent inconnues, jamais 0. */
+const plus = (a: number | null, b: number | null): number | null =>
+  a === null && b === null ? null : round((a ?? 0) + (b ?? 0));
+
+/** Recette + items, bornes basses — le snapshot fait foi, l'ajout complète. */
+function add(a: Macros, b: Macros): Macros {
+  const out: Macros = { ...EMPTY_MACROS };
+  for (const nutrient of NUTRIENTS) out[nutrient] = plus(a[nutrient], b[nutrient]);
+  return out;
+}
+
+/**
+ * Recette + items, bornes hautes. Le snapshot n'est jamais borné au-delà de
+ * sa valeur ; un item à la borne haute absente (non bornée) laisse le tout
+ * non borné — on n'invente pas un plafond.
+ */
+function addBorne(a: Macros, b: Macros): Macros {
+  const out: Macros = { ...EMPTY_MACROS };
+  for (const nutrient of NUTRIENTS) {
+    out[nutrient] = a[nutrient] === null
+      ? b[nutrient]
+      : b[nutrient] === null ? null : a[nutrient] + b[nutrient];
   }
   return out;
 }
