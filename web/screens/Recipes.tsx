@@ -59,7 +59,8 @@ export function Recipes({ onClose }: { onClose: () => void }): React.ReactElemen
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
             Aucune recette pour l’instant. Elles arrivent toutes seules : une
             recette partagée depuis Jow, ou collée ici, reste connue du foyer
-            même si le repas n’est pas enregistré.
+            même si le repas n’est pas enregistré — et un plat décrit avec
+            l’IA, ou photographié, y entre dès qu’il est enregistré.
           </p>
         </div>
       ) : null}
