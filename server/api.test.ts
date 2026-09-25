@@ -775,6 +775,109 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       );
       assert.equal(rows[0]!.raw_input, null, 'aucun texte de partage à inventer');
     });
+
+    /**
+     * Un repas décrit avec l'IA crée sa recette manuelle : c'est elle qui
+     * apparaît dans « Mes recettes », comme une recette Jow lue puis mangée.
+     */
+    it('enregistre une recette créée par l’IA dans « mes recettes »', async () => {
+      const riz = await insertFood(
+        pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true,
+      );
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 200, unit: 'g', quantityG: 200 }],
+      });
+      assert.equal(status, 201);
+      const recipeId = body.meal.recipe?.id;
+      assert.ok(typeof recipeId === 'string', 'le repas pointe sa recette');
+      // La recette manuelle n'est qu'une copie pour la liste : la nutrition
+      // vient toujours des items, sans double compte.
+      assert.equal(body.meal.nutrition.kcal, 260);
+      assert.equal(body.meal.nutrition.confidence, 'moyenne');
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.deepEqual(liste.recipes.map((r: any) => r.title), ['Riz aux légumes']);
+      assert.equal(liste.recipes[0].id, recipeId);
+      assert.equal(liste.recipes[0].source, 'manuel');
+      assert.equal(liste.recipes[0].timesEaten, 1);
+      assert.ok(typeof liste.recipes[0].lastEatenAt === 'string');
+    });
+
+    it('enregistre une recette photographiée, même sans titre reformulé', async () => {
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'dejeuner', source: 'photo',
+        servings: 1,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 150, unit: 'g', quantityG: 150 }],
+      });
+      assert.equal(status, 201);
+      assert.equal(body.meal.nutrition.confidence, 'basse');
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.deepEqual(liste.recipes.map((r: any) => r.title), ['Riz']);
+      assert.equal(liste.recipes[0].source, 'manuel');
+      assert.equal(liste.recipes[0].timesEaten, 1);
+    });
+
+    it('rejoue une recette manuelle avec sa composition', async () => {
+      const mangeur = await addEater('Alex', '1988-04-12');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { body: origine } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 2,
+        participants: [{ eaterId: mangeur, present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 200, unit: 'g', quantityG: 200 }],
+      });
+      const recipeId = origine.meal.recipe.id;
+
+      // Ce que fait l'écran « Mes recettes » : relire, puis enregistrer — sans
+      // composition. Une recette manuelle ne publie aucune valeur : le repas
+      // reprend donc ses ingrédients, remis à l'échelle.
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'manuel',
+        recipeId, servings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+      });
+      assert.equal(status, 201);
+      assert.equal(body.meal.recipe.id, recipeId);
+      assert.equal(body.meal.items.length, 1);
+      assert.equal(body.meal.items[0].quantityG, 100);
+      assert.equal(body.meal.nutrition.kcal, 130);
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.equal(liste.recipes[0].timesEaten, 2);
+    });
+
+    it('un second service rejoint la recette du premier, sans la dupliquer', async () => {
+      const mangeur = await addEater('Alex', '1988-04-12');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { body: plat } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 3, remainingServings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 400, unit: 'g', quantityG: 400 }],
+      });
+      // 300 g mangés : les restes n'entrent pas dans le total.
+      assert.equal(plat.meal.nutrition.kcal, 390);
+
+      const { status, body: restes } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'dejeuner', source: 'ia',
+        leftoverOf: plat.meal.id, servings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+      });
+      assert.equal(status, 201);
+      assert.equal(restes.meal.recipe.id, plat.meal.recipe.id);
+      assert.equal(restes.meal.items[0].quantityG, 100);
+      assert.equal(restes.meal.nutrition.kcal, 130);
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.equal(liste.recipes.length, 1, 'une seule recette pour les deux services');
+      assert.equal(liste.recipes[0].timesEaten, 2);
+    });
   });
 
   describe('jow_food_link', () => {

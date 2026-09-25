@@ -146,7 +146,9 @@ export function SharedRecipe(
       await api.post('/api/meals', {
         eatenAt: eatenAt(day),
         slot,
-        source: 'jow',
+        // Rejouer une recette manuelle reste un repas manuel : ses quantités
+        // ont été validées par le foyer, pas publiées par Jow.
+        source: state?.recipe?.source === 'manuel' ? 'manuel' : 'jow',
         recipeId: state?.recipe?.id ?? null,
         ...parts,
         guestCount,
