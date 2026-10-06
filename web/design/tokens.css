@@ -440,16 +440,39 @@ input[type='number']::-webkit-inner-spin-button {
   border-top: .5px solid var(--border);
   display: flex; background: var(--surface-2);
   padding-bottom: env(safe-area-inset-bottom);
+  /* Le « + » déborde vers le haut : rien ne doit le rogner. */
+  overflow: visible;
 }
-.nav button {
-  flex: 1; padding: 10px 0 11px; border: 0; background: none;
+.nav__tab {
+  flex: 1; padding: 10px 0 12px; border: 0; background: none;
   color: var(--text-muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1), color 120ms ease;
 }
-.nav button[aria-current='page'] {
+.nav__tab:active { transform: scale(.93); }
+.nav__tab span {
+  font-size: 10px; line-height: 1.2; font-weight: 400;
+}
+.nav__tab[aria-current='page'] {
   color: var(--coral-fg);
   box-shadow: inset 0 2px 0 var(--coral);
 }
+.nav__tab[aria-current='page'] span { font-weight: 500; }
+/* Le « + » ancré au milieu : un slot souple comme un onglet pour le
+   centrer, et un pastille terracotta pleine qui remonte d'un demi-diamètre.
+   Blanc sur terracotta, comme `.btn` — jamais une couleur de nutriment. */
+.nav__plus-slot {
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+}
+.nav__plus {
+  width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--coral); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: -24px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .22);
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
+}
+.nav__plus:active { transform: scale(.94); }
 
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -477,7 +500,7 @@ input[type='number']::-webkit-inner-spin-button {
 
 /* Moins de mouvement, pas moins d'information : les fondus restent. */
 @media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled), .tuile:active:not(:disabled) { transform: none; }
+  .btn:active:not(:disabled), .tuile:active:not(:disabled), .nav__tab:active, .nav__plus:active { transform: none; }
   .apparait { animation-name: fondu; }
 }
 

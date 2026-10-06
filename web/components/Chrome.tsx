@@ -12,18 +12,22 @@
 import { useRef, type ReactNode } from 'react';
 import { navigate } from '../router.tsx';
 import { useSession } from '../session.tsx';
-import { IconBowl, IconChat, IconHistory, IconHome, IconUsers, IconWeek } from '../icons.tsx';
+import { IconBowl, IconChat, IconHistory, IconHome, IconPlus, IconWeek } from '../icons.tsx';
 import { Avatar, accountSeed } from './Avatar.tsx';
 import { InstallBanner } from './InstallBanner.tsx';
 
 export type Tab = 'accueil' | 'semaine' | 'historique' | 'conseils' | 'membres';
 
-const TABS: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] = [
+/** Les quatre onglets de la barre basse. « La famille » vit dans le menu du
+ *  compte (en haut à droite) : la place du milieu revient au « + » ancré,
+ *  qui mène à `/ajouter` depuis n'importe quel onglet. */
+const TABS_LEFT: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] = [
   { tab: 'accueil', path: '/', label: 'Aujourd’hui', Icon: IconHome },
   { tab: 'semaine', path: '/semaine', label: 'La semaine', Icon: IconWeek },
+];
+const TABS_RIGHT: { tab: Tab; path: string; label: string; Icon: typeof IconHome }[] = [
   { tab: 'historique', path: '/historique', label: 'Historique', Icon: IconHistory },
   { tab: 'conseils', path: '/conseils', label: 'Conseils', Icon: IconChat },
-  { tab: 'membres', path: '/membres', label: 'La famille', Icon: IconUsers },
 ];
 
 export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): React.ReactElement {
@@ -61,6 +65,12 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
           >
             Votre profil
           </button>
+          <button
+            type="button" className="row"
+            onClick={() => { menu.current?.hidePopover(); navigate('/membres'); }}
+          >
+            La famille
+          </button>
           <button type="button" className="row" onClick={() => { void signOut(); }}>
             Se déconnecter
           </button>
@@ -74,15 +84,42 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
 
       <nav className="nav" aria-label="Navigation principale">
         {/* Sans clé API côté serveur, pas d'onglet qui mènerait à un refus. */}
-        {TABS.filter(({ tab: name }) => ia || name !== 'conseils').map(({ tab: name, path, label, Icon }) => (
+        {TABS_LEFT.map(({ tab: name, path, label, Icon }) => (
           <button
             key={name}
             type="button"
+            className="nav__tab"
             onClick={() => navigate(path)}
             aria-current={name === tab ? 'page' : undefined}
             aria-label={label}
           >
-            <Icon size={21} />
+            <Icon size={22} />
+            <span aria-hidden="true">{label}</span>
+          </button>
+        ))}
+        {/* Le « + » ancré : la porte d'entrée de `/ajouter`, au milieu,
+            en aplat terracotta plein — le chrome, jamais un nutriment. */}
+        <span className="nav__plus-slot">
+          <button
+            type="button"
+            className="nav__plus"
+            onClick={() => navigate('/ajouter')}
+            aria-label="Ajouter un repas"
+          >
+            <IconPlus size={24} />
+          </button>
+        </span>
+        {TABS_RIGHT.filter(({ tab: name }) => ia || name !== 'conseils').map(({ tab: name, path, label, Icon }) => (
+          <button
+            key={name}
+            type="button"
+            className="nav__tab"
+            onClick={() => navigate(path)}
+            aria-current={name === tab ? 'page' : undefined}
+            aria-label={label}
+          >
+            <Icon size={22} />
+            <span aria-hidden="true">{label}</span>
           </button>
         ))}
       </nav>

@@ -103,7 +103,12 @@ export function QuickAddScreen(): React.ReactElement {
 
   return (
     <div className="app">
-      <ModalHeader title="Ajouter un repas" onClose={() => navigate('/')} />
+      <ModalHeader title="Ajouter un repas" onClose={() => {
+        // Le « + » part de n'importe quel onglet : fermer revient d'où l'on
+        // vient, pas toujours à l'accueil.
+        if (window.history.length > 1) window.history.back();
+        else navigate('/');
+      }} />
 
       {/* Le sur-titre dit le créneau que prendront les raccourcis d'un tap —
           ou le jour choisi sur l'accueil, qui compte davantage. */}
