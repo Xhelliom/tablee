@@ -56,17 +56,27 @@ describe('assistant de recettes — ce qui revient', () => {
   it('garde un numéro de la liste, une fois, et retire une raison chiffrée', () => {
     const proposals = readProposals({
       propositions: [
-        { numero: 2, raison: 'Des légumineuses, pour les fibres.' },
-        { numero: 2, raison: 'doublon' },
-        { numero: 9, raison: 'une recette inventée' },
-        { numero: 1, raison: 'Apporte 12 g de fibres.' },
+        { numero: 2, raison: 'Des légumineuses, pour les fibres.', moment: 'soir' },
+        { numero: 2, raison: 'doublon', moment: 'midi' },
+        { numero: 9, raison: 'une recette inventée', moment: 'midi' },
+        { numero: 1, raison: 'Apporte 12 g de fibres.', moment: 'midi' },
       ],
     }, candidates);
 
     assert.deepEqual(
-      proposals.map((p) => [p.recipe.id, p.reason]),
-      [['r2', 'Des légumineuses, pour les fibres.'], ['r1', null]],
+      proposals.map((p) => [p.recipe.id, p.reason, p.moment]),
+      [['r2', 'Des légumineuses, pour les fibres.', 'soir'], ['r1', null, 'midi']],
     );
+  });
+
+  it('un moment absent ou inconnu ne retire pas la suggestion', () => {
+    const proposals = readProposals({
+      propositions: [
+        { numero: 1, raison: 'Des légumes variés.' },
+        { numero: 2, raison: 'Des légumineuses.', moment: 'goûter' },
+      ],
+    }, candidates);
+    assert.deepEqual(proposals.map((p) => p.moment), [null, null]);
   });
 
   it('rend une liste vide sur une réponse illisible, sans lever', () => {
@@ -78,15 +88,18 @@ describe('assistant de recettes — ce qui revient', () => {
   it('garde deux idées au plus, et écarte entière une idée chiffrée', () => {
     const ideas = readIdeas({
       idees: [
-        { titre: 'Dahl de lentilles corail', raison: 'Des légumineuses, pour les fibres.' },
-        { titre: 'Salade 3 haricots', raison: 'Des haricots pour varier.' },
-        { titre: 'Soupe de pois cassés', raison: 'Environ 10 g de fibres par bol.' },
-        { titre: '  ', raison: 'sans nom' },
-        { titre: 'Chili sin carne', raison: 'Des haricots rouges et du maïs.' },
-        { titre: 'Taboulé de boulgour', raison: 'Une céréale complète.' },
+        { titre: 'Dahl de lentilles corail', raison: 'Des légumineuses, pour les fibres.', moment: 'soir' },
+        { titre: 'Salade 3 haricots', raison: 'Des haricots pour varier.', moment: 'midi' },
+        { titre: 'Soupe de pois cassés', raison: 'Environ 10 g de fibres par bol.', moment: 'soir' },
+        { titre: '  ', raison: 'sans nom', moment: 'midi' },
+        { titre: 'Chili sin carne', raison: 'Des haricots rouges et du maïs.', moment: 'midi' },
+        { titre: 'Taboulé de boulgour', raison: 'Une céréale complète.', moment: 'soir' },
       ],
     });
-    assert.deepEqual(ideas.map((i) => i.title), ['Dahl de lentilles corail', 'Chili sin carne']);
+    assert.deepEqual(ideas.map((i) => [i.title, i.moment]), [
+      ['Dahl de lentilles corail', 'soir'],
+      ['Chili sin carne', 'midi'],
+    ]);
     assert.deepEqual(readIdeas({ propositions: [] }), []);
   });
 });

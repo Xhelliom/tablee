@@ -254,6 +254,10 @@ export interface Meal {
   imageUrl: string | null;
   items: MealItem[];
   participants: { eaterId: string; firstName: string; share: number }[];
+  /** Le plat principal, quand ce repas en est un sous-plat. `null` : un vrai repas. */
+  parentMealId: string | null;
+  /** Les sous-plats — fromage, dessert, entrée à part. Un seul niveau : toujours vide sur un sous-plat. */
+  subMeals: Meal[];
   /** Produits de saison de la recette ce mois-ci — 0 tant que la table est vide. */
   seasonalCount: number;
   nutrition: {
@@ -357,6 +361,8 @@ export interface RecipeProposal {
   recipe: RecipeSummary;
   /** `null` quand le modèle n'a rien donné de lisible, ou a glissé un chiffre. */
   reason: string | null;
+  /** Le repas visé, pour présenter dans l'ordre de la journée. `null` : non dit. */
+  moment: 'midi' | 'soir' | null;
 }
 
 export interface AssistantRecipesResponse {
@@ -365,7 +371,7 @@ export interface AssistantRecipesResponse {
    * Des plats hors de la liste, inventés par le modèle : un nom et une phrase,
    * **aucune valeur**. L'écran les marque « à vérifier ».
    */
-  ideas: { title: string; reason: string }[];
+  ideas: { title: string; reason: string; moment: 'midi' | 'soir' | null }[];
   /** Le texte exact envoyé au modèle — ce qui est sorti du foyer. */
   facts: string;
 }
