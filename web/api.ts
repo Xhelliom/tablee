@@ -442,4 +442,13 @@ export interface WeekResponse {
   days: number;
   eaters: { id: string; firstName: string; color: string | null }[];
   cells: { date: string; eaterId: string; meals: number; plantRatio: number | null }[];
+  /**
+   * Les tendances du foyer (10/2026) : moyennes des % du repère par jour, en
+   * % entiers, jamais par personne. `null` : aucun convive renseigné.
+   */
+  nutrients: {
+    date: string;
+    means: Record<'proteinG' | 'carbG' | 'fatG' | 'fiberG', number | null>;
+    eaters: number;
+  }[];
 }

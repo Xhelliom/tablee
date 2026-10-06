@@ -36,6 +36,60 @@ export interface DayMealForMember extends DailyMeal {
 }
 
 /**
+ * Les repas d'une plage de jours, vus depuis chaque membre, avec la part qui
+ * lui a été attribuée à l'écriture (R2 — on relit `share`, on ne le recalcule
+ * pas). La semaine y lit les tendances du foyer ; le jour, `mealsForDay`.
+ */
+export interface RangedMealForMember extends DayMealForMember {
+  date: string;
+}
+
+export async function mealsForRange(
+  db: HouseholdDb,
+  householdId: string,
+  from: string,
+  days: number,
+  timezone: string,
+): Promise<RangedMealForMember[]> {
+  const { rows } = await db.query<{
+    date: string; meal_id: string; eater_id: string; share: number;
+    kcal: number | null; protein_g: number | null; carb_g: number | null;
+    fat_g: number | null; fiber_g: number | null;
+    kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
+    fat_g_max: number | null; fiber_g_max: number | null;
+    grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
+  }>(
+    `select (m.eaten_at at time zone $4)::date::text as date,
+            m.id as meal_id, mp.eater_id, mp.share,
+            n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
+            n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
+            n.grams_total, n.grams_plant, n.grams_classified
+     from meal m
+     join meal_participant mp on mp.meal_id = m.id
+     left join meal_nutrition n on n.meal_id = m.id
+     where m.household_id = $1
+       and (m.eaten_at at time zone $4)::date >= $2::date
+       and (m.eaten_at at time zone $4)::date < ($2::date + ($3 || ' days')::interval)
+     order by m.eaten_at`,
+    [householdId, from, String(days), timezone],
+  );
+
+  return rows.map((r) => ({
+    date: r.date,
+    mealId: r.meal_id,
+    eaterId: r.eater_id,
+    share: r.share,
+    kcal: r.kcal, proteinG: r.protein_g, carbG: r.carb_g,
+    fatG: r.fat_g, fiberG: r.fiber_g,
+    max: {
+      kcal: r.kcal_max, proteinG: r.protein_g_max, carbG: r.carb_g_max,
+      fatG: r.fat_g_max, fiberG: r.fiber_g_max,
+    },
+    gramsTotal: r.grams_total, gramsPlant: r.grams_plant, gramsClassified: r.grams_classified,
+  }));
+}
+
+/**
  * Les repas d'une journée, vus depuis chaque membre, avec la part qui lui a
  * été attribuée à l'écriture (R2 — on relit `share`, on ne le recalcule pas).
  */

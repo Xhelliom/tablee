@@ -1297,7 +1297,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `POST` | `/api/foods` | Créer un aliment saisi à la main, sans aucune valeur déduite. |
 > | `DELETE` | `/api/templates/:id` | |
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
-> | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
+> | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. *06/10/2026 :* `nutrients` en plus — moyennes des % du repère par jour pour les quatre macros, foyer uniquement (§15). |
 >
 > **Ajoutées le 15/09/2026** :
 >
@@ -1364,6 +1364,12 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 Le client envoie `present`, **pas** `share` : le serveur calcule les shares
 depuis les `portion_coef` courants (R2).
 
+*06/10/2026 — `parentMealId` en plus :* un sous-plat (dessert, fromage, entrée
+à part), avec ses propres convives et ses propres parts. Créneau et journée
+recopiés du plat principal, qui doit exister dans le foyer et ne pas être
+lui-même un sous-plat. Les listes nichent (`subMeals`), le bilan somme sans
+rien y changer.
+
 ---
 
 ## 13. Écrans
@@ -1374,7 +1380,7 @@ depuis les `portion_coef` courants (R2).
 | **/share** | Intercepte le partage Jow. Affiche la recette, le nombre de parts, les cases « qui a mangé ». Deux taps pour valider. |
 | **Ajout rapide** | Templates en premier (gros boutons), puis **« Restes de… »** (repas des 3 derniers jours avec recette), puis recherche texte, puis photo. |
 | **Détail repas** | Composition, nutrition, participants, badge de confiance. Éditable. |
-| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. *Précisé le 14/09/2026 :* seule la part végétale est tracée, un petit graphe par personne avec la moyenne des jours saisis. `/api/week` ne renvoie pas les quatre autres barres, et « dans le repère 5 jours sur 7 » serait un score (§14bis). |
+| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. *Précisé le 14/09/2026 :* seule la part végétale est tracée, un petit graphe par personne avec la moyenne des jours saisis. `/api/week` ne renvoie pas les quatre autres barres, et « dans le repère 5 jours sur 7 » serait un score (§14bis). *Précisé le 06/10/2026 :* les quatre barres se lisent quand même, mais **en moyenne du foyer** — un graphe unique de colonnes empilées (« La tablée, jour par jour »), jamais par personne, sans chiffres sur les segments. Les graphes par convive restent végétaux. |
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |

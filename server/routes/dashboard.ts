@@ -9,14 +9,15 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
+import { weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
-  householdPlantAverage, householdTimezone, mealsForDay, weekGrid,
+  householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
-import { mondayOf, nextDay, startOfDay, todayIn } from '../http/tz.ts';
+import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
 export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
@@ -89,15 +90,36 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, cells] = await Promise.all([
+    const [eaters, cells, references, ranged] = await Promise.all([
       listEaters(request.db, householdId),
       weekGrid(request.db, householdId, from, days, timezone),
+      loadReferences(request.db),
+      mealsForRange(request.db, householdId, from, days, timezone),
     ]);
+
+    // Les tendances du foyer (§15, 10/2026) : moyennes des % du repère par
+    // jour, jamais par personne. Les graphes par convive restent végétaux.
+    const byDay = new Map<string, typeof ranged>();
+    for (const row of ranged) byDay.set(row.date, [...(byDay.get(row.date) ?? []), row]);
+    const dates = Array.from({ length: days }, (_, i) => shiftDay(from, i));
+    const nutrients = weeklyMeans(
+      dates.map((date) => ({
+        date,
+        members: eaters.map((eater) => ({
+          sex: eater.sex,
+          age: ageAt(eater.birthDate, new Date(`${date}T12:00:00Z`)),
+          meals: (byDay.get(date) ?? []).filter((row) => row.eaterId === eater.id),
+        })),
+      })),
+      references,
+    );
+
     return {
       from,
       days,
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
+      nutrients,
     };
   });
 }
