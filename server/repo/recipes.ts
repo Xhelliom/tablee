@@ -316,12 +316,17 @@ export interface LinkResult {
  *
  * Un ingrédient sans `jow_food_id` (recette manuelle, payload inattendu) ne
  * met à jour que sa propre ligne : rien à propager sans clé stable.
+ *
+ * Verrou (020) : un lien verrouillé refuse toute écriture — seul le
+ * super-admin passe outre, par `force: true` (voie `/api/admin/*`). Sans lui,
+ * même un `parent` reçoit un 403 plutôt qu'un écrasement silencieux.
  */
 export async function linkIngredientToFood(
   db: HouseholdDb,
   ingredientId: string,
   foodId: string | null,
   confirmedBy: string | null = null,
+  options: { force?: boolean } = {},
 ): Promise<LinkResult> {
   const { rows } = await db.query<{ jow_food_id: string | null; label: string }>(
     'select jow_food_id, label from recipe_ingredient where id = $1',
@@ -337,6 +342,19 @@ export async function linkIngredientToFood(
       [ingredientId, foodId],
     );
     return { propagated: rowCount ?? 0, jowFoodId: null };
+  }
+
+  if (options.force !== true) {
+    const verrou = await db.query<{ locked: boolean }>(
+      'select locked from jow_food_link where jow_food_id = $1', [jowFoodId],
+    );
+    if (verrou.rows[0]?.locked === true) {
+      const { ApiError } = await import('../http/errors.ts');
+      throw new ApiError(
+        403, 'lien_verrouille',
+        'cette correspondance est verrouillée — seul un super-admin peut la modifier',
+      );
+    }
   }
 
   if (foodId === null) {

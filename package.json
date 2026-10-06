@@ -21,7 +21,8 @@
     "build:web": "vite build",
     "icons": "node --import tsx scripts/make-icons.ts",
     "seed:refs": "node --env-file-if-exists=.env --import tsx scripts/seed-refs.ts",
-    "seed": "npm run seed:food && npm run seed:refs"
+    "seed": "npm run seed:food && npm run seed:refs",
+    "superadmin": "node --env-file-if-exists=.env --import tsx scripts/make-superadmin.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

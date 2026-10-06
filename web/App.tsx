@@ -27,6 +27,7 @@ import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 import { HouseholdSettingsScreen } from './screens/HouseholdSettings.tsx';
 import { AssistantScreen } from './screens/Assistant.tsx';
 import { ProfileScreen } from './screens/Profile.tsx';
+import { SuperAdminScreen } from './screens/SuperAdmin.tsx';
 
 export function App(): ReactElement {
   return (
@@ -129,6 +130,8 @@ function Routes(): ReactElement {
       return <Chrome tab="conseils"><AssistantScreen /></Chrome>;
     case 'foyer':
       return <HouseholdSettingsScreen />;
+    case 'superadmin':
+      return <SuperAdminScreen />;
     case 'profil':
       return <ProfileScreen />;
     case 'membres':

@@ -145,6 +145,8 @@ export interface Eater {
    * enfant est à table sans compte. Un convive n'est pas un compte (007).
    */
   userId: string | null;
+  /** Verrou super-admin (020) sur le lien seul : ni parent ni rattachement auto ne le touchent. */
+  linkLocked?: boolean;
   /** Vrai quand cette assiette est celle du compte connecté. */
   isMe: boolean;
   /**

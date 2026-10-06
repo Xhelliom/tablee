@@ -11,6 +11,7 @@ import type { AppContext } from '../app.ts';
 import { invitationUrl } from '../auth/auth.ts';
 import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
+import { isSuperAdmin } from '../repo/admin.ts';
 import { listHouseholdsForUser } from '../repo/households.ts';
 
 /**
@@ -89,6 +90,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
         user: { id: state.userId, email: state.email, name: state.name },
         households,
         google,
+        superadmin: await isSuperAdmin(ctx.pool, state.userId).catch(() => false),
       };
     }
 
@@ -105,6 +107,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext): void {
       role: identity.role,
       households,
       google,
+      superadmin: identity.superadmin,
       // « Découper avec l'IA » et l'onglet « Conseils » ne s'affichent que si
       // le serveur sait le faire.
       ia: (ctx.llm ?? null) !== null,

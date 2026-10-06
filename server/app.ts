@@ -24,6 +24,7 @@ import { ApiError } from './http/errors.ts';
 import { SECURITY_HEADERS } from './http/headers.ts';
 import { assistantRoutes } from './routes/assistant.ts';
 import { authRoutes } from './routes/auth.ts';
+import { adminRoutes } from './routes/admin.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
 import { householdRoutes } from './routes/household.ts';
@@ -312,6 +313,7 @@ export function buildApp(
     });
 
     authRoutes(api, ctx);
+    adminRoutes(api, ctx);
     eaterRoutes(api, ctx);
     householdRoutes(api, ctx);
     recipeRoutes(api, ctx);

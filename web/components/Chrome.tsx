@@ -31,7 +31,7 @@ const TABS_RIGHT: { tab: Tab; path: string; label: string; Icon: typeof IconHome
 ];
 
 export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): React.ReactElement {
-  const { user, signOut, ia, eaters } = useSession();
+  const { user, signOut, ia, eaters, superadmin } = useSession();
   const menu = useRef<HTMLDivElement>(null);
   const seed = user === null ? null : accountSeed(user.id, eaters);
 
@@ -71,6 +71,14 @@ export function Chrome({ tab, children }: { tab: Tab; children: ReactNode }): Re
           >
             La famille
           </button>
+          {superadmin ? (
+            <button
+              type="button" className="row"
+              onClick={() => { menu.current?.hidePopover(); navigate('/superadmin'); }}
+            >
+              Super-admin
+            </button>
+          ) : null}
           <button type="button" className="row" onClick={() => { void signOut(); }}>
             Se déconnecter
           </button>

@@ -41,7 +41,7 @@ import { ÉditionFiche } from './Eaters.tsx';
 type Étape = 'moi' | 'famille';
 
 export function OnboardingScreen(): ReactElement {
-  const { user, household, eaters, refreshEaters } = useSession();
+  const { user, household, eaters, refreshEaters, signOut } = useSession();
   const { path } = useRoute();
   const moi = eaters.find((eater) => eater.isMe) ?? null;
   const [étape, setÉtape] = useState<Étape>(moi === null ? 'moi' : 'famille');
@@ -96,6 +96,26 @@ export function OnboardingScreen(): ReactElement {
       )}
 
       <div className="fab-space" />
+
+      {/*
+        Porte de sortie (10/2026) : cet écran remplace toute l'app tant que le
+        foyer est vide — sans elle, quelqu'un arrivé là par erreur (mauvais
+        foyer actif, session d'un second compte) est coincé sans menu, sans
+        retour, sans déconnexion. Un bouton discret suffit : le parcours
+        normal, lui, ne passe jamais par ici.
+      */}
+      <div className="sec" style={{ paddingTop: 0 }}>
+        <button
+          type="button" className="btn btn--quiet"
+          onClick={() => { void signOut(); }}
+        >
+          Se déconnecter
+        </button>
+        <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
+          Connecté en tant que {user?.email ?? '…'}
+          {household?.name ? ` · foyer « ${household.name} »` : ''}.
+        </p>
+      </div>
     </div>
   );
 }

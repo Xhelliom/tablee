@@ -39,13 +39,15 @@ export interface Account {
 /** Ce que rend `GET /api/me`. */
 type Me = (
   | { state: 'anonyme' }
-  | { state: 'sans_foyer'; user: Account; households: HouseholdChoice[] }
+  | { state: 'sans_foyer'; user: Account; households: HouseholdChoice[]; superadmin: boolean }
   | {
       state: 'actif';
       user: Account;
       household: Household;
       role: Role;
       households: HouseholdChoice[];
+      /** Super-admin de la plateforme (020) : voit la page du même nom. */
+      superadmin: boolean;
       /** Le serveur sait découper un texte libre par IA (V3). */
       ia: boolean;
     }
@@ -58,6 +60,8 @@ interface SessionValue {
   household: Household | null;
   /** Le rôle dans le foyer actif. `parent` gère les accès, `adulte` saisit. */
   role: Role | null;
+  /** Super-admin de la plateforme : la page du même nom, depuis le menu du compte. */
+  superadmin: boolean;
   /** Tous les foyers du compte — une personne peut en avoir plusieurs. */
   households: HouseholdChoice[];
   /** L'instance propose Google : pour entrer, et pour lier son compte une fois connecté. */
@@ -125,6 +129,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       user,
       household,
       role,
+      superadmin: me.state === 'anonyme' ? false : (me.superadmin ?? false),
       households,
       google: me.google,
       ia: me.state === 'actif' && me.ia,
