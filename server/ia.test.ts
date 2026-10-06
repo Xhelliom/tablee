@@ -105,10 +105,10 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         recettes.push(facts);
         return Promise.resolve({
           propositions: [
-            { numero: 1, raison: 'Des haricots rouges, pour les fibres.' },
-            { numero: 9, raison: 'une recette inventée' },
+            { numero: 1, raison: 'Des haricots rouges, pour les fibres.', moment: 'soir' },
+            { numero: 9, raison: 'une recette inventée', moment: 'midi' },
           ],
-          idees: [{ titre: 'Dahl de lentilles corail', raison: 'Des légumineuses, pour les fibres.' }],
+          idees: [{ titre: 'Dahl de lentilles corail', raison: 'Des légumineuses, pour les fibres.', moment: 'midi' }],
         });
       },
     };
@@ -406,12 +406,12 @@ describe('l’IA', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { status, body } = await call(avecIA, 'POST', '/api/assistant/recipes');
       assert.equal(status, 200);
       assert.deepEqual(
-        body.proposals.map((p: any) => [p.recipe.title, p.reason]),
-        [['Chili sin carne', 'Des haricots rouges, pour les fibres.']],
+        body.proposals.map((p: any) => [p.recipe.title, p.reason, p.moment]),
+        [['Chili sin carne', 'Des haricots rouges, pour les fibres.', 'soir']],
         'la recette inventée est jetée',
       );
       assert.deepEqual(body.ideas, [
-        { title: 'Dahl de lentilles corail', reason: 'Des légumineuses, pour les fibres.' },
+        { title: 'Dahl de lentilles corail', reason: 'Des légumineuses, pour les fibres.', moment: 'midi' },
       ], 'une idée, elle, passe — sans aucune valeur');
 
       const [envoyé] = recettes;
