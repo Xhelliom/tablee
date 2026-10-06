@@ -49,6 +49,7 @@ import {
   api, type FoodSearchResponse, type FoodSummary, type Meal, type Slot,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
+import { annoncerImage } from '../mealImage.ts';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { DécrirePlat, type LignesDécoupées } from '../components/DécrirePlat.tsx';
@@ -81,8 +82,19 @@ interface Draft {
 
 let prochaineClé = 0;
 
-export function FreeTextEntry({ onClose }: { onClose: () => void }): React.ReactElement {
+export function FreeTextEntry({ onClose, parentMealId }: {
+  onClose: () => void;
+  /**
+   * Le plat principal dont ce qui est saisi est un sous-plat (019) : dessert,
+   * fromage, entrée à part. Créneau et journée sont repris du parent et ne se
+   * choisissent plus ; les convives sont pré-cochés sur les siens.
+   */
+  parentMealId?: string;
+}): React.ReactElement {
   const { eaters, ia, day } = useSession();
+  /** Le plat principal, en mode sous-plat. `null` : en cours de chargement. */
+  const [parent, setParent] = useState<Meal | null>(null);
+  const [parentMissing, setParentMissing] = useState(false);
   /** Les descriptions déjà découpées : le champ se vide, l'image du plat s'en sert. */
   const [décrits, setDécrits] = useState<string[]>([]);
   /** Le titre reformulé par l'IA au premier découpage : la description, elle, reste ce qui est découpé. */
@@ -110,7 +122,27 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
-  useEffect(() => { setPresent(new Set(eaters.map((m) => m.id))); }, [eaters]);
+  // En mode sous-plat, les cases suivent le plat principal une fois chargé, pas
+  // la liste des convives.
+  useEffect(() => {
+    if (parentMealId !== undefined && parent !== null) return;
+    setPresent(new Set(eaters.map((m) => m.id)));
+  }, [eaters, parentMealId, parent]);
+
+  // En mode sous-plat, on part de qui était au plat principal — le fromage
+  // pour un seul se décoche, l'entrée pour tous reste cochée.
+  useEffect(() => {
+    if (parentMealId === undefined) return;
+    void api.get<{ meal: Meal }>(`/api/meals/${parentMealId}`)
+      .then(({ meal: found }) => {
+        // Pas de petit-enfant : l'URL a été fabriquée ou le parent a changé.
+        if (found.parentMealId !== null) { setParentMissing(true); return; }
+        setParent(found);
+        setSlot(found.slot);
+        setPresent(new Set(found.participants.map((p) => p.eaterId)));
+      })
+      .catch(() => setParentMissing(true));
+  }, [parentMealId]);
 
   useEffect(() => {
     window.clearTimeout(timer.current);
@@ -196,8 +228,11 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
     setSaving(true);
     try {
       const { meal } = await api.post<{ meal: Meal }>('/api/meals', {
-        eatenAt: eatenAt(day),
-        slot,
+        // En mode sous-plat, le serveur recopie créneau et journée du parent —
+        // on lui envoie les mêmes, pour que la requête se lise seule.
+        eatenAt: parent === null ? eatenAt(day) : parent.eatenAt,
+        slot: parent === null ? slot : parent.slot,
+        ...(parentMealId === undefined ? {} : { parentMealId }),
         source: photographié ? 'photo' : items.some((item) => item.foods !== undefined) ? 'ia' : 'texte',
         // Ce qui est saisi est le plat entier, cuisiné pour `cooked` ; le reste
         // n'est mangé par personne, et attend au frigo (§6bis).
@@ -213,13 +248,15 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
           quantityG: item.grams,
         })),
       });
-      // Sans l'attendre : voir `POST /api/meals/:id/image`.
+      // Sans l'attendre : voir `POST /api/meals/:id/image`. Quand elle arrive,
+      // l'accueil (ou la fiche) s'en ressaisit à l'annonce (`web/mealImage.ts`).
       if (meal.source === 'ia' || meal.source === 'photo') {
-        void api.post(`/api/meals/${meal.id}/image`, { description: décrits.join('\n') })
+        void api.post<{ imageUrl: string | null }>(`/api/meals/${meal.id}/image`, { description: décrits.join('\n') })
+          .then(({ imageUrl }) => { if (imageUrl !== null) annoncerImage(meal.id, imageUrl); })
           .catch(() => undefined);
       }
-      // L'accueil, pas le détail : même raison que dans `Share.tsx`.
-      navigate('/', { replace: true });
+      // Retour au plat principal en mode sous-plat, à l'accueil sinon.
+      navigate(parentMealId === undefined ? '/' : `/repas/${parentMealId}`, { replace: true });
     } catch {
       setError('Le repas n’a pas pu être enregistré.');
       setSaving(false);
@@ -228,13 +265,15 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
 
   const estimé = items.some((item) => item.foods !== undefined);
   // Un bouton grisé sans raison se lit comme une panne.
-  const manque = items.length === 0
-    ? 'Ajoutez au moins un aliment.'
-    : present.size === 0 ? 'Cochez qui était à table.' : null;
+  const manque = parentMealId !== undefined && parent === null
+    ? (parentMissing ? 'Plat principal introuvable.' : 'Chargement du repas…')
+    : items.length === 0
+      ? 'Ajoutez au moins un aliment.'
+      : present.size === 0 ? 'Cochez qui était à table.' : null;
 
   return (
     <div className="app">
-      <ModalHeader title="Saisir un repas" onClose={onClose} />
+      <ModalHeader title={parentMealId === undefined ? 'Saisir un repas' : 'Ajouter un plat'} onClose={onClose} />
 
       <section style={{ ...bloc, borderTop: 0, paddingTop: 20, paddingBottom: 18 }}>
         {ia ? (
@@ -245,7 +284,7 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
             onDécoupé={ajouterDécoupage}
           />
         ) : (
-          <p className="display" style={titre}>Qu’y avait-il<br />au menu&nbsp;?</p>
+          <p className="display" style={titre}>{parentMealId === undefined ? 'Qu’y avait-il\nau menu ?' : 'Un plat\nde plus'}</p>
         )}
       </section>
 
@@ -410,27 +449,40 @@ export function FreeTextEntry({ onClose }: { onClose: () => void }): React.React
         </>
       ) : null}
 
-      <section style={bloc}>
-        <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas{day === null ? null : <span className="meta" style={{ display: 'block', marginTop: 2 }}>{longDate(day)}</span>}</p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {SLOT_ORDER.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={option === slot}
-              onClick={() => setSlot(option)}
-              style={{
-                fontSize: 13, padding: '6px 12px', borderRadius: 'var(--radius)',
-                border: option === slot ? '.5px solid var(--coral)' : '.5px solid var(--border)',
-                background: option === slot ? 'var(--coral)' : 'transparent',
-                color: option === slot ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
-              }}
-            >
-              {(day === null ? SLOT_WHEN : SLOT_LABELS)[option]}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* En mode sous-plat, le créneau ne se choisit plus : le plat suit son
+          plat principal, même jour, même moment. */}
+      {parentMealId === undefined ? (
+        <section style={bloc}>
+          <p style={{ fontSize: 14, marginBottom: 10 }}>Quel repas{day === null ? null : <span className="meta" style={{ display: 'block', marginTop: 2 }}>{longDate(day)}</span>}</p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {SLOT_ORDER.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={option === slot}
+                onClick={() => setSlot(option)}
+                style={{
+                  fontSize: 13, padding: '6px 12px', borderRadius: 'var(--radius)',
+                  border: option === slot ? '.5px solid var(--coral)' : '.5px solid var(--border)',
+                  background: option === slot ? 'var(--coral)' : 'transparent',
+                  color: option === slot ? '#fff' : 'var(--text-secondary)', cursor: 'pointer',
+                }}
+              >
+                {(day === null ? SLOT_WHEN : SLOT_LABELS)[option]}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section style={bloc}>
+          <p style={{ fontSize: 14 }}>Quel repas</p>
+          <p className="meta" style={{ marginTop: 4, lineHeight: 1.5 }}>
+            {parent === null
+              ? '…'
+              : `${SLOT_LABELS[parent.slot]} · ${longDate(parent.eatenAt.slice(0, 10))} — suit le plat principal`}
+          </p>
+        </section>
+      )}
 
       <section style={{ ...bloc, paddingBottom: 16 }}>
         <WhoWasThere eaters={eaters} present={present} onToggle={toggle}

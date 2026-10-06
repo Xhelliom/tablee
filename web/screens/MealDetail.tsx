@@ -20,6 +20,7 @@ import {
   api, type FoodSummary, type Meal, type MealItem, type RecipeIngredient,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
+import { imagesRécentes, écouterImages } from '../mealImage.ts';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
@@ -32,7 +33,7 @@ import {
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import {
-  IconCamera, IconChevron, IconClose, IconPlus, IconSearch, IconStar, IconTrash,
+  IconBowl, IconCamera, IconChevron, IconClose, IconPlus, IconSearch, IconStar, IconTrash,
 } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER,
@@ -63,6 +64,20 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
   }, [mealId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Même course qu'à l'accueil : la fiche ouverte avant l'image la reçoit à
+  // son annonce, sans rechargement — une image déjà là n'est jamais écrasée.
+  useEffect(() => {
+    const appliquer = (imageUrl: string): void => {
+      setMeal((prev) => prev === null || prev.imageUrl !== null ? prev : { ...prev, imageUrl });
+    };
+    for (const annonce of imagesRécentes()) {
+      if (annonce.mealId === mealId) appliquer(annonce.imageUrl);
+    }
+    return écouterImages(({ mealId: id, imageUrl }) => {
+      if (id === mealId) appliquer(imageUrl);
+    });
+  }, [mealId]);
 
   const patch = async (body: Record<string, unknown>): Promise<void> => {
     setBusy(true);
@@ -205,18 +220,27 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
           même jour). On ajoute par la recherche d'aliment, par un libellé seul
           quand le référentiel ne connaît rien, ou en décrivant / photographiant
           avec `DécrirePlat` — le composant commun à la saisie et à la fiche. */}
-      <Composition
-        items={meal.items}
-        busy={busy}
-        ia={ia}
-        personnes={Math.max(1, Math.round(base))}
-        label={meal.recipe === null ? 'Composition' : 'Ajouté au plat'}
-        onChange={(items) => { void patch({ items }); }}
-      />
+      {/* La composition du plat lui-même — pour un repas sans recette, c'est
+          tout le plat ; avec recette, les lignes Jow sont au-dessus et les
+          ajouts vivent en sous-plats (« Avec »), chacun pour ses convives. */}
+      {meal.recipe === null ? (
+        <Composition
+          items={meal.items}
+          busy={busy}
+          ia={ia}
+          personnes={Math.max(1, Math.round(base))}
+          label="Composition"
+          onChange={(items) => { void patch({ items }); }}
+        />
+      ) : null}
+      {meal.parentMealId === null ? <AvecPlat meal={meal} /> : null}
 
-      <section className="spread" style={row}>
-        <span style={{ fontSize: 14 }}>Quel repas</span>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      {/* Un sous-plat suit la journée de son plat principal : le créneau ne s'y
+          change pas — le corriger, c'est corriger le parent. */}
+      {meal.parentMealId === null ? (
+        <section className="spread" style={row}>
+          <span style={{ fontSize: 14 }}>Quel repas</span>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {SLOT_ORDER.map((option) => (
             <button
               key={option}
@@ -234,8 +258,9 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
               {SLOT_WHEN[option]}
             </button>
           ))}
-        </div>
-      </section>
+          </div>
+        </section>
+      ) : null}
 
       {/* ── Édition (V2) ──────────────────────────────────────────────────── */}
       {/* Un repas se corrige comme il s'est saisi : ce qu'on avait devant soi,
@@ -331,6 +356,83 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
       <div className="fab-space" />
     </div>
   );
+}
+
+/**
+ * « Et avec ça ? » — les sous-plats d'un repas (019) : dessert, fromage,
+ * entrée à part, chacun pour ses convives.
+ *
+ * Un plat principal, des plats en plus : le même écran de saisie les crée
+ * (`/repas/:id/ajouter`), avec leurs propres « qui était à table » et leurs
+ * propres parts. Le bilan n'a rien à y changer : il somme déjà les lignes par
+ * convive.
+ *
+ * Les lignes ajoutées au plat avant les sous-plats s'affichent telles quelles,
+ * sans s'éditer : leur chemin d'ajout n'existe plus, mais leur nutrition
+ * compte toujours.
+ */
+function AvecPlat({ meal }: { meal: Meal }): React.ReactElement {
+  const legacy = meal.recipe !== null ? meal.items : [];
+  return (
+    <section style={row}>
+      <p className="label">Et avec ça ?</p>
+      <p className="meta" style={{ margin: '4px 0 10px', lineHeight: 1.5 }}>
+        Dessert, fromage, entrée — chacun pour qui le mange.
+      </p>
+      <div className="stack" style={{ gap: 7 }}>
+        {legacy.length > 0 ? (
+          <div className="card" style={{ padding: '10px 12px' }}>
+            {legacy.map((item) => (
+              <p key={item.id} style={{ fontSize: 13, lineHeight: 1.6 }}>
+                {item.label}
+                {item.quantityG !== null ? <span className="meta"> · {formatGrams(item.quantityG)}</span> : null}
+              </p>
+            ))}
+            <p className="meta" style={{ marginTop: 4 }}>Ajouté au plat — pour tout le monde, comme avant.</p>
+          </div>
+        ) : null}
+        {meal.subMeals.map((sub) => (
+          <button key={sub.id} type="button" className="card row"
+                  onClick={() => navigate(`/repas/${sub.id}`)}
+                  style={{ cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+            {sub.imageUrl !== null ? (
+              <img src={sub.imageUrl} alt="" className="thumb" style={{ width: 42, height: 42 }} />
+            ) : (
+              <span className="thumb" style={{ width: 42, height: 42 }}><IconBowl size={20} /></span>
+            )}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, lineHeight: 1.3 }}>{sousPlatTitre(sub)}</span>
+              <span className="meta" style={{ display: 'block', marginTop: 2, lineHeight: 1.4 }}>
+                {sub.participants.length === 0
+                  ? 'Personne d’enregistré'
+                  : `Pour ${sub.participants.map((p) => p.firstName).join(', ')}`}
+              </span>
+            </span>
+            <IconChevron size={17} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          </button>
+        ))}
+        <button type="button" className="row"
+                onClick={() => navigate(`/repas/${meal.id}/ajouter`)}
+                style={{ border: '.5px solid var(--coral-line)', borderRadius: 12 }}>
+          <span className="thumb" style={{ background: 'var(--coral)', color: '#fff', width: 42, height: 42 }}>
+            <IconPlus size={19} />
+          </span>
+          <span>
+            <span style={{ fontSize: 14, display: 'block' }}>Ajouter un plat</span>
+            <span className="meta">La même saisie, pour qui le mange</span>
+          </span>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** Un sous-plat se nomme comme un repas sans recette. */
+function sousPlatTitre(sub: Meal): string {
+  if (sub.recipe !== null) return sub.recipe.title;
+  if (sub.title !== null) return sub.title;
+  if (sub.items.length === 0) return SLOT_LABELS[sub.slot];
+  return sub.items.slice(0, 3).map((item) => item.label).join(', ');
 }
 
 /**
@@ -511,13 +613,35 @@ function Composition({
 
       {mode === 'chercher' ? (
         <>
-          <input
-            className="field"
-            style={{ marginTop: 10, fontSize: 14 }}
-            value={query}
-            placeholder="Ajouter un aliment…"
-            onChange={(e) => { void search(e.target.value); }}
-          />
+          {/* L'ajout a son geste explicite : le champ seul ressemblait à une
+              recherche passive, et le « + » ne sortait que dans les résultats.
+              Le bouton reprend le langage du « + » ancré de la barre basse :
+              aplat terracotta plein, même quand il n'ajoute « que » du texte. */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <input
+              className="field"
+              style={{ flex: 1, minWidth: 0, fontSize: 14 }}
+              value={query}
+              placeholder="Ajouter un aliment…"
+              aria-label="Ajouter un aliment"
+              onChange={(e) => { void search(e.target.value); }}
+            />
+            <button
+              type="button"
+              aria-label={query.trim().length === 0 ? 'Ajouter un aliment' : `Ajouter « ${query.trim()} »`}
+              disabled={busy || query.trim().length === 0}
+              onClick={addFreeText}
+              style={{
+                width: 46, flexShrink: 0, border: 0, borderRadius: 'var(--radius)',
+                background: busy || query.trim().length === 0 ? 'var(--surface-1)' : 'var(--coral)',
+                color: busy || query.trim().length === 0 ? 'var(--text-muted)' : '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: busy || query.trim().length === 0 ? 'default' : 'pointer',
+              }}
+            >
+              <IconPlus size={20} />
+            </button>
+          </div>
           {results.length > 0 ? (
             <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0' }}>
               {results.map((food) => (
@@ -538,19 +662,20 @@ function Composition({
                       display: 'flex', alignItems: 'center', gap: 7, width: '100%',
                       padding: '7px 2px', fontSize: 13, background: 'none', border: 0,
                       borderBottom: '.5px solid var(--border)', textAlign: 'left', cursor: 'pointer',
+                      color: 'var(--coral-fg)',
                     }}
                   >
-                    <IconPlus size={14} />
-                    {food.name}
+                    <IconPlus size={16} />
+                    <span style={{ color: 'var(--text-primary)' }}>{food.name}</span>
                   </button>
                 </li>
               ))}
             </ul>
           ) : query.trim().length >= 2 ? (
-            <button type="button" className="btn btn--quiet" style={{ marginTop: 10 }}
-                    onClick={addFreeText}>
-              Ajouter « {query.trim()} » sans valeurs
-            </button>
+            <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
+              Aucun aliment connu sous ce nom — le « + » l’ajoute sans valeurs,
+              la quantité se précise ensuite.
+            </p>
           ) : null}
         </>
       ) : null}

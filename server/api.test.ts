@@ -262,6 +262,145 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.deepEqual(repas, { [moi]: 1, [elle]: 1, [enfant]: 0 });
     });
 
+    describe('sous-plats', () => {
+      /**
+       * Le fromage de l'un, le fruit de l'autre : un sous-plat reprend le
+       * créneau et la journée de son plat principal, mais ses parts ne
+       * comptent que pour ses propres convives — Σ = 1 par repas, chacun.
+       */
+      it('hérite du créneau et de la journée, avec ses propres parts', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const elle = await addEater('Adulte deux', '1987-01-01', 1);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }, { eaterId: elle }],
+        });
+
+        // Le client prétend un autre moment : le serveur recopie le parent.
+        const { body: enfant, status } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-14T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(status, 201);
+        assert.equal(enfant.meal.parentMealId, parent.meal.id);
+        assert.equal(enfant.meal.eatenAt, parent.meal.eatenAt);
+        assert.equal(enfant.meal.slot, 'diner');
+        assert.deepEqual(
+          enfant.meal.participants.map((p: any) => [p.eaterId, p.share]),
+          [[moi, 1]],
+        );
+
+        const { body: relu } = await call('GET', `/api/meals/${parent.meal.id}`);
+        assert.equal(relu.meal.subMeals.length, 1);
+        assert.equal(relu.meal.subMeals[0].id, enfant.meal.id);
+        assert.deepEqual(relu.meal.subMeals[0].subMeals, [], 'un seul niveau');
+      });
+
+      it('refuse un parent inconnu, d’un autre repas, ou déjà enfant', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+
+        const inconnu = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: '00000000-0000-4000-8000-000000000000',
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(inconnu.status, 400);
+
+        const petitEnfant = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: enfant.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(petitEnfant.status, 400);
+      });
+
+      /**
+       * Les listes ne voient que des plats principaux, avec leurs sous-plats
+       * nichés ; le bilan, lui, mange de tout — le dessert compte pour qui l'a
+       * mangé, et pour lui seul.
+       */
+      it('niche les listes, et le bilan compte pour chacun', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const elle = await addEater('Adulte deux', '1987-01-01', 1);
+        const fromage = await insertFood(pool, 'Comté', { kcal: 400, protein: 25, carb: 1, fat: 32, fiber: 0 }, false);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }, { eaterId: elle }],
+        });
+        await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+          items: [{ foodId: fromage, label: 'Comté', quantity: 30, unit: 'g', quantityG: 30 }],
+        });
+
+        const { body: liste } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+        assert.equal(liste.meals.length, 1, 'un seul plat principal dans la liste');
+        assert.equal(liste.meals[0].subMeals.length, 1);
+
+        const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+        const repas = Object.fromEntries(
+          bilan.dashboard.map((e: any) => [e.eater.id, e.balance.mealCount]),
+        );
+        assert.deepEqual(repas, { [moi]: 2, [elle]: 1 });
+      });
+
+      it('refuse de déplacer un sous-plat, mais le laisse se corriger', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const fromage = await insertFood(pool, 'Comté', { kcal: 400, protein: 25, carb: 1, fat: 32, fiber: 0 }, false);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+          items: [{ foodId: fromage, label: 'Comté', quantity: 30, unit: 'g', quantityG: 30 }],
+        });
+
+        const deplace = await call('PATCH', `/api/meals/${enfant.meal.id}`, { slot: 'dejeuner' });
+        assert.equal(deplace.status, 400);
+
+        const corrige = await call('PATCH', `/api/meals/${enfant.meal.id}`, {
+          items: [{ foodId: fromage, label: 'Comté', quantity: 60, unit: 'g', quantityG: 60 }],
+        });
+        assert.equal(corrige.status, 200);
+        assert.equal(corrige.body.meal.nutrition.kcal, 240);
+      });
+
+      it('supprimer le plat principal emporte ses sous-plats', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+
+        assert.equal((await call('DELETE', `/api/meals/${parent.meal.id}`)).status, 200);
+        assert.equal((await call('GET', `/api/meals/${enfant.meal.id}`)).status, 404);
+      });
+    });
+
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');

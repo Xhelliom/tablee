@@ -140,6 +140,11 @@ export function mealRoutes(app: FastifyInstance, ctx: AppContext): void {
         // repas à n'importe quel compte — la nounou, le conjoint — et
         // `meal.created_by` est précisément ce qui dit « qui a agi » (007).
         createdBy: request.identity().userId,
+        // Un sous-plat (019) : le parent est vérifié par `createMeal`, qui en
+        // recopie aussi le créneau et la journée.
+        ...((input['parentMealId'] !== undefined || input['parent_meal_id'] !== undefined)
+          ? { parentMealId: optionalUuid(input['parentMealId'] ?? input['parent_meal_id'], 'parentMealId') }
+          : {}),
       }),
     );
 

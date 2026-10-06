@@ -15,6 +15,7 @@ import { LoginScreen, ResetPasswordScreen } from './screens/Login.tsx';
 import { TodayScreen } from './screens/Today.tsx';
 import { ShareScreen } from './screens/Share.tsx';
 import { QuickAddScreen } from './screens/QuickAdd.tsx';
+import { FreeTextEntry } from './screens/FreeTextEntry.tsx';
 import { MealDetailScreen } from './screens/MealDetail.tsx';
 import { LeftoverScreen } from './screens/Leftover.tsx';
 import { WeekScreen } from './screens/Week.tsx';
@@ -108,9 +109,18 @@ function Routes(): ReactElement {
     case 'restes':
       return segments[1] === undefined ? <QuickAddScreen /> : <LeftoverScreen mealId={segments[1]} />;
     case 'repas':
-      return segments[1] === undefined
-        ? <Chrome tab="accueil"><TodayScreen /></Chrome>
-        : <MealDetailScreen mealId={segments[1]} />;
+      if (segments[1] === undefined) return <Chrome tab="accueil"><TodayScreen /></Chrome>;
+      // Un plat de plus au même repas : la même saisie, rattachée au plat
+      // principal comme sous-plat (019).
+      if (segments[2] === 'ajouter' && segments[3] === undefined) {
+        const parent = segments[1];
+        return (
+          <FreeTextEntry parentMealId={parent} onClose={() => navigate(`/repas/${parent}`)} />
+        );
+      }
+      return segments[2] === undefined
+        ? <MealDetailScreen mealId={segments[1]} />
+        : <Chrome tab="accueil"><p className="empty">Cette page n’existe pas.</p></Chrome>;
     case 'semaine':
       return <Chrome tab="semaine"><WeekScreen /></Chrome>;
     case 'historique':

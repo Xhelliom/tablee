@@ -93,8 +93,9 @@ export function HistoryScreen(): React.ReactElement {
           <section key={day} className="sec" style={{ paddingTop: 18 }}>
             <p className="eyebrow" style={{ marginBottom: 9 }}>{longDate(day)}</p>
             <div className="stack">
+              {/* Le plus récent d'abord, comme l'accueil. */}
               {[...dayMeals]
-                .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))
+                .sort((a, b) => SLOT_ORDER.indexOf(b.slot) - SLOT_ORDER.indexOf(a.slot))
                 .map((meal) => (
                   <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
                             onOpen={(id) => navigate(`/repas/${id}`)} />
