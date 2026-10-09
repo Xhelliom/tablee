@@ -184,6 +184,14 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
                   : formatPercent(nutrition.plantRatio)}
               </span>
             </div>
+            {nutrition.energyDensity !== null ? (
+              <div className="spread">
+                <span style={{ fontSize: 13 }}>Densité du plat</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {`${Math.round(nutrition.energyDensity)}\u00a0kcal pour 100\u00a0g`}
+                </span>
+              </div>
+            ) : null}
             {nutrition.plantRatio !== null
              && nutrition.gramsClassified !== null
              && nutrition.gramsTotal !== null

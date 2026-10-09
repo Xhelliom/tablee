@@ -125,6 +125,12 @@ export interface MealNutrition extends Macros {
   gramsPlant: number | null;
   /** Grammes dont l'origine est connue, végétale **ou** animale. */
   gramsClassified: number | null;
+  /**
+   * kcal pour 100 g de ce qui a été mangé. `null` tant que l'énergie et les
+   * grammes ne portent pas sur les mêmes aliments — jamais 0. Aucun repère :
+   * une propriété du plat, pas d'une personne.
+   */
+  energyDensity: number | null;
   confidence: Confidence;
   /** Destinés à être affichés, pas seulement loggués (§6 du contrat Jow). */
   warnings: string[];
@@ -183,7 +189,8 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
   let confidence: Confidence;
 
   const snapshot = meal.recipe;
-  if (snapshot !== null && NUTRIENTS.some((n) => snapshot.perServing[n] !== null)) {
+  const fromSnapshot = snapshot !== null && NUTRIENTS.some((n) => snapshot.perServing[n] !== null);
+  if (snapshot !== null && fromSnapshot) {
     const snapshotMacros = scale(snapshot.perServing, servings);
     confidence = snapshot.confidence;
     const partial = NUTRIENTS.filter((n) => snapshot.perServing[n] === null);
@@ -219,7 +226,20 @@ export function calculerNutrition(meal: MealInput, defaults: UnitDefaults): Meal
 
   const plant = plantRatio(recipeItems, eatenItems, servings, warnings);
 
-  return { ...macros, max: maxima, ...plant, confidence, warnings, items };
+  // Même périmètre, ou rien : chaque gramme est connu, l'énergie n'a pas de
+  // trou (borne haute = borne basse), et pour une recette les ingrédients sont
+  // là et c'est le snapshot qui porte l'énergie — sinon grammes et kcal
+  // décrivent deux plats différents.
+  const samePerimeter =
+    [...recipeItems, ...eatenItems].every((item) => item.quantityG !== null)
+    && (meal.recipe === null || (fromSnapshot && recipeItems.length > 0))
+    && macros.kcal !== null && maxima.kcal === macros.kcal;
+  const energyDensity =
+    samePerimeter && plant.gramsTotal !== null && plant.gramsTotal > 0 && macros.kcal !== null
+      ? round((macros.kcal / plant.gramsTotal) * 100)
+      : null;
+
+  return { ...macros, max: maxima, ...plant, energyDensity, confidence, warnings, items };
 }
 
 /**

@@ -361,3 +361,80 @@ describe('calculerNutrition — part végétale', () => {
     assert.equal(result.gramsTotal, null);
   });
 });
+
+describe('calculerNutrition — densité énergétique', () => {
+  const galette = {
+    perServing: { kcal: 320, proteinG: 18, carbG: 16, fatG: 20, fiberG: 12 },
+    confidence: 'haute' as const,
+  };
+
+  it('rapporte l’énergie aux grammes pour 100 g', () => {
+    const result = calculerNutrition(
+      meal({ items: [item('Riz', RIZ, 200), item('Poulet', POULET, 100)] }), VIDE,
+    );
+    assert.equal(result.energyDensity, 136); // (260 + 148) / 300
+  });
+
+  it('se tait quand un ingrédient n’a pas de grammes', () => {
+    const result = calculerNutrition(
+      meal({ items: [item('Riz', RIZ, 200), { ...item('Sauce', RIZ, null), unit: 'Poignée' }] }), VIDE,
+    );
+    assert.equal(result.energyDensity, null);
+  });
+
+  it('se tait quand l’énergie d’un aliment est inconnue', () => {
+    const result = calculerNutrition(
+      meal({ items: [item('Riz', RIZ, 200), item('Mystère', food('Mystère', {}, null), 50)] }), VIDE,
+    );
+    assert.equal(result.energyDensity, null);
+  });
+
+  it('se tait sans aliment du tout, plutôt que 0', () => {
+    assert.equal(calculerNutrition(meal({}), VIDE).energyDensity, null);
+  });
+
+  it('repas Jow : snapshot et ingrédients sur le même périmètre', () => {
+    const result = calculerNutrition(
+      meal({ source: 'jow', recipe: galette, servings: 2, recipeIngredients: [item('Riz', RIZ, 100)] }),
+      VIDE,
+    );
+    assert.equal(result.energyDensity, 320); // 640 kcal pour 200 g
+  });
+
+  it('repas Jow : se tait si un ingrédient n’est pas converti', () => {
+    const result = calculerNutrition(
+      meal({
+        source: 'jow', recipe: galette,
+        recipeIngredients: [item('Riz', RIZ, 100), { ...item('Huile', null, null), unit: 'Cuillère à soupe' }],
+      }),
+      VIDE,
+    );
+    assert.equal(result.energyDensity, null);
+  });
+
+  it('repas Jow : se tait sans ingrédients chargés', () => {
+    assert.equal(calculerNutrition(meal({ source: 'jow', recipe: galette }), VIDE).energyDensity, null);
+  });
+
+  it('repas Jow complété : ajout de kcal connue compte des deux côtés', () => {
+    const result = calculerNutrition(
+      meal({
+        source: 'jow', recipe: galette,
+        recipeIngredients: [item('Riz', RIZ, 100)], items: [item('Riz', RIZ, 100)],
+      }),
+      VIDE,
+    );
+    assert.equal(result.energyDensity, 225); // 450 kcal pour 200 g
+  });
+
+  it('repas Jow complété : se tait si l’ajout a une énergie inconnue', () => {
+    const result = calculerNutrition(
+      meal({
+        source: 'jow', recipe: galette,
+        recipeIngredients: [item('Riz', RIZ, 100)], items: [item('Mystère', food('Mystère', {}, null), 50)],
+      }),
+      VIDE,
+    );
+    assert.equal(result.energyDensity, null);
+  });
+});

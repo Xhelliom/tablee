@@ -121,6 +121,14 @@ pas filtré par la RLS.
   bilan, en gris, et n'apparaît ni dans l'anneau, ni dans les compteurs du
   foyer, ni sur la fiche d'un repas. Lire l'en-tête de la 017 avant d'y
   toucher : c'est un renversement du §9, pas un oubli.
+  **Exception, décidée par le propriétaire le 09/10/2026 : la densité
+  énergétique d'un plat** (kcal pour 100 g, migration 022) s'affiche sur la
+  fiche d'un repas, **pour tous, mineurs compris**. C'est une propriété du plat,
+  pas d'une personne : I5 vise les profils, et ce chiffre n'est ni une barre, ni
+  un repère, ni un objectif. Deux conditions qui restent : elle vaut `null`
+  (donc rien à l'écran, jamais 0) quand l'énergie et les grammes ne portent pas
+  sur les mêmes aliments (`calculerNutrition`, comme `plantRatio` se tait), et
+  **aucun mot « léger / dense »** tant qu'un seuil n'a pas de source.
 - **Ne jamais envoyer au LLM** : prénoms, dates de naissance, allergènes, poids,
   photos de personnes. Uniquement des libellés d'aliments, des agrégats et des
   tranches d'âge.
