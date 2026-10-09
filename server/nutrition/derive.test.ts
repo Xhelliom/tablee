@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
+import { optionalNumber, parseCsv, requiredNumber, requiredText } from '../food/seeds.ts';
 import {
   deriveTargets, energyTargets, KCAL_PER_GRAM,
   type EnergyReference, type PercentReference,
@@ -209,5 +211,31 @@ describe('energyTargets', () => {
     ]);
     assert.equal(cibles.length, 2);
     assert.equal(cibles[1]?.source, 'BE M prolongé');
+  });
+});
+
+describe('I5, filet 1 : les fichiers que le seed charge', () => {
+  const lire = async (file: string) =>
+    parseCsv(await readFile(new URL(`../../db/seeds/${file}`, import.meta.url), 'utf8')).rows;
+
+  it('energy-reference.csv ne produit aucun repère kcal avant 18 ans', async () => {
+    const energies = (await lire('energy-reference.csv'))
+      .filter((row) => optionalNumber('energy-reference.csv', row, 'kcal') !== null)
+      .map((row) => energy(
+        requiredText('energy-reference.csv', row, 'sex').toUpperCase() as 'F' | 'M',
+        requiredNumber('energy-reference.csv', row, 'age_min'),
+        requiredNumber('energy-reference.csv', row, 'age_max'),
+        requiredNumber('energy-reference.csv', row, 'kcal'),
+      ));
+    assert.ok(energies.some((e) => e.ageMin < 18), 'le fichier doit bien contenir des besoins d’enfants');
+    const cibles = energyTargets(energies);
+    assert.ok(cibles.length > 0, 'les majeurs, eux, ont leur repère');
+    assert.deepEqual(cibles.filter((c) => c.ageMin < 18), []);
+  });
+
+  it('nutrient-reference.csv, saisi à la main, n’écrit aucune ligne kcal avant 18 ans', async () => {
+    const lignes = (await lire('nutrient-reference.csv'))
+      .filter((row) => row.values['nutrient'] === 'kcal' && requiredNumber('nutrient-reference.csv', row, 'age_min') < 18);
+    assert.deepEqual(lignes, []);
   });
 });

@@ -1127,6 +1127,25 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(proteines.consumed, 4.05);
     });
 
+    it('I5 : la moyenne d’énergie sur 7 jours existe pour un majeur, jamais pour un mineur', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2018-01-01', 2, 'F');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
+      for (const [eaten_at, who] of [['2026-09-10', adulte], ['2026-09-13', adulte], ['2026-09-13', enfant]] as const) {
+        await call('POST', '/api/meals', {
+          eaten_at: `${eaten_at}T12:30:00+02:00`, slot: 'dejeuner', source: 'manuel',
+          participants: [{ eaterId: who }],
+          items: [{ foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 }],
+        });
+      }
+      const { body } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const of = (id: string) => body.dashboard.find((d: any) => d.eater.id === id).balance;
+      assert.equal(of(adulte).energyAverage7d.days, 2);
+      assert.equal(of(adulte).energyAverage7d.average, 130);
+      assert.equal('energyAverage7d' in of(enfant), false);
+      assert.equal(of(enfant).bars.some((b: any) => b.nutrient === 'kcal'), false);
+    });
+
     it('demande l’unité plutôt que de la deviner tant que unit_default est vide', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const salade = await insertFood(pool, 'Salade verte', { kcal: 15 }, true);

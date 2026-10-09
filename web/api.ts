@@ -220,10 +220,19 @@ export interface PlantBar {
   householdAverage7d: number | null;
 }
 
+export interface EnergyAverage {
+  average: number | null;
+  days: number;
+  reference: NutrientReference | null;
+  percent: number | null;
+}
+
 export interface DailyBalance {
   bars: NutrientBar[];
   plant: PlantBar;
   mealCount: number;
+  /** Absent sous 18 ans (I5). */
+  energyAverage7d?: EnergyAverage;
 }
 
 export interface MealItem {

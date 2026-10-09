@@ -57,6 +57,26 @@ const bar = (result: ReturnType<typeof bilanJournalier>, nutrient: string) => {
 };
 
 describe('bilanJournalier', () => {
+  // ── Énergie en moyenne sur 7 jours (même I5, trois filets) ─────────────────
+  it('moyenne l’énergie sur les jours renseignés, contre le BNM', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST, meals: [],
+      // lundi 2 repas (900), mardi vide (non saisi, pas zéro), mercredi 1500.
+      energyWeek: [[repas({ kcal: 400 }), repas({ kcal: 500 })], [], [repas({ kcal: 1500 })]],
+    });
+    assert.equal(result.energyAverage7d?.average, 1200);
+    assert.equal(result.energyAverage7d?.days, 2);
+    assert.equal(result.energyAverage7d?.percent, 57.1);
+  });
+
+  it('filet 2 : aucune moyenne d’énergie sous 18 ans', () => {
+    const result = bilanJournalier({
+      sex: 'F', age: 17, references: REPERES_DE_TEST, meals: [],
+      energyWeek: [[repas({ kcal: 700 })]],
+    });
+    assert.equal(result.energyAverage7d, undefined);
+  });
+
   // ── I5 : pas de chiffre de calories sur un profil mineur ───────────────────
   it('ne construit pas de barre « Énergie » sous 18 ans', () => {
     const repas1 = repas({ kcal: 700, proteinG: 25 });

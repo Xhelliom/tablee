@@ -25,7 +25,7 @@
  * inconnue, et le milieu d'un intervalle dessiné comme s'il était mesuré.
  */
 import { useState } from 'react';
-import type { BarState, DailyBalance, Nutrient, NutrientBar, PlantBar } from '../api.ts';
+import type { BarState, DailyBalance, EnergyAverage, Nutrient, NutrientBar, PlantBar } from '../api.ts';
 import { Avatar } from './Avatar.tsx';
 import { IconCheckCircle, IconInfo, IconPlusCircle, IconUpCircle } from '../icons.tsx';
 import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
@@ -121,6 +121,10 @@ export function BilanCard({
           ))}
       </div>
 
+      {balance.energyAverage7d !== undefined ? (
+        <EnergyWeekRow energy={balance.energyAverage7d} />
+      ) : null}
+
       <PlantRow plant={balance.plant} />
 
       <div style={{
@@ -201,6 +205,50 @@ function NutrientRow({
         )}
         <Value percent={bar?.percent ?? null} percentMax={bar?.percentMax ?? null} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * L'énergie en moyenne sur 7 jours (majeurs seulement : la ligne n'est pas
+ * rendue sans `energyAverage7d`, I5). Dit toujours que c'est un minorant : une
+ * journée partiellement saisie compte comme entière (dette n° 20).
+ */
+function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElement {
+  return (
+    <div style={{
+      marginTop: 16, paddingTop: 14, borderTop: '.5px solid var(--border)',
+      display: 'flex', flexDirection: 'column', gap: 7,
+    }}>
+      <div className="spread" style={{ gap: 10 }}>
+        <Name color={NUTRIENT_COLOR.kcal} label="Énergie, moyenne sur 7 jours" />
+        <span className="meta">
+          {energy.days > 0 ? `${energy.days} jour${energy.days > 1 ? 's' : ''} renseigné${energy.days > 1 ? 's' : ''}` : ''}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {energy.percent !== null ? (
+          <Track
+            color={NUTRIENT_COLOR.kcal}
+            percent={energy.percent}
+            percentMax={null}
+            state="partiel"
+            scale={SCALE}
+            reference
+            ceiling={null}
+            marker={null}
+            label={`Énergie, moyenne sur 7 jours : ${formatPercentRange(energy.percent, energy.percent)} du repère`}
+          />
+        ) : (
+          <EmptyTrack />
+        )}
+        <Value percent={energy.percent} percentMax={null} />
+      </div>
+      <p className="meta">
+        {energy.average === null
+          ? 'Indisponible : aucun repas des 7 derniers jours n’a d’énergie connue.'
+          : 'Une journée saisie en partie compte comme entière : la moyenne est un minimum, peut-être plus haute en vrai.'}
+      </p>
     </div>
   );
 }
