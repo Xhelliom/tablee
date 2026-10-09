@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { api, type RecipeSummary } from '../api.ts';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { IconBowl, IconChevron } from '../icons.tsx';
 import { relativeDay } from '../design/vocabulary.ts';
 import { SharedRecipe } from './Share.tsx';
@@ -124,6 +125,7 @@ function Section({ title, hint, recipes, onChoose }: {
                   <ConfidenceBadge confidence={recipe.confidence} />
                 ) : null}
               </span>
+              <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
             </span>
 
             <IconChevron size={17} style={{ color: 'var(--text-muted)' }} />

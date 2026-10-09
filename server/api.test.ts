@@ -871,6 +871,39 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.ok(typeof galette.lastEatenAt === 'string');
     });
 
+    it('expose les lettres Jow sur la liste et le repas, et rien sans elles', async () => {
+      const lettrée = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+      const nue = await recette('650b16ade7cc8d0013ce4a6f', 'Chili sin carne');
+      await sql("update recipe set nutri_score = 'B', green_score = 'A+' where id = $1", [lettrée]);
+
+      const { body } = await call('GET', '/api/recipes');
+      const parTitre = (t: string): any => body.recipes.find((r: any) => r.title === t);
+      assert.equal(parTitre('Galette végé').nutriScore, 'B');
+      assert.equal(parTitre('Galette végé').greenScore, 'A+');
+      assert.equal(parTitre('Chili sin carne').nutriScore, null);
+      assert.equal(parTitre('Chili sin carne').greenScore, null);
+
+      const saisir = async (recipeId: string): Promise<any> => (await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'jow', recipeId, servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+      })).body.meal;
+      const avec = await saisir(lettrée);
+      const sans = await saisir(nue);
+      const relu = async (m: any): Promise<any> => (await call('GET', `/api/meals/${m.id}`)).body.meal;
+      assert.deepEqual(
+        [(await relu(avec)).recipe.nutriScore, (await relu(avec)).recipe.greenScore], ['B', 'A+'],
+      );
+      assert.deepEqual(
+        [(await relu(sans)).recipe.nutriScore, (await relu(sans)).recipe.greenScore], [null, null],
+      );
+
+      // Un repas hors Jow n'a pas de recette, donc pas de lettre à inventer.
+      const { body: libre } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel', participants: [],
+      });
+      assert.equal((await relu(libre.meal)).recipe, null);
+    });
+
     /**
      * Le piège que cette suite existe pour attraper (§16).
      *
