@@ -62,6 +62,7 @@ export interface RecipeSummary {
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = importée, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -113,13 +114,13 @@ export async function markRecipeKnown(
 export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeSummary[]> {
   const { rows } = await db.query<{
     id: string; title: string; image_url: string | null; base_servings: number;
-    nutri_score: string | null; confidence: Confidence;
+    nutri_score: string | null; green_score: string | null; confidence: Confidence;
     last_eaten_at: Date | null; times_eaten: string;
     source: 'jow' | 'manuel'; url: string | null;
     kcal_serving: number | null; protein_serving: number | null; carb_serving: number | null;
     fat_serving: number | null; fiber_serving: number | null;
   }>(
-    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.confidence,
+    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.green_score, r.confidence,
             r.source, r.url, r.kcal_serving, r.protein_serving, r.carb_serving,
             r.fat_serving, r.fiber_serving,
             max(m.eaten_at) as last_eaten_at,
@@ -142,6 +143,7 @@ export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeS
     imageUrl: row.image_url,
     baseServings: row.base_servings,
     nutriScore: row.nutri_score,
+    greenScore: row.green_score,
     confidence: row.confidence,
     lastEatenAt: row.last_eaten_at === null ? null : row.last_eaten_at.toISOString(),
     timesEaten: Number(row.times_eaten),

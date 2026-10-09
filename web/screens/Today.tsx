@@ -27,6 +27,7 @@ import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { LeftoverRow } from '../components/Leftovers.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
 import { IconBowl, IconChevron, IconPlus } from '../icons.tsx';
 import {
@@ -480,6 +481,7 @@ function RecipeCard({ recipe, reason }: { recipe: RecipeSummary; reason: string 
             {reason}
           </span>
         ) : null}
+        <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
         {recipe.confidence !== 'haute' ? (
           <ConfidenceBadge confidence={recipe.confidence} />
         ) : null}

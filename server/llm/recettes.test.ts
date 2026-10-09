@@ -10,7 +10,7 @@ import {
 } from './recettes.ts';
 
 const recette = (id: string, title: string, over: Partial<RecipeSummary> = {}): RecipeSummary => ({
-  id, title, imageUrl: null, baseServings: 4, nutriScore: null, confidence: 'haute',
+  id, title, imageUrl: null, baseServings: 4, nutriScore: null, greenScore: null, confidence: 'haute',
   lastEatenAt: null, timesEaten: 0, source: 'jow', url: null,
   perServing: { kcal: 320, proteinG: 18, carbG: 40, fatG: 10, fiberG: 12 },
   ...over,

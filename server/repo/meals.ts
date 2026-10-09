@@ -88,7 +88,7 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette (016). `null` : à l'écran, ses libellés. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA (015). */
   imageUrl: string | null;
   items: MealItem[];
@@ -538,7 +538,7 @@ export async function recomputeMealsUsingIngredient(
 const MEAL_SELECT = `
   select m.id, m.eaten_at, m.slot, m.source, m.servings, m.remaining_servings, m.guest_count,
          m.leftover_of, m.note, m.title, m.image_id, m.parent_meal_id,
-         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
+         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score, r.green_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
          n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
          n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.energy_density, n.confidence
@@ -551,7 +551,7 @@ interface MealRow {
   remaining_servings: number | null; guest_count: number; leftover_of: string | null; note: string | null;
   title: string | null; image_id: string | null; parent_meal_id: string | null;
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
-  nutri_score: string | null;
+  nutri_score: string | null; green_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
   fat_g: number | null; fiber_g: number | null;
   kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
@@ -731,6 +731,7 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
             id: row.recipe_id,
             title: row.recipe_title ?? '',
             nutriScore: row.nutri_score,
+            greenScore: row.green_score,
           },
     imageUrl: row.image_url ?? (row.image_id === null ? null : dishImageUrl(row.image_id)),
     items: itemsByMeal.get(row.id) ?? [],
