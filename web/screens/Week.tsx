@@ -91,8 +91,42 @@ export function WeekScreen(): React.ReactElement {
           ))}
         </section>
       )}
+      {data.frequencies.length > 0 ? <Frequencies items={data.frequencies} /> : null}
       <div className="fab-space" />
     </>
+  );
+}
+
+/**
+ * Les repères en aliments et en fréquences de Santé publique France. Ce sont
+ * des repères **adultes**, lus pour le foyer : aucun plafond ne descend sur la
+ * fiche d'un convive, et le texte du document est cité sous chaque ligne.
+ */
+function Frequencies({ items }: { items: WeekResponse['frequencies'] }): React.ReactElement {
+  return (
+    <section className="sec" style={{ paddingBottom: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <p style={{ fontSize: 14 }}>Les repères de la semaine</p>
+      <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+        Repères de Santé publique France pour les adultes, comptés pour le foyer.
+      </p>
+      {items.map((item) => {
+        const limit = item.kind === 'max_grams';
+        const current = item.current === null
+          ? 'rien de saisi'
+          : `${item.partial ? 'au moins ' : ''}${item.current}\u00a0${item.unit}`;
+        return (
+          <div key={item.code} className="card" style={{ padding: '12px 15px' }}>
+            <p style={{ fontSize: 14 }}>{item.label}</p>
+            <p style={{ fontSize: 13, marginTop: 2 }}>
+              {`${current} · repère\u00a0: ${limit ? 'au plus' : 'au moins'} ${item.target}\u00a0${item.unit}`}
+            </p>
+            <p style={{ fontSize: 11, marginTop: 4, color: 'var(--text-secondary)' }}>
+              {`« ${item.citation} » — ${item.source}`}
+            </p>
+          </div>
+        );
+      })}
+    </section>
   );
 }
 

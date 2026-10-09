@@ -9,12 +9,13 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
+import { bilanFrequences } from '../nutrition/frequency.ts';
 import { weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
-import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
+import { loadFrequencyReferences, loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
-  householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
+  frequencyInputs, householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
 import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
@@ -90,11 +91,13 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, cells, references, ranged] = await Promise.all([
+    const [eaters, cells, references, ranged, frequencyRefs, frequency] = await Promise.all([
       listEaters(request.db, householdId),
       weekGrid(request.db, householdId, from, days, timezone),
       loadReferences(request.db),
       mealsForRange(request.db, householdId, from, days, timezone),
+      loadFrequencyReferences(request.db),
+      frequencyInputs(request.db, householdId, from, days, timezone),
     ]);
 
     // Les tendances du foyer (§15, 10/2026) : moyennes des % du repère par
@@ -120,6 +123,9 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
       nutrients,
+      // Repères de fréquence (SPF, adultes) : au niveau du foyer seulement, et
+      // aucun par convive — un plafond n'a rien à faire sur la fiche d'un enfant.
+      frequencies: bilanFrequences({ references: frequencyRefs, ...frequency }),
     };
   });
 }

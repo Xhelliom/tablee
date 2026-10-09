@@ -1,6 +1,7 @@
 /**
- * Les trois tables de référence **livrées vides** (§17) : `unit_default`,
- * `nutrient_reference`, `seasonal_produce`.
+ * Les tables de référence **livrées vides** (§17) : `unit_default`,
+ * `nutrient_reference`, `seasonal_produce` — et `frequency_reference`, qui se
+ * lit ici aussi (repères de fréquence, 022).
  *
  * Ce module les lit. Il n'en écrit aucune ligne, et aucun script de ce dépôt
  * ne les remplit : chacune demande une collecte — une source d'équivalences
@@ -22,6 +23,7 @@ import type { HouseholdDb, UnscopedDb } from '../db.ts';
 import type {
   ReferenceBasis, ReferenceKind, ReferenceTable,
 } from '../nutrition/references.ts';
+import type { FrequencyReference } from '../nutrition/frequency.ts';
 import type { UnitDefaults, UnitForm } from '../nutrition/units.ts';
 import { defaultKey } from '../nutrition/units.ts';
 
@@ -128,4 +130,18 @@ export function lastMonthOfSeason(months: number[], current: number): number {
     month = next;
   }
   return month;
+}
+
+export async function loadFrequencyReferences(db: UnscopedDb): Promise<FrequencyReference[]> {
+  const { rows } = await db.query<{
+    code: string; label: string; kind: FrequencyReference['kind']; value: number;
+    categories: string[]; name_pattern: string | null; source: string; citation: string;
+  }>(
+    `select code, label, kind, value, categories, name_pattern, source, citation
+     from frequency_reference order by code`,
+  );
+  return rows.map((r) => ({
+    code: r.code, label: r.label, kind: r.kind, value: r.value, categories: r.categories,
+    namePattern: r.name_pattern, source: r.source, citation: r.citation,
+  }));
 }
