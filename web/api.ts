@@ -453,4 +453,20 @@ export interface WeekResponse {
     means: Record<'proteinG' | 'carbG' | 'fatG' | 'fiberG', number | null>;
     eaters: number;
   }[];
+  /**
+   * Repères de fréquence (SPF, adultes), au niveau du foyer : jamais par
+   * convive. `current` vaut `null` quand rien n'est saisi.
+   */
+  frequencies: {
+    code: string;
+    label: string;
+    kind: 'min_times' | 'min_days' | 'max_grams';
+    target: number;
+    unit: 'fois' | 'jours' | 'g';
+    current: number | null;
+    met: boolean | null;
+    partial: boolean;
+    source: string;
+    citation: string;
+  }[];
 }

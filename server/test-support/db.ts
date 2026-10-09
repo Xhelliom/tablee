@@ -70,7 +70,7 @@ export async function resetDatabase(db: pg.Pool): Promise<void> {
   // `organization` entraîne household, et household le reste du domaine.
   await db.query(`
     truncate household, eater, food, recipe, meal, meal_template,
-             nutrient_reference, unit_default, seasonal_produce,
+             nutrient_reference, frequency_reference, unit_default, seasonal_produce,
              "user", "organization"
     restart identity cascade`);
 }

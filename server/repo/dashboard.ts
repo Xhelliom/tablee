@@ -7,7 +7,9 @@
  */
 import type { HouseholdDb } from '../db.ts';
 import { todayIn } from '../http/tz.ts';
+import { isMinor } from '../nutrition/age.ts';
 import type { DailyMeal } from '../nutrition/daily.ts';
+import type { FrequencyLine, FrequencyParticipant } from '../nutrition/frequency.ts';
 
 export async function householdTimezone(db: HouseholdDb, householdId: string): Promise<string> {
   const { rows } = await db.query<{ timezone: string }>(
@@ -218,4 +220,77 @@ export async function weekGrid(
         ? null
         : Math.round((r.plant / r.total) * 1000) / 10,
   }));
+}
+
+/**
+ * Les aliments **rattachés** des repas d'une fenêtre, et qui était à table —
+ * de quoi compter les repères de fréquence (022).
+ *
+ * Jointure interne sur `food` exprès : un `meal_item` ou un ingrédient de
+ * recette sans `food_id` (Jow non rattaché) ne remonte pas, et ne peut donc
+ * rien retrancher. Les grammes inconnus restent `null`.
+ */
+export async function frequencyInputs(
+  db: HouseholdDb,
+  householdId: string,
+  from: string,
+  days: number,
+  timezone: string,
+): Promise<{ lines: FrequencyLine[]; participants: FrequencyParticipant[]; mealCount: number }> {
+  const window = `m.household_id = $1
+       and (m.eaten_at at time zone $4)::date >= $2::date
+       and (m.eaten_at at time zone $4)::date < ($2::date + ($3 || ' days')::interval)`;
+  const params = [householdId, from, String(days), timezone];
+
+  const items = await db.query<{
+    meal_id: string; date: string; category: string | null; name: string;
+    grams: number | null; basis: 'portion' | 'plat';
+  }>(
+    // Un plat saisi à la main se réduit des restes (`eatenFraction`) ; un
+    // ingrédient de recette Jow est déjà par convive.
+    `select m.id as meal_id, (m.eaten_at at time zone $4)::date::text as date,
+            f.category, f.name, 'plat' as basis,
+            mi.quantity_g * case when m.recipe_id is null
+              then m.servings / (m.servings + greatest(coalesce(m.remaining_servings, 0), 0))
+              else 1 end as grams
+     from meal m
+     join meal_item mi on mi.meal_id = m.id
+     join food f on f.id = mi.food_id
+     where ${window}
+     union all
+     select m.id, (m.eaten_at at time zone $4)::date::text,
+            f.category, f.name, 'portion', ri.quantity_g
+     from meal m
+     join recipe_ingredient ri on ri.recipe_id = m.recipe_id
+     join food f on f.id = ri.food_id
+     where ${window}`,
+    params,
+  );
+
+  const people = await db.query<{ meal_id: string; eater_id: string; share: number; birth_date: string; date: string }>(
+    `select m.id as meal_id, mp.eater_id, mp.share, e.birth_date::text as birth_date,
+            (m.eaten_at at time zone $4)::date::text as date
+     from meal m
+     join meal_participant mp on mp.meal_id = m.id
+     join eater e on e.id = mp.eater_id
+     where ${window}`,
+    params,
+  );
+
+  const count = await db.query<{ n: number }>(
+    `select count(*)::int as n from meal m where ${window}`,
+    params,
+  );
+
+  return {
+    lines: items.rows.map((r) => ({
+      mealId: r.meal_id, date: r.date, category: r.category, name: r.name,
+      grams: r.grams, basis: r.basis,
+    })),
+    participants: people.rows.map((r) => ({
+      mealId: r.meal_id, eaterId: r.eater_id, share: r.share,
+      adult: !isMinor(r.birth_date, new Date(`${r.date}T12:00:00Z`)),
+    })),
+    mealCount: count.rows[0]?.n ?? 0,
+  };
 }
