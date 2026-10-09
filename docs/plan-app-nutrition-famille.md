@@ -623,6 +623,17 @@ Repère `végétal` : **pas de cible chiffrée affichée**. La barre montre la v
 du jour et la moyenne des 7 derniers jours du foyer. C'est une tendance, pas un
 objectif (R7, I5).
 
+> **Levée le 09/10/2026 — la diversité alimentaire existe.** L'objection
+> ci-dessus (« demande une fenêtre glissante ») ne tient plus : la fenêtre de
+> 7 jours existe, la barre Végétal s'en sert déjà. La vue semaine affiche
+> « N aliments différents, M familles » (`food.category`), pour le foyer et par
+> convive, sans repère, sans cible, sans pourcentage — une tendance, comme
+> Végétal. Un repas sans aliment rattaché est **signalé** (« n repas sans
+> aliment rattaché »), jamais compté comme zéro : un rattachement Jow manquant
+> sous-estime le compte, il ne le fausse pas. Ce n'est pas une sixième barre :
+> elle n'entre ni dans l'anneau ni dans les compteurs. Détail dans
+> `docs/indicateurs-possibles.md` §2.
+
 ---
 
 ## 8bis. Saisonnalité — **en V1**

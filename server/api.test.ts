@@ -1031,6 +1031,40 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   // ── saisonnalité et fuseau du foyer ───────────────────────────────────────
 
+  describe('diversité de la semaine', () => {
+    it('compte aliments et familles, et signale un repas sans aliment rattaché', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const carotte = await insertFood(pool, 'Carotte, crue', { kcal: 35 }, true);
+      const riz = await insertFood(pool, 'Riz, cuit', { kcal: 130 }, true);
+      await pool.query('update food set category = $2 where id = $1', [carotte, 'legumes']);
+      await pool.query('update food set category = $2 where id = $1', [riz, 'cereales']);
+      const { rows } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Riz carottes', 1) returning id`,
+      );
+      for (const [i, foodId] of [carotte, riz].entries()) {
+        await pool.query(
+          `insert into recipe_ingredient (recipe_id, food_id, label, quantity_g, position)
+           values ($1, $2, 'x', 100, $3)`,
+          [rows[0]!.id, foodId, i],
+        );
+      }
+      await call('POST', '/api/meals', {
+        eaten_at: '2026-10-06T12:00:00+02:00', slot: 'dejeuner', source: 'jow',
+        recipe_id: rows[0]!.id, participants: [{ eaterId: adulte }],
+      });
+      await call('POST', '/api/meals', {
+        eaten_at: '2026-10-07T12:00:00+02:00', slot: 'dejeuner', source: 'manuel',
+        title: 'Sans rien', items: [{ label: 'Plat maison', quantity: 100, unit: 'g', quantityG: 100 }],
+        participants: [{ eaterId: adulte }],
+      });
+
+      const { body } = await call('GET', '/api/week?from=2026-10-05&days=7');
+      assert.deepEqual(body.diversity.household, { foods: 2, families: 2, mealsWithoutFood: 1 });
+      assert.deepEqual(body.diversity.byEater[adulte], { foods: 2, families: 2, mealsWithoutFood: 1 });
+    });
+  });
+
   describe('mois de saisonnalité', () => {
     /** Un produit de saison rattaché à un aliment, pour pouvoir être coché. */
     const courgette = async (): Promise<string> => {

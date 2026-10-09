@@ -453,4 +453,14 @@ export interface WeekResponse {
     means: Record<'proteinG' | 'carbG' | 'fatG' | 'fiberG', number | null>;
     eaters: number;
   }[];
+  /**
+   * Diversité sur la fenêtre (10/2026) : un compte, sans repère ni
+   * pourcentage. `mealsWithoutFood` : repas sans aliment rattaché, non comptés.
+   */
+  diversity: {
+    household: DiversityCount;
+    byEater: Record<string, DiversityCount>;
+  };
 }
+
+export interface DiversityCount { foods: number; families: number; mealsWithoutFood: number }
