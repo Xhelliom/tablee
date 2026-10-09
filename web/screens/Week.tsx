@@ -15,7 +15,7 @@
  * (`docs/proposition-accueil.html`). Toujours rien qui se compte par personne.
  */
 import { useEffect, useState } from 'react';
-import { api, type Nutrient, type WeekResponse } from '../api.ts';
+import { api, type DiversityCount, type Nutrient, type WeekResponse } from '../api.ts';
 import { Avatar } from '../components/Avatar.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, localDate, shortDay,
@@ -76,6 +76,7 @@ export function WeekScreen(): React.ReactElement {
         }}>
           <p style={{ fontSize: 14 }}>La tablée, jour par jour</p>
           <HouseholdWeek days={days} nutrients={data.nutrients} today={today} />
+          <Diversity data={data.diversity} eaters={data.eaters} />
           <p style={{ fontSize: 14, marginTop: 8 }}>Part végétale, jour par jour</p>
           <Legend average={average} />
           {data.eaters.map((eater) => (
@@ -93,6 +94,38 @@ export function WeekScreen(): React.ReactElement {
       )}
       <div className="fab-space" />
     </>
+  );
+}
+
+/**
+ * « N aliments différents, M familles » (10/2026) : un compte, sans cible ni
+ * pourcentage. Un repas sans aliment rattaché est dit, pas compté comme zéro.
+ */
+function Diversity({ data, eaters }: {
+  data: WeekResponse['diversity'];
+  eaters: WeekResponse['eaters'];
+}): React.ReactElement {
+  const line = (d: DiversityCount): string =>
+    `${d.foods} aliment${d.foods > 1 ? 's' : ''} différent${d.foods > 1 ? 's' : ''}, ` +
+    `${d.families} famille${d.families > 1 ? 's' : ''}`;
+  const bare = (d: DiversityCount): string | null =>
+    d.mealsWithoutFood === 0 ? null
+      : `${d.mealsWithoutFood} repas sans aliment rattaché, non compté${d.mealsWithoutFood > 1 ? 's' : ''}`;
+  return (
+    <div className="card" style={{ padding: '14px 15px' }}>
+      <p style={{ fontSize: 15 }}>{line(data.household)}</p>
+      {bare(data.household) !== null ? (
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{bare(data.household)}</p>
+      ) : null}
+      {eaters.map((eater) => {
+        const d = data.byEater[eater.id];
+        return d === undefined ? null : (
+          <p key={eater.id} style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+            {`${eater.firstName} : ${line(d)}`}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 

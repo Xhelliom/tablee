@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { DailyMeal } from './daily.ts';
 import type { ReferenceTable } from './references.ts';
-import { weeklyMeans, type WeekDayInput } from './weekly.ts';
+import { diversityByEater, weeklyMeans, type WeekDayInput } from './weekly.ts';
 
 /** Repères fictifs, de test uniquement — même règle que `daily.test.ts`. */
 const REPERES: ReferenceTable[] = [
@@ -80,5 +80,20 @@ describe('weeklyMeans', () => {
     }], []);
     assert.equal(jour?.means.proteinG, null);
     assert.equal(jour?.eaters, 1);
+  });
+});
+
+describe('diversityByEater', () => {
+  const row = (mealId: string, eaterId: string, foodId: string | null, category: string | null) =>
+    ({ mealId, eaterId, foodId, category });
+
+  it('compte aliments et familles distincts, et signale le repas sans aliment rattaché', () => {
+    const { household, byEater } = diversityByEater([
+      row('m1', 'a', 'carotte', 'legumes'), row('m1', 'b', 'carotte', 'legumes'),
+      row('m1', 'a', 'poireau', 'legumes'), row('m2', 'a', 'riz', 'cereales'),
+      row('m3', 'a', null, null), row('m3', 'b', null, null),
+    ]);
+    assert.deepEqual(household, { foods: 3, families: 2, mealsWithoutFood: 1 });
+    assert.deepEqual(byEater['b'], { foods: 1, families: 1, mealsWithoutFood: 1 });
   });
 });

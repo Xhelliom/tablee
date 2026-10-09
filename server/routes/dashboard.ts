@@ -9,12 +9,12 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
-import { weeklyMeans } from '../nutrition/weekly.ts';
+import { diversityByEater, weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
-  householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
+  diversityRows, householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
 import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
@@ -90,11 +90,12 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, cells, references, ranged] = await Promise.all([
+    const [eaters, cells, references, ranged, diversity] = await Promise.all([
       listEaters(request.db, householdId),
       weekGrid(request.db, householdId, from, days, timezone),
       loadReferences(request.db),
       mealsForRange(request.db, householdId, from, days, timezone),
+      diversityRows(request.db, householdId, from, days, timezone),
     ]);
 
     // Les tendances du foyer (§15, 10/2026) : moyennes des % du repère par
@@ -120,6 +121,7 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
       nutrients,
+      diversity: diversityByEater(diversity),
     };
   });
 }
