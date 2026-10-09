@@ -133,6 +133,7 @@ export interface StoredNutrition {
   gramsTotal: number | null;
   gramsPlant: number | null;
   gramsClassified: number | null;
+  energyDensity: number | null;
   confidence: Confidence;
 }
 
@@ -482,8 +483,8 @@ export async function recomputeNutrition(
     `insert into meal_nutrition (meal_id, kcal, protein_g, carb_g, fat_g, fiber_g,
                                  kcal_max, protein_g_max, carb_g_max, fat_g_max, fiber_g_max,
                                  plant_ratio, grams_total, grams_plant, grams_classified,
-                                 confidence, computed_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now())
+                                 energy_density, confidence, computed_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, now())
      on conflict (meal_id) do update set
        kcal = excluded.kcal, protein_g = excluded.protein_g, carb_g = excluded.carb_g,
        fat_g = excluded.fat_g, fiber_g = excluded.fiber_g,
@@ -492,12 +493,13 @@ export async function recomputeNutrition(
        fiber_g_max = excluded.fiber_g_max,
        plant_ratio = excluded.plant_ratio, grams_total = excluded.grams_total,
        grams_plant = excluded.grams_plant, grams_classified = excluded.grams_classified,
+       energy_density = excluded.energy_density,
        confidence = excluded.confidence, computed_at = now()`,
     [
       mealId, result.kcal, result.proteinG, result.carbG, result.fatG, result.fiberG,
       result.max.kcal, result.max.proteinG, result.max.carbG, result.max.fatG, result.max.fiberG,
       result.plantRatio, result.gramsTotal, result.gramsPlant, result.gramsClassified,
-      result.confidence,
+      result.energyDensity, result.confidence,
     ],
   );
 
@@ -539,7 +541,7 @@ const MEAL_SELECT = `
          r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
          n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
-         n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.confidence
+         n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.energy_density, n.confidence
   from meal m
   left join recipe r on r.id = m.recipe_id
   left join meal_nutrition n on n.meal_id = m.id`;
@@ -556,6 +558,8 @@ interface MealRow {
   fat_g_max: number | null; fiber_g_max: number | null;
   plant_ratio: number | null;
   grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
+  // numeric sort en chaîne depuis pg
+  energy_density: string | number | null;
   confidence: Confidence | null;
 }
 
@@ -746,7 +750,9 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
             },
             plantRatio: row.plant_ratio,
             gramsTotal: row.grams_total, gramsPlant: row.grams_plant,
-            gramsClassified: row.grams_classified, confidence: row.confidence,
+            gramsClassified: row.grams_classified,
+            energyDensity: row.energy_density === null ? null : Number(row.energy_density),
+            confidence: row.confidence,
           },
   }));
 }

@@ -991,6 +991,31 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(body.recipe.ingredients[0].foodId, carotte);
     });
 
+    it('ne donne la densité énergétique que si énergie et grammes se recoupent', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const { a, ingredientA } = await deuxRecettes();
+      const repas = {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
+        recipe_id: a, servings: 2, participants: [{ eaterId: adulte }],
+      };
+
+      // 320 kcal par portion pour 100 g d'ingrédients par portion.
+      const { body: complet } = await call('POST', '/api/meals', repas);
+      assert.equal(complet.meal.nutrition.energyDensity, 320);
+      const { body: relu } = await call('GET', `/api/meals/${complet.meal.id}`);
+      assert.equal(relu.meal.nutrition.energyDensity, 320);
+
+      // Un ingrédient sans grammes : les kcal du snapshot couvrent plus que les grammes.
+      await pool.query(
+        `insert into recipe_ingredient (recipe_id, jow_food_id, label, quantity, unit, position)
+         values ($1, 'x', 'Sauce', 1, 'Poignée', 1)`,
+        [a],
+      );
+      const { body: partiel } = await call('POST', '/api/meals', repas);
+      assert.equal(partiel.meal.nutrition.energyDensity, null);
+      void ingredientA;
+    });
+
     it('recalcule la part végétale des repas concernés', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const { a, ingredientA } = await deuxRecettes();

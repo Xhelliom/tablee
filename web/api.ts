@@ -280,6 +280,8 @@ export interface Meal {
     gramsTotal: number | null;
     gramsPlant: number | null;
     gramsClassified: number | null;
+    /** kcal pour 100 g du plat ; `null` si énergie et grammes ne se recoupent pas. */
+    energyDensity: number | null;
     confidence: Confidence;
   } | null;
 }

@@ -593,6 +593,12 @@ Mot de passe hashé en argon2id. Pas de JWT — inutile ici, et plus dur à rév
 > celles de l'anneau, des compteurs du foyer et de la fiche d'un repas, et ce
 > sont elles qui portent les cinq couleurs du §8ter.
 >
+> **Densité énergétique d'un plat (09/10/2026).** Le propriétaire l'affiche sur
+> la fiche d'un repas, pour tous, mineurs compris : kcal pour 100 g de ce qui a
+> été mangé, propriété du plat et non d'une personne. `null` — donc absente —
+> quand énergie et grammes n'ont pas le même périmètre ; pas de seuil
+> « léger / dense » sans source. Migration 022.
+>
 > L'énergie n'est chiffrée que dans le **bilan détaillé** d'une personne, en
 > dernière position, en gris, et **jamais sur un profil mineur** (I5, trois
 > filets — voir l'en-tête de la migration 017). Ce qui l'a rendue possible est
