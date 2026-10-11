@@ -593,6 +593,12 @@ Mot de passe hashé en argon2id. Pas de JWT — inutile ici, et plus dur à rév
 > celles de l'anneau, des compteurs du foyer et de la fiche d'un repas, et ce
 > sont elles qui portent les cinq couleurs du §8ter.
 >
+> **Densité énergétique d'un plat (09/10/2026).** Le propriétaire l'affiche sur
+> la fiche d'un repas, pour tous, mineurs compris : kcal pour 100 g de ce qui a
+> été mangé, propriété du plat et non d'une personne. `null` — donc absente —
+> quand énergie et grammes n'ont pas le même périmètre ; pas de seuil
+> « léger / dense » sans source. Migration 022.
+>
 > L'énergie n'est chiffrée que dans le **bilan détaillé** d'une personne, en
 > dernière position, en gris, et **jamais sur un profil mineur** (I5, trois
 > filets — voir l'en-tête de la migration 017). Ce qui l'a rendue possible est
@@ -1324,7 +1330,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Deux appels au modèle par requête depuis le 14/09/2026 : le découpage, puis le choix de l'aliment, par numéro, parmi quinze candidats Ciqual par ligne. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
 > | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. *Précisé le 15/09/2026* : la réponse arrive en Server-Sent Events — des `texte` au fil de la génération, puis `fin`, qui porte la réponse entière et fait foi, ou `erreur` si le flux casse en route. Ce qui est refusé avant le flux (400, 429, 503) reste une erreur JSON. |
 > | `POST` | `/api/assistant/recipes` | V3 — le bouton « Demander à l'assistant des recettes » de l'accueil, pour rendre la semaine plus équilibrée. Même résumé du foyer que `/api/assistant`, plus l'ordre des repères et la liste des recettes Jow du foyer : le modèle **choisit** par numéro parmi elles et ajoute une ou deux idées de plats marquées « à vérifier », sans jamais écrire une valeur (R1). Le texte envoyé revient dans la réponse, pour se relire à l'écran. `409` quand il n'aurait rien sur quoi s'appuyer ; même plafond et même 503 que le découpage. Ce qu'il approxime : dette n° 20. |
-> | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
+> | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. *Depuis le 25/09/2026, un repas décrit avec l'IA ou photographié y entre aussi : `createMeal` lui crée une recette `manuel` (titre reformulé, quantités par part) et l'y rattache — sinon « Mes recettes » ignorait tout ce qui ne venait pas de Jow. La recette est un instantané comme le snapshot Jow : le calcul nutritionnel l'ignore et lit les items du repas, et la rejouer sans composition reprend ses ingrédients remis à l'échelle.* |
 >
 > **Ajoutées le 13/09/2026 avec les comptes** (§7 renversé) :
 >

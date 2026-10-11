@@ -24,6 +24,7 @@ import { imagesRécentes, écouterImages } from '../mealImage.ts';
 import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { RecipeHero } from '../components/RecipeHero.tsx';
 import { DécrirePlat, type LignesDécoupées } from '../components/DécrirePlat.tsx';
 import { GramsInput } from '../components/GramsInput.tsx';
@@ -128,6 +129,9 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
             publié par Jow, de la somme des aliments, ou des deux quand le
             repas à recette a été complété (22/09/2026). */}
         <p className="meta">{longDate(meal.eatenAt.slice(0, 10))}</p>
+        {meal.recipe !== null ? (
+          <p><RecipeScores nutriScore={meal.recipe.nutriScore} greenScore={meal.recipe.greenScore} /></p>
+        ) : null}
         {nutrition !== null ? (
           <ConfidenceBadge
             confidence={nutrition.confidence}
@@ -184,6 +188,14 @@ export function MealDetailScreen({ mealId }: { mealId: string }): React.ReactEle
                   : formatPercent(nutrition.plantRatio)}
               </span>
             </div>
+            {nutrition.energyDensity !== null ? (
+              <div className="spread">
+                <span style={{ fontSize: 13 }}>Densité du plat</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {`${Math.round(nutrition.energyDensity)}\u00a0kcal pour 100\u00a0g`}
+                </span>
+              </div>
+            ) : null}
             {nutrition.plantRatio !== null
              && nutrition.gramsClassified !== null
              && nutrition.gramsTotal !== null

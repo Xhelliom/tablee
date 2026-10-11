@@ -35,6 +35,7 @@ import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge, Warnings } from '../components/Confidence.tsx';
 import { RemainsPicker, eatenHint, split } from '../components/Leftovers.tsx';
 import { RecipeHero } from '../components/RecipeHero.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import {
@@ -146,7 +147,9 @@ export function SharedRecipe(
       await api.post('/api/meals', {
         eatenAt: eatenAt(day),
         slot,
-        source: 'jow',
+        // Rejouer une recette manuelle reste un repas manuel : ses quantités
+        // ont été validées par le foyer, pas publiées par Jow.
+        source: state?.recipe?.source === 'manuel' ? 'manuel' : 'jow',
         recipeId: state?.recipe?.id ?? null,
         ...parts,
         guestCount,
@@ -193,8 +196,8 @@ export function SharedRecipe(
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <ConfidenceBadge confidence={confidence}
                                label={confidence === 'haute' ? 'Résolue' : undefined} />
-              {recipe?.nutriScore != null ? (
-                <span className="meta">Nutri-Score {recipe.nutriScore}</span>
+              {recipe !== null ? (
+                <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
               ) : null}
               {state.seasonal > 0 ? (
                 <span className="meta">

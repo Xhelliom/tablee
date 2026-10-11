@@ -156,6 +156,17 @@ spec:
             - name: TABLEE_IMAGE_MODEL
               value: gemini-3.1-flash-lite-image
 
+            # Les rappels push (dette n° 27) : les trois clés, ou aucune.
+            - name: TABLEE_VAPID_PUBLIC
+              valueFrom:
+                secretKeyRef: { name: tablee, key: TABLEE_VAPID_PUBLIC, optional: true }
+            - name: TABLEE_VAPID_PRIVATE
+              valueFrom:
+                secretKeyRef: { name: tablee, key: TABLEE_VAPID_PRIVATE, optional: true }
+            - name: TABLEE_VAPID_SUBJECT
+              valueFrom:
+                secretKeyRef: { name: tablee, key: TABLEE_VAPID_SUBJECT, optional: true }
+
             # `1` rallume le journal de requêtes, expurgé des jetons Jow (I6).
             - name: TABLEE_LOG
               value: '0'

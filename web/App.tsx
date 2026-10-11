@@ -27,6 +27,7 @@ import { AcceptInvitationScreen } from './screens/Invitation.tsx';
 import { HouseholdSettingsScreen } from './screens/HouseholdSettings.tsx';
 import { AssistantScreen } from './screens/Assistant.tsx';
 import { ProfileScreen } from './screens/Profile.tsx';
+import { UpcomingDishesScreen } from './screens/UpcomingDishes.tsx';
 import { SuperAdminScreen } from './screens/SuperAdmin.tsx';
 
 export function App(): ReactElement {
@@ -122,6 +123,8 @@ function Routes(): ReactElement {
       return segments[2] === undefined
         ? <MealDetailScreen mealId={segments[1]} />
         : <Chrome tab="accueil"><p className="empty">Cette page n’existe pas.</p></Chrome>;
+    case 'plats-a-venir':
+      return <UpcomingDishesScreen />;
     case 'semaine':
       return <Chrome tab="semaine"><WeekScreen /></Chrome>;
     case 'historique':

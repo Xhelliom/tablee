@@ -220,10 +220,19 @@ export interface PlantBar {
   householdAverage7d: number | null;
 }
 
+export interface EnergyAverage {
+  average: number | null;
+  days: number;
+  reference: NutrientReference | null;
+  percent: number | null;
+}
+
 export interface DailyBalance {
   bars: NutrientBar[];
   plant: PlantBar;
   mealCount: number;
+  /** Absent sous 18 ans (I5). */
+  energyAverage7d?: EnergyAverage;
 }
 
 export interface MealItem {
@@ -251,7 +260,7 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette, reformulé par l'IA au découpage. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA. */
   imageUrl: string | null;
   items: MealItem[];
@@ -280,6 +289,8 @@ export interface Meal {
     gramsTotal: number | null;
     gramsPlant: number | null;
     gramsClassified: number | null;
+    /** kcal pour 100 g du plat ; `null` si énergie et grammes ne se recoupent pas. */
+    energyDensity: number | null;
     confidence: Confidence;
   } | null;
 }
@@ -327,6 +338,7 @@ export interface RecipeIngredient {
 
 export interface Recipe {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   url: string | null;
   imageUrl: string | null;
@@ -344,10 +356,12 @@ export interface Recipe {
 /** Une recette du foyer, telle que la liste « Mes recettes » la montre. */
 export interface RecipeSummary {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -464,3 +478,10 @@ export interface WeekResponse {
 }
 
 export interface DiversityCount { foods: number; families: number; mealsWithoutFood: number }
+
+/** Un plat du stock « plats à venir » (023) : une recette, sans jour. */
+export interface UpcomingDish {
+  id: string;
+  addedAt: string;
+  recipe: { id: string; title: string; imageUrl: string | null; baseServings: number; url: string | null };
+}

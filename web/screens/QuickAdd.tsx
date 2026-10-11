@@ -218,6 +218,12 @@ export function QuickAddScreen(): React.ReactElement {
                 onClick={() => setMode('recettes')}
               />
               <Porte
+                icon={<span style={pastille}><IconBowl size={18} /></span>}
+                title="Plats à venir"
+                detail="Le stock de la commande en cours"
+                onClick={() => navigate('/plats-a-venir')}
+              />
+              <Porte
                 icon={<span style={pastille}><IconLink size={18} /></span>}
                 title="Coller un lien Jow"
                 detail="Ou, depuis Jow : « Partager », puis Tablée"

@@ -62,6 +62,7 @@ export interface RecipeSummary {
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = importée, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -113,13 +114,13 @@ export async function markRecipeKnown(
 export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeSummary[]> {
   const { rows } = await db.query<{
     id: string; title: string; image_url: string | null; base_servings: number;
-    nutri_score: string | null; confidence: Confidence;
+    nutri_score: string | null; green_score: string | null; confidence: Confidence;
     last_eaten_at: Date | null; times_eaten: string;
     source: 'jow' | 'manuel'; url: string | null;
     kcal_serving: number | null; protein_serving: number | null; carb_serving: number | null;
     fat_serving: number | null; fiber_serving: number | null;
   }>(
-    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.confidence,
+    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.green_score, r.confidence,
             r.source, r.url, r.kcal_serving, r.protein_serving, r.carb_serving,
             r.fat_serving, r.fiber_serving,
             max(m.eaten_at) as last_eaten_at,
@@ -142,6 +143,7 @@ export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeS
     imageUrl: row.image_url,
     baseServings: row.base_servings,
     nutriScore: row.nutri_score,
+    greenScore: row.green_score,
     confidence: row.confidence,
     lastEatenAt: row.last_eaten_at === null ? null : row.last_eaten_at.toISOString(),
     timesEaten: Number(row.times_eaten),
@@ -294,6 +296,67 @@ export async function saveJowRecipe(db: HouseholdDb, parsed: ParsedRecipe): Prom
   const recipe = await loadRecipe(db, id);
   if (recipe === null) throw new Error('recette introuvable après enregistrement');
   return recipe;
+}
+
+/**
+ * Persiste une recette saisie par le foyer — aujourd'hui, la copie d'un repas
+ * décrit avec l'IA ou photographié (voir `createMeal`).
+ *
+ * Comme une recette Jow lue puis mangée, elle entre dans `household_recipe` :
+ * c'est cette table, et elle seule, que liste « Mes recettes ». Les quantités
+ * sont **par part cuisinée**, comme les ingrédients Jow sont par convive : un
+ * même chiffre se relit et se rejoue à une autre échelle sans conversion.
+ *
+ * La recette est un instantané, pas une vue : modifier le repas ensuite ne la
+ * réécrit pas — même règle que le snapshot Jow.
+ */
+export interface ManualIngredient {
+  foodId: string | null;
+  label: string;
+  quantity: number | null;
+  unit: string | null;
+  quantityG: number | null;
+}
+
+export async function saveManualRecipe(
+  db: HouseholdDb,
+  householdId: string,
+  input: {
+    title: string;
+    /** Parts cuisinées, arrondies à l'entier (`base_servings` est un entier). */
+    baseServings: number;
+    confidence: Confidence;
+    /** Quantités **par part**, dans l'ordre d'affichage. */
+    items: ManualIngredient[];
+  },
+): Promise<string> {
+  const { rows } = await db.query<{ id: string }>(
+    `insert into recipe (source, household_id, title, base_servings, confidence)
+      values ('manuel', $1, $2, $3, $4)
+      returning id`,
+    [
+      householdId, input.title,
+      Math.max(1, Math.round(input.baseServings)),
+      input.confidence,
+    ],
+  );
+  const id = rows[0]?.id;
+  if (id === undefined) throw new Error('recette non enregistrée');
+
+  for (const [position, ingredient] of input.items.entries()) {
+    await db.query(
+      `insert into recipe_ingredient
+         (recipe_id, food_id, label, quantity, unit, quantity_g, position)
+       values ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        id, ingredient.foodId, ingredient.label, ingredient.quantity,
+        ingredient.unit, ingredient.quantityG, position,
+      ],
+    );
+  }
+
+  await markRecipeKnown(db, householdId, id);
+  return id;
 }
 
 export interface LinkResult {

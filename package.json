@@ -7,7 +7,7 @@
     "node": ">=22.9"
   },
   "scripts": {
-    "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
+    "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\" && TSX_TSCONFIG_PATH=web/tsconfig.json node --import tsx --test \"web/**/*.test.ts\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.json",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
@@ -30,6 +30,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9.39.5",
     "typescript": "^5.7.2",
@@ -49,6 +50,7 @@
     "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "web-push": "^3.6.7"
   }
 }

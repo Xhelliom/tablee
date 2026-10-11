@@ -29,11 +29,12 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« date » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, references, meals, plantAverage] = await Promise.all([
+    const [eaters, references, meals, plantAverage, weekMeals] = await Promise.all([
       listEaters(request.db, householdId),
       loadReferences(request.db),
       mealsForDay(request.db, householdId, date, timezone),
       householdPlantAverage(request.db, householdId, 7),
+      mealsForRange(request.db, householdId, shiftDay(date, -6), 7, timezone),
     ]);
 
     const byMember = new Map<string, typeof meals>();
@@ -41,6 +42,7 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       byMember.set(meal.eaterId, [...(byMember.get(meal.eaterId) ?? []), meal]);
     }
 
+    const weekDates = Array.from({ length: 7 }, (_, i) => shiftDay(date, i - 6));
     const dashboard = eaters.map((eater) => ({
       eater: {
         id: eater.id,
@@ -57,6 +59,8 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
         meals: byMember.get(eater.id) ?? [],
         references,
         householdPlantAverage7d: plantAverage,
+        energyWeek: weekDates.map((day) =>
+          weekMeals.filter((row) => row.eaterId === eater.id && row.date === day)),
       }),
     }));
 
