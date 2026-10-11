@@ -5,6 +5,7 @@
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from '../http/errors.ts';
 import { body, str } from '../http/validate.ts';
+import { subscribe, unsubscribe } from '../repo/push.ts';
 import type { AppContext } from '../app.ts';
 
 /** Un service push est toujours en https ; le reste est une erreur ou un détournement. */
@@ -24,23 +25,18 @@ export function pushRoutes(app: FastifyInstance, ctx: AppContext): void {
     if (ctx.push == null) throw ApiError.notFound('rappels non activés sur ce serveur');
     const input = body(request.body);
     const keys = body(input['keys']);
-    // Un appareil change de compte : l'endpoint est repris, pas dupliqué.
-    await request.db.query(
-      `insert into push_subscription (household_id, user_id, endpoint, p256dh, auth)
-       values ($1, $2, $3, $4, $5)
-       on conflict (endpoint) do update
-         set household_id = $1, user_id = $2, p256dh = $4, auth = $5`,
-      [request.householdId(), request.identity().userId, endpoint(input['endpoint']),
-        str(keys['p256dh'], 'keys.p256dh', { max: 200 }), str(keys['auth'], 'keys.auth', { max: 100 })],
-    );
+    // Un appareil qui change de compte ou de foyer est repris, pas dupliqué (025).
+    await subscribe(request.db, request.householdId(), request.identity().userId, {
+      endpoint: endpoint(input['endpoint']),
+      p256dh: str(keys['p256dh'], 'keys.p256dh', { max: 200 }),
+      auth: str(keys['auth'], 'keys.auth', { max: 100 }),
+    });
     reply.code(201);
     return { ok: true };
   });
 
   app.post('/api/push/unsubscribe', async (request) => {
-    await request.db.query(
-      'delete from push_subscription where household_id = $1 and endpoint = $2',
-      [request.householdId(), endpoint(body(request.body)['endpoint'])]);
+    await unsubscribe(request.db, request.householdId(), endpoint(body(request.body)['endpoint']));
     return { ok: true };
   });
 }

@@ -107,6 +107,16 @@ describe('rappels : envoi', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     assert.equal(await abonnes(nous), 0);
   });
 
+  it('reprend un appareil abonné par un autre foyer, sans laisser l’ancien désabonner', async () => {
+    assert.equal((await abonner(nous, 'https://push.test/a')).status, 201);
+    assert.equal((await abonner(voisins, 'https://push.test/a')).status, 201);
+    assert.equal(await abonnes(nous), 0);
+    assert.equal(await abonnes(voisins), 1);
+    // La porte de la 025 ne s'ouvre qu'en abonnant : désabonner reste borné au foyer.
+    await call('POST', '/api/push/unsubscribe', nous.cookie, { endpoint: 'https://push.test/a' });
+    assert.equal(await abonnes(voisins), 1);
+  });
+
   it('refuse un endpoint qui n’est pas en https', async () => {
     assert.equal((await abonner(nous, 'http://push.test/a')).status, 400);
   });

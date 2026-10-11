@@ -13,8 +13,9 @@ import type pg from 'pg';
 import webpush from 'web-push';
 import { withHousehold } from './db.ts';
 import { todayIn } from './http/tz.ts';
+import { claimReminder, deleteSubscription, listSubscriptions, reminderDishes } from './repo/push.ts';
 
-/** Les horaires sont fixes, en heure du foyer (`household.timezone`) — dette n° 24. */
+/** Les horaires sont fixes, en heure du foyer (`household.timezone`) — dette n° 27. */
 export const REMINDER_SLOTS = [
   { slot: 'midi', hour: 12, minute: 0 },
   { slot: 'soir', hour: 19, minute: 0 },
@@ -104,18 +105,11 @@ export async function runReminders(pool: pg.Pool, send: SendPush, now = new Date
     if (due === null) continue;
     try {
       sent += await withHousehold(pool, h.id, async (db) => {
-        const { rows: dishes } = await db.query<{ title: string; source: string }>(
-          `select r.title, r.source from upcoming_dish d join recipe r on r.id = d.recipe_id
-           where d.household_id = $1 order by d.added_at, d.id`, [h.id]);
+        const dishes = await reminderDishes(db, h.id);
         if (dishes.length === 0) return 0;
-        const { rows: subs } = await db.query<PushSubscriptionInput & { id: string }>(
-          'select id, endpoint, p256dh, auth from push_subscription where household_id = $1', [h.id]);
+        const subs = await listSubscriptions(db, h.id);
         if (subs.length === 0) return 0;
-        // Le verrou : un seul tour, un seul processus, prévient le foyer.
-        const claim = await db.query(
-          `insert into reminder_sent (household_id, day, slot) values ($1, $2, $3)
-           on conflict do nothing`, [h.id, due.day, due.slot]);
-        if (claim.rowCount === 0) return 0;
+        if (!await claimReminder(db, h.id, due.day, due.slot)) return 0;
 
         const jow = dishes.filter((d) => d.source === 'jow').map((d) => d.title);
         const message = reminderMessage(jow, dishes.length);
@@ -123,7 +117,7 @@ export async function runReminders(pool: pg.Pool, send: SendPush, now = new Date
         for (const sub of subs) {
           try {
             if (await send(sub, message) === 'gone') {
-              await db.query('delete from push_subscription where id = $1', [sub.id]);
+              await deleteSubscription(db, h.id, sub.id);
             } else ok++;
           } catch (error) {
             console.error('push : envoi échoué', (error as Error).message);

@@ -836,7 +836,7 @@ Dependabot, puisqu'une empreinte qui bouge se relit alors en diff.
 
 ## 27. Les rappels push : horaires fixes, un seul processus, et la fiabilité de chaque plateforme
 
-**Où** — `server/push.ts`, `server/routes/push.ts`, migration 024, `web/public/sw.js`,
+**Où** — `server/push.ts`, `server/routes/push.ts`, `server/repo/push.ts`, migrations 024 et 025, `web/public/sw.js`,
 bloc « Rappels » de `web/screens/HouseholdSettings.tsx`.
 
 Web push + VAPID (lib `web-push`, JavaScript pur : rien à compiler sur le
