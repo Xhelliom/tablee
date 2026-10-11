@@ -7,7 +7,7 @@
     "node": ">=22.9"
   },
   "scripts": {
-    "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\"",
+    "test": "node --import tsx --test --test-concurrency=1 \"server/**/*.test.ts\" && TSX_TSCONFIG_PATH=web/tsconfig.json node --import tsx --test \"web/**/*.test.ts\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web/tsconfig.json",
     "jow:resolve": "node --import tsx scripts/jow-resolve.ts",
