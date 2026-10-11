@@ -32,6 +32,7 @@ import { mealRoutes } from './routes/meals.ts';
 import { eaterRoutes } from './routes/eaters.ts';
 import { recipeRoutes } from './routes/recipes.ts';
 import { templateRoutes } from './routes/templates.ts';
+import { upcomingRoutes } from './routes/upcoming.ts';
 
 export interface AppContext {
   pool: pg.Pool;
@@ -320,6 +321,7 @@ export function buildApp(
     foodRoutes(api, ctx);
     mealRoutes(api, ctx);
     templateRoutes(api, ctx);
+    upcomingRoutes(api, ctx);
     dashboardRoutes(api, ctx);
     assistantRoutes(api, ctx);
   });
