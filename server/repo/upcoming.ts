@@ -55,10 +55,15 @@ export async function addUpcomingDish(
   return full[0] === undefined ? null : toDish(full[0]);
 }
 
+/**
+ * La recette du plat retiré, `null` s'il n'y était plus. Le `delete` verrouille
+ * la ligne : de deux retraits simultanés, le second attend et ne trouve rien.
+ */
 export async function removeUpcomingDish(
   db: HouseholdDb, householdId: string, id: string,
-): Promise<boolean> {
-  const { rowCount } = await db.query(
-    'delete from upcoming_dish where household_id = $1 and id = $2', [householdId, id]);
-  return (rowCount ?? 0) > 0;
+): Promise<string | null> {
+  const { rows } = await db.query<{ recipe_id: string }>(
+    'delete from upcoming_dish where household_id = $1 and id = $2 returning recipe_id',
+    [householdId, id]);
+  return rows[0]?.recipe_id ?? null;
 }

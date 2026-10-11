@@ -95,6 +95,55 @@ describe('plats à venir', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     assert.equal(status, 404);
   });
 
+  describe('manger un plat du stock', () => {
+    const manger = (cookie: string, id: string) =>
+      call('POST', `/api/upcoming-dishes/${id}/eat`, cookie,
+        { eatenAt: '2026-10-11T12:00:00Z', slot: 'dejeuner' });
+
+    beforeEach(async () => {
+      for (const [firstName, birthDate] of [['Léa', '2020-01-01'], ['Marc', '1985-03-02']]) {
+        await call('POST', '/api/eaters', nous.cookie, { firstName, birthDate, sex: 'F' });
+      }
+    });
+
+    it('crée le repas pour les convives actifs, fige les parts (Σ = 1) et retire le plat', async () => {
+      const id = (await call('POST', '/api/upcoming-dishes', nous.cookie, { recipeId: recetteId })).body.dish.id;
+      const { status, body } = await manger(nous.cookie, id);
+      assert.equal(status, 201);
+
+      const meal = (await call('GET', `/api/meals/${body.mealId}`, nous.cookie)).body.meal;
+      assert.equal(meal.source, 'jow');
+      assert.equal(meal.participants.length, 2);
+      const somme = meal.participants.reduce((n: number, p: { share: number }) => n + Number(p.share), 0);
+      assert.ok(Math.abs(somme - 1) < 1e-6, `Σ des parts = ${somme}`);
+      assert.deepEqual((await call('GET', '/api/upcoming-dishes', nous.cookie)).body.dishes, []);
+    });
+
+    it('annuler = supprimer le repas et remettre la recette au stock', async () => {
+      const id = (await call('POST', '/api/upcoming-dishes', nous.cookie, { recipeId: recetteId })).body.dish.id;
+      const { body } = await manger(nous.cookie, id);
+      assert.equal((await call('DELETE', `/api/meals/${body.mealId}`, nous.cookie)).status, 200);
+      await call('POST', '/api/upcoming-dishes', nous.cookie, { recipeId: recetteId });
+      assert.equal((await call('GET', '/api/upcoming-dishes', nous.cookie)).body.dishes.length, 1);
+    });
+
+    it('deux taps rapprochés : un seul repas, le second en 404', async () => {
+      const id = (await call('POST', '/api/upcoming-dishes', nous.cookie, { recipeId: recetteId })).body.dish.id;
+      const statuts = (await Promise.all([manger(nous.cookie, id), manger(nous.cookie, id)]))
+        .map((r) => r.status).sort();
+      assert.deepEqual(statuts, [201, 404]);
+      const { rows } = await withHousehold(pool, nous.householdId, (db) =>
+        db.query<{ n: number }>('select count(*)::int as n from meal'));
+      assert.equal(rows[0]?.n, 1);
+    });
+
+    it('refuse un plat inconnu, ou celui d’un autre foyer, sans rien créer', async () => {
+      const autre = (await call('POST', '/api/upcoming-dishes', voisins.cookie, { recipeId: recetteId })).body.dish.id;
+      assert.equal((await manger(nous.cookie, autre)).status, 404);
+      assert.equal((await call('GET', '/api/upcoming-dishes', voisins.cookie)).body.dishes.length, 1);
+    });
+  });
+
   describe('étanchéité', () => {
     it('le stock du voisin est invisible et intouchable par l’API', async () => {
       const { body } = await call('POST', '/api/upcoming-dishes', voisins.cookie, { recipeId: recetteId });
