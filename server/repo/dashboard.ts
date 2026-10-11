@@ -8,6 +8,7 @@
 import type { HouseholdDb } from '../db.ts';
 import { todayIn } from '../http/tz.ts';
 import type { DailyMeal } from '../nutrition/daily.ts';
+import type { DiversityRow } from '../nutrition/weekly.ts';
 
 export async function householdTimezone(db: HouseholdDb, householdId: string): Promise<string> {
   const { rows } = await db.query<{ timezone: string }>(
@@ -217,5 +218,39 @@ export async function weekGrid(
       r.total === null || r.total === 0 || r.plant === null || (r.classified ?? 0) === 0
         ? null
         : Math.round((r.plant / r.total) * 1000) / 10,
+  }));
+}
+
+/**
+ * Les aliments rattachés de chaque repas de la plage, par convive : ceux de
+ * `meal_item` et ceux de la recette (`recipe_ingredient`). Un repas sans aucun
+ * aliment rattaché ressort avec `foodId` nul — présent, pas absent.
+ */
+export async function diversityRows(
+  db: HouseholdDb,
+  householdId: string,
+  from: string,
+  days: number,
+  timezone: string,
+): Promise<DiversityRow[]> {
+  const { rows } = await db.query<{
+    meal_id: string; eater_id: string; food_id: string | null; category: string | null;
+  }>(
+    `select m.id as meal_id, mp.eater_id, f.id as food_id, f.category
+     from meal m
+     join meal_participant mp on mp.meal_id = m.id
+     left join lateral (
+       select food_id from meal_item where meal_id = m.id and food_id is not null
+       union
+       select food_id from recipe_ingredient where recipe_id = m.recipe_id and food_id is not null
+     ) x on true
+     left join food f on f.id = x.food_id
+     where m.household_id = $1
+       and (m.eaten_at at time zone $4)::date >= $2::date
+       and (m.eaten_at at time zone $4)::date < ($2::date + ($3 || ' days')::interval)`,
+    [householdId, from, String(days), timezone],
+  );
+  return rows.map((r) => ({
+    mealId: r.meal_id, eaterId: r.eater_id, foodId: r.food_id, category: r.category,
   }));
 }
