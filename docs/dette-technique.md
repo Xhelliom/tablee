@@ -864,6 +864,13 @@ Raspberry Pi arm64). Le serveur lui-même tourne un tour par minute
   n'apparaît pas sinon. Les économiseurs de batterie agressifs de certains
   constructeurs Android retardent ou perdent des messages : rien n'est garanti
   à la minute.
+- **N'importe quel hôte https est accepté comme endpoint**
+  (`server/routes/push.ts`). Un membre connecté peut donc faire envoyer au
+  serveur, à l'heure des rappels, un POST chiffré vers une adresse https de son
+  choix, interne comprise, sans en voir la réponse (SSRF aveugle). Impact
+  faible : corps chiffré, réponse jamais rendue, compte authentifié requis. Le
+  remède : n'accepter que les hôtes des services push connus (FCM, Mozilla
+  autopush, Apple, Windows).
 - **Non vérifié sur un vrai téléphone** (pas de HTTPS ni d'appareil dans le
   cadre de cette tâche) : à ajouter à la séquence de `docs/mise-en-service.md`.
 

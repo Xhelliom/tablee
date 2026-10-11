@@ -93,7 +93,12 @@ self.addEventListener('notificationclick', (event) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       const open = windows.find((w) => 'focus' in w);
       // Une fenêtre déjà ouverte est ramenée à l'accueil plutôt que doublée.
-      return open ? open.navigate(url).then((w) => w && w.focus()) : self.clients.openWindow(url);
+      // `navigate` est rejeté sur une fenêtre que ce worker ne contrôle pas
+      // (`includeUncontrolled`) : on en ouvre alors une, sinon le tap ne fait rien.
+      if (!open) return self.clients.openWindow(url);
+      return open.navigate(url)
+        .then((w) => (w ? w.focus() : self.clients.openWindow(url)))
+        .catch(() => self.clients.openWindow(url));
     }),
   );
 });
