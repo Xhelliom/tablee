@@ -213,6 +213,7 @@ export function HouseholdSettingsScreen(): React.ReactElement {
       {parent ? <HouseholdForm onSaved={reload} /> : null}
 
       <Apparence />
+      <Rappels />
 
       {error !== null ? (
         <section className="sec">
@@ -299,6 +300,78 @@ function Apparence(): React.ReactElement {
         Réglage de cet appareil, gardé dans ce navigateur. Il ne suit pas votre
         compte et ne change rien pour les autres membres du foyer.
       </p>
+    </section>
+  );
+}
+
+// ── Rappels ─────────────────────────────────────────────────────────────────
+
+const clé64 = (b64: string): Uint8Array<ArrayBuffer> => {
+  const brut = atob(b64.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(b64.length / 4) * 4, '='));
+  return Uint8Array.from(brut, (c) => c.charCodeAt(0));
+};
+
+/**
+ * Les rappels de midi et du soir, **par appareil** : le navigateur donne
+ * l'abonnement à cet appareil-ci, et il ne se transporte pas. Rien n'est
+ * demandé avant le tap — la permission refusée une fois ne se redemande pas.
+ * Absent quand le serveur n'a pas de clés, ou que le navigateur ne sait pas
+ * (iOS : seulement une fois la PWA ajoutée à l'écran d'accueil).
+ */
+function Rappels(): React.ReactElement | null {
+  const [état, setÉtat] = useState<'inconnu' | 'indisponible' | 'off' | 'on'>('inconnu');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setÉtat('indisponible'); return; }
+    void (async () => {
+      try {
+        await api.get('/api/push/key');
+        const reg = await navigator.serviceWorker.ready;
+        setÉtat((await reg.pushManager.getSubscription()) === null ? 'off' : 'on');
+      } catch { setÉtat('indisponible'); }
+    })();
+  }, []);
+
+  if (état === 'inconnu' || état === 'indisponible') return null;
+
+  const basculer = async (): Promise<void> => {
+    setError(null);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const actuel = await reg.pushManager.getSubscription();
+      if (actuel !== null) {
+        await api.post('/api/push/unsubscribe', { endpoint: actuel.endpoint });
+        await actuel.unsubscribe();
+        setÉtat('off');
+        return;
+      }
+      if ((await Notification.requestPermission()) !== 'granted') {
+        setError('La notification est bloquée pour ce site : à autoriser dans les réglages du navigateur.');
+        return;
+      }
+      const { publicKey } = await api.get<{ publicKey: string }>('/api/push/key');
+      const abonnement = await reg.pushManager.subscribe({
+        userVisibleOnly: true, applicationServerKey: clé64(publicKey),
+      });
+      await api.post('/api/push/subscription', abonnement.toJSON());
+      setÉtat('on');
+    } catch {
+      setError('Le rappel n’a pas pu être réglé sur cet appareil.');
+    }
+  };
+
+  return (
+    <section className="sec">
+      <h2 className="eyebrow">Rappels</h2>
+      <button type="button" className="chip" onClick={() => void basculer()}>
+        {état === 'on' ? 'Désactiver sur cet appareil' : 'Activer sur cet appareil'}
+      </button>
+      <p className="meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
+        « Aujourd’hui, lequel ? » à midi et à 19 h, heure du foyer, quand des
+        plats attendent dans le stock. Réglage de cet appareil.
+      </p>
+      {error !== null ? <p className="meta">{error}</p> : null}
     </section>
   );
 }
