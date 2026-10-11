@@ -711,11 +711,15 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(part.meal.items[0].quantityG, 150);   // 600 g × ¼
     });
 
+    const daysAgo = (n: number): string =>
+      new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
     it('repère un repas qui revient trois fois, et se tait après le template', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
 
-      for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
+      // La fenêtre est glissante (30 jours) : des dates figées en sortent.
+      for (const day of [daysAgo(3), daysAgo(2), daysAgo(1)]) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
@@ -740,7 +744,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     it('ne suggère rien pour deux occurrences', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
-      for (const day of ['2026-09-12', '2026-09-13']) {
+      for (const day of [daysAgo(2), daysAgo(1)]) {
         await call('POST', '/api/meals', {
           eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
