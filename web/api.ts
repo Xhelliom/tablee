@@ -145,6 +145,8 @@ export interface Eater {
    * enfant est à table sans compte. Un convive n'est pas un compte (007).
    */
   userId: string | null;
+  /** Verrou super-admin (020) sur le lien seul : ni parent ni rattachement auto ne le touchent. */
+  linkLocked?: boolean;
   /** Vrai quand cette assiette est celle du compte connecté. */
   isMe: boolean;
   /**
@@ -218,10 +220,19 @@ export interface PlantBar {
   householdAverage7d: number | null;
 }
 
+export interface EnergyAverage {
+  average: number | null;
+  days: number;
+  reference: NutrientReference | null;
+  percent: number | null;
+}
+
 export interface DailyBalance {
   bars: NutrientBar[];
   plant: PlantBar;
   mealCount: number;
+  /** Absent sous 18 ans (I5). */
+  energyAverage7d?: EnergyAverage;
 }
 
 export interface MealItem {
@@ -249,11 +260,15 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette, reformulé par l'IA au découpage. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA. */
   imageUrl: string | null;
   items: MealItem[];
   participants: { eaterId: string; firstName: string; share: number }[];
+  /** Le plat principal, quand ce repas en est un sous-plat. `null` : un vrai repas. */
+  parentMealId: string | null;
+  /** Les sous-plats — fromage, dessert, entrée à part. Un seul niveau : toujours vide sur un sous-plat. */
+  subMeals: Meal[];
   /** Produits de saison de la recette ce mois-ci — 0 tant que la table est vide. */
   seasonalCount: number;
   nutrition: {
@@ -274,6 +289,8 @@ export interface Meal {
     gramsTotal: number | null;
     gramsPlant: number | null;
     gramsClassified: number | null;
+    /** kcal pour 100 g du plat ; `null` si énergie et grammes ne se recoupent pas. */
+    energyDensity: number | null;
     confidence: Confidence;
   } | null;
 }
@@ -344,6 +361,7 @@ export interface RecipeSummary {
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -359,6 +377,8 @@ export interface RecipeProposal {
   recipe: RecipeSummary;
   /** `null` quand le modèle n'a rien donné de lisible, ou a glissé un chiffre. */
   reason: string | null;
+  /** Le repas visé, pour présenter dans l'ordre de la journée. `null` : non dit. */
+  moment: 'midi' | 'soir' | null;
 }
 
 export interface AssistantRecipesResponse {
@@ -367,7 +387,7 @@ export interface AssistantRecipesResponse {
    * Des plats hors de la liste, inventés par le modèle : un nom et une phrase,
    * **aucune valeur**. L'écran les marque « à vérifier ».
    */
-  ideas: { title: string; reason: string }[];
+  ideas: { title: string; reason: string; moment: 'midi' | 'soir' | null }[];
   /** Le texte exact envoyé au modèle — ce qui est sorti du foyer. */
   facts: string;
 }
@@ -438,4 +458,20 @@ export interface WeekResponse {
   days: number;
   eaters: { id: string; firstName: string; color: string | null }[];
   cells: { date: string; eaterId: string; meals: number; plantRatio: number | null }[];
+  /**
+   * Les tendances du foyer (10/2026) : moyennes des % du repère par jour, en
+   * % entiers, jamais par personne. `null` : aucun convive renseigné.
+   */
+  nutrients: {
+    date: string;
+    means: Record<'proteinG' | 'carbG' | 'fatG' | 'fiberG', number | null>;
+    eaters: number;
+  }[];
+}
+
+/** Un plat du stock « plats à venir » (023) : une recette, sans jour. */
+export interface UpcomingDish {
+  id: string;
+  addedAt: string;
+  recipe: { id: string; title: string; imageUrl: string | null; baseServings: number; url: string | null };
 }

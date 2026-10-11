@@ -18,12 +18,14 @@ import { acquireForHousehold, type HouseholdDb, type ScopedClient } from './db.t
 import type { Auth } from './auth/auth.ts';
 import { readAuthState, type AuthState, type Identity } from './auth/identity.ts';
 import type { DrawDish } from './llm/image.ts';
+import type { Push } from './push.ts';
 import type { Llm } from './llm/index.ts';
 import { redactRequestUrl } from './jow/share.ts';
 import { ApiError } from './http/errors.ts';
 import { SECURITY_HEADERS } from './http/headers.ts';
 import { assistantRoutes } from './routes/assistant.ts';
 import { authRoutes } from './routes/auth.ts';
+import { adminRoutes } from './routes/admin.ts';
 import { dashboardRoutes } from './routes/dashboard.ts';
 import { foodRoutes } from './routes/foods.ts';
 import { householdRoutes } from './routes/household.ts';
@@ -31,6 +33,8 @@ import { mealRoutes } from './routes/meals.ts';
 import { eaterRoutes } from './routes/eaters.ts';
 import { recipeRoutes } from './routes/recipes.ts';
 import { templateRoutes } from './routes/templates.ts';
+import { pushRoutes } from './routes/push.ts';
+import { upcomingRoutes } from './routes/upcoming.ts';
 
 export interface AppContext {
   pool: pg.Pool;
@@ -45,6 +49,8 @@ export interface AppContext {
   llm?: Llm | null;
   /** L'image d'un plat saisi avec l'IA, `null` ou absente sans `GEMINI_API_KEY`. */
   drawDish?: DrawDish | null;
+  /** Les rappels push, `null` ou absents sans clés VAPID (`server/push.ts`). */
+  push?: Push | null;
 }
 
 /**
@@ -312,12 +318,15 @@ export function buildApp(
     });
 
     authRoutes(api, ctx);
+    adminRoutes(api, ctx);
     eaterRoutes(api, ctx);
     householdRoutes(api, ctx);
     recipeRoutes(api, ctx);
     foodRoutes(api, ctx);
     mealRoutes(api, ctx);
     templateRoutes(api, ctx);
+    upcomingRoutes(api, ctx);
+    pushRoutes(api, ctx);
     dashboardRoutes(api, ctx);
     assistantRoutes(api, ctx);
   });

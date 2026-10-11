@@ -62,6 +62,7 @@ export interface RecipeSummary {
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = importée, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -113,13 +114,13 @@ export async function markRecipeKnown(
 export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeSummary[]> {
   const { rows } = await db.query<{
     id: string; title: string; image_url: string | null; base_servings: number;
-    nutri_score: string | null; confidence: Confidence;
+    nutri_score: string | null; green_score: string | null; confidence: Confidence;
     last_eaten_at: Date | null; times_eaten: string;
     source: 'jow' | 'manuel'; url: string | null;
     kcal_serving: number | null; protein_serving: number | null; carb_serving: number | null;
     fat_serving: number | null; fiber_serving: number | null;
   }>(
-    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.confidence,
+    `select r.id, r.title, r.image_url, r.base_servings, r.nutri_score, r.green_score, r.confidence,
             r.source, r.url, r.kcal_serving, r.protein_serving, r.carb_serving,
             r.fat_serving, r.fiber_serving,
             max(m.eaten_at) as last_eaten_at,
@@ -142,6 +143,7 @@ export async function listRecipes(db: HouseholdDb, limit = 100): Promise<RecipeS
     imageUrl: row.image_url,
     baseServings: row.base_servings,
     nutriScore: row.nutri_score,
+    greenScore: row.green_score,
     confidence: row.confidence,
     lastEatenAt: row.last_eaten_at === null ? null : row.last_eaten_at.toISOString(),
     timesEaten: Number(row.times_eaten),
@@ -377,12 +379,17 @@ export interface LinkResult {
  *
  * Un ingrédient sans `jow_food_id` (recette manuelle, payload inattendu) ne
  * met à jour que sa propre ligne : rien à propager sans clé stable.
+ *
+ * Verrou (020) : un lien verrouillé refuse toute écriture — seul le
+ * super-admin passe outre, par `force: true` (voie `/api/admin/*`). Sans lui,
+ * même un `parent` reçoit un 403 plutôt qu'un écrasement silencieux.
  */
 export async function linkIngredientToFood(
   db: HouseholdDb,
   ingredientId: string,
   foodId: string | null,
   confirmedBy: string | null = null,
+  options: { force?: boolean } = {},
 ): Promise<LinkResult> {
   const { rows } = await db.query<{ jow_food_id: string | null; label: string }>(
     'select jow_food_id, label from recipe_ingredient where id = $1',
@@ -398,6 +405,19 @@ export async function linkIngredientToFood(
       [ingredientId, foodId],
     );
     return { propagated: rowCount ?? 0, jowFoodId: null };
+  }
+
+  if (options.force !== true) {
+    const verrou = await db.query<{ locked: boolean }>(
+      'select locked from jow_food_link where jow_food_id = $1', [jowFoodId],
+    );
+    if (verrou.rows[0]?.locked === true) {
+      const { ApiError } = await import('../http/errors.ts');
+      throw new ApiError(
+        403, 'lien_verrouille',
+        'cette correspondance est verrouillée — seul un super-admin peut la modifier',
+      );
+    }
   }
 
   if (foodId === null) {

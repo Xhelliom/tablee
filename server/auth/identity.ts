@@ -20,6 +20,7 @@ import type pg from 'pg';
 import { ApiError } from '../http/errors.ts';
 import type { Auth } from './auth.ts';
 import { isRole, type Role } from './auth.ts';
+import { ensureFirstSuperAdmin } from '../repo/admin.ts';
 
 export interface Identity {
   userId: string;
@@ -31,6 +32,12 @@ export interface Identity {
   householdName: string;
   timezone: string;
   role: Role;
+  /**
+   * Super-admin de la plateforme (020) : voit tous les comptes et répare les
+   * associations. Disjoint du rôle de foyer — un super-admin sans foyer ne
+   * saisit nulle part.
+   */
+  superadmin: boolean;
 }
 
 /**
@@ -112,6 +119,13 @@ export async function readAuthState(
   const membership = await resolveMembership(pool, user.id, active);
 
   if (membership === null) {
+    // Sans foyer non plus, on ne laisse pas la place au second : le premier
+    // compte connecté — même sans foyer — prend le siège (020).
+    try {
+      await ensureFirstSuperAdmin(pool, user.id);
+    } catch {
+      // Volontairement muet : la connexion n'en dépend pas.
+    }
     return { kind: 'sans_foyer', userId: user.id, email: user.email, name: user.name };
   }
 
@@ -120,6 +134,16 @@ export async function readAuthState(
   // manuelle — on retombe sur le rôle le moins capable plutôt que de laisser
   // passer.
   const role: Role = isRole(membership.role) ? membership.role : 'adulte';
+
+  // Le premier compte connecté de l'instance devient super-admin (020), une
+  // seule fois. En dehors de ce cas, c'est une lecture : la table tient lieu
+  // de vérité, jamais le rôle de foyer.
+  let superadmin = false;
+  try {
+    superadmin = await ensureFirstSuperAdmin(pool, user.id);
+  } catch {
+    superadmin = false;
+  }
 
   return {
     kind: 'actif',
@@ -132,6 +156,7 @@ export async function readAuthState(
       householdName: membership.household_name,
       timezone: membership.timezone,
       role,
+      superadmin,
     },
   };
 }
@@ -153,6 +178,19 @@ export async function readAuthState(
  */
 export function assertParent(identity: Identity, message: string): void {
   if (identity.role !== 'parent') {
+    throw new ApiError(403, 'droits_insuffisants', message);
+  }
+}
+
+/**
+ * Exige le super-admin de plateforme (020), ou refuse en 403.
+ *
+ * Disjoint des rôles de foyer : un `parent` de son foyer n'y suffit pas, et
+ * un super-admin hors foyer n'y gagne aucun droit de saisie — seulement les
+ * routes `/api/admin/*`.
+ */
+export function assertSuperAdmin(identity: Identity, message: string): void {
+  if (!identity.superadmin) {
     throw new ApiError(403, 'droits_insuffisants', message);
   }
 }

@@ -38,12 +38,27 @@ export interface Proposal {
   recipe: RecipeSummary;
   /** `null` quand le modèle n'a rien donné de lisible, ou a glissé un chiffre. */
   reason: string | null;
+  /**
+   * Le repas auquel le plat convient le mieux, pour présenter les suggestions
+   * dans l'ordre de la journée plutôt que par utilité nutritionnelle — un tri
+   * que l'écran ne pouvait pas deviner, et qui s'y lisait comme du hasard.
+   * `null` quand le modèle ne l'a pas dit : l'écran les montre après.
+   */
+  moment: Moment | null;
 }
 
 /** Un plat hors de la liste : un nom et une phrase, rien qui se mesure. */
 export interface Idea {
   title: string;
   reason: string;
+  moment: Moment | null;
+}
+
+/** Le repas visé par une suggestion : midi avant soir, comme la journée. */
+export type Moment = 'midi' | 'soir';
+
+function readMoment(value: unknown): Moment | null {
+  return value === 'midi' || value === 'soir' ? value : null;
 }
 
 const MAX_PROPOSALS = 3;
@@ -99,14 +114,14 @@ export function readProposals(output: unknown, candidates: RecipeSummary[]): Pro
   const seen = new Set<number>();
   const proposals: Proposal[] = [];
   for (const item of items) {
-    const { numero, raison } = (item ?? {}) as { numero?: unknown; raison?: unknown };
+    const { numero, raison, moment } = (item ?? {}) as { numero?: unknown; raison?: unknown; moment?: unknown };
     if (typeof numero !== 'number' || !Number.isInteger(numero) || seen.has(numero)) continue;
     const recipe = candidates[numero - 1];
     if (recipe === undefined) continue;
     seen.add(numero);
     // Une raison chiffrée est retirée ; la recette reste, ses valeurs
     // viennent de Jow.
-    proposals.push({ recipe, reason: readableText(raison, 280) });
+    proposals.push({ recipe, reason: readableText(raison, 280), moment: readMoment(moment) });
     if (proposals.length === MAX_PROPOSALS) break;
   }
   return proposals;
@@ -125,11 +140,11 @@ export function readIdeas(output: unknown): Idea[] {
 
   const ideas: Idea[] = [];
   for (const item of items) {
-    const { titre, raison } = (item ?? {}) as { titre?: unknown; raison?: unknown };
+    const { titre, raison, moment } = (item ?? {}) as { titre?: unknown; raison?: unknown; moment?: unknown };
     const title = readableText(titre, 80);
     const reason = readableText(raison, 280);
     if (title === null || reason === null) continue;
-    ideas.push({ title, reason });
+    ideas.push({ title, reason, moment: readMoment(moment) });
     if (ideas.length === MAX_IDEAS) break;
   }
   return ideas;
@@ -154,6 +169,7 @@ const CONSIGNE = [
   'Choisis au plus trois recettes, de la plus utile à la moins utile, désignées par leur numéro dans la liste. Rien qui n’y figure. Si aucune n’aide vraiment le premier repère, propose-en moins.',
   'Pour chacune, une phrase courte qui dit quel repère elle aide à rejoindre, en termes de qualité et de variété.',
   'Ajoute ensuite une ou deux idées de plats qui ne sont pas dans la liste, pour le premier repère et dans le respect des régimes : un nom de plat courant, sans marque, et une phrase. Si la liste est vide, ne propose que des idées.',
+  'Pour chaque proposition comme pour chaque idée, indique le repas auquel elle convient le mieux : "midi" ou "soir", en les répartissant entre les deux plutôt qu’en visant un seul. L’écran les présente dans l’ordre de la journée.',
   'Aucun chiffre, ni dans les noms ni dans les phrases : les valeurs affichées viennent de Jow, et une idée n’en a aucune de vérifiée. Parle de familles d’aliments plutôt que de quantités.',
   'Un ton de constat et de suggestion, jamais de reproche, sans vocabulaire de régime amaigrissant, de calories ni de poids.',
 ].join('\n');
@@ -165,8 +181,12 @@ const FORMAT = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { numero: { type: 'integer' }, raison: { type: 'string' } },
-        required: ['numero', 'raison'],
+        properties: {
+          numero: { type: 'integer' },
+          raison: { type: 'string' },
+          moment: { type: 'string', enum: ['midi', 'soir'] },
+        },
+        required: ['numero', 'raison', 'moment'],
         additionalProperties: false,
       },
     },
@@ -174,8 +194,12 @@ const FORMAT = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { titre: { type: 'string' }, raison: { type: 'string' } },
-        required: ['titre', 'raison'],
+        properties: {
+          titre: { type: 'string' },
+          raison: { type: 'string' },
+          moment: { type: 'string', enum: ['midi', 'soir'] },
+        },
+        required: ['titre', 'raison', 'moment'],
         additionalProperties: false,
       },
     },

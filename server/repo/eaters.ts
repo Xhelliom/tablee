@@ -15,6 +15,7 @@
  * le rattachement se fait tout seul à ce moment-là (`claimEatersForUser`).
  */
 import type { HouseholdDb } from '../db.ts';
+import { ApiError } from '../http/errors.ts';
 
 export interface Eater {
   id: string;
@@ -30,6 +31,12 @@ export interface Eater {
   userId: string | null;
   /** L'adresse à qui l'assiette est réservée, tant que personne ne l'a prise. */
   claimEmail: string | null;
+  /**
+   * Verrou super-admin (020) sur le lien seul : `user_id` et `claim_email`
+   * refusent toute écriture tant qu'il est posé. Le reste de la fiche reste
+   * modifiable.
+   */
+  linkLocked: boolean;
   /** Majeurs uniquement (I5). Une mesure, jamais une cible. */
   weightKg: number | null;
   /** Quand ce poids a été saisi. Un poids sans date dérive. */
@@ -40,7 +47,7 @@ export interface Eater {
 interface Row {
   id: string; first_name: string; birth_date: string; sex: 'F' | 'M';
   portion_coef: number; diets: string[]; color: string | null; active: boolean;
-  user_id: string | null; claim_email: string | null;
+  user_id: string | null; claim_email: string | null; link_locked: boolean;
   weight_kg: number | null; weight_recorded_at: Date | string | null;
   height_cm: number | null;
 }
@@ -56,6 +63,7 @@ const toEater = (row: Row): Eater => ({
   active: row.active,
   userId: row.user_id,
   claimEmail: row.claim_email,
+  linkLocked: row.link_locked ?? false,
   weightKg: row.weight_kg,
   weightRecordedAt:
     row.weight_recorded_at === null
@@ -65,7 +73,7 @@ const toEater = (row: Row): Eater => ({
 });
 
 const COLUMNS = `id, first_name, birth_date, sex, portion_coef, diets, color, active,
-                 user_id, claim_email, weight_kg, weight_recorded_at, height_cm`;
+                 user_id, claim_email, link_locked, weight_kg, weight_recorded_at, height_cm`;
 
 const SELECT = `select ${COLUMNS} from eater`;
 
@@ -154,6 +162,11 @@ export type MemberPatch = Partial<MemberInput> & { active?: boolean };
  * l'écriture de chaque repas ; un enfant qui grandit change ce qu'il mangera,
  * pas ce qu'il a mangé. Cette fonction n'écrit que dans `eater`, et c'est
  * volontairement tout ce qu'elle sait faire.
+ *
+ * Verrou (020) : toucher au lien (`user_id`, `claim_email`, y compris via
+ * `active: false`) sur une fiche verrouillée refuse en 403. Seule la voie
+ * super-admin (`server/repo/admin.ts`) passe outre — c'est elle qui répare,
+ * pas le foyer qui contourne.
  */
 export async function updateEater(
   db: HouseholdDb,
@@ -166,6 +179,20 @@ export async function updateEater(
   // pourrait plus recréer sa fiche (409), et une adresse réservée rattacherait
   // à son arrivée une assiette que personne ne voit.
   const patch: MemberPatch = input.active === false ? { ...input, userId: null, claimEmail: null } : input;
+  const toucheAuLien =
+    patch.userId !== undefined || patch.claimEmail !== undefined;
+  if (toucheAuLien) {
+    const { rows } = await db.query<{ link_locked: boolean }>(
+      'select link_locked from eater where household_id = $1 and id = $2',
+      [householdId, id],
+    );
+    if (rows[0]?.link_locked === true) {
+      throw new ApiError(
+        403, 'lien_verrouille',
+        'cette association convive ↔ compte est verrouillée — seul un super-admin peut la modifier',
+      );
+    }
+  }
   const sets: string[] = [];
   const params: unknown[] = [householdId, id];
   const set = (column: string, value: unknown): void => {
@@ -245,6 +272,7 @@ export async function claimEatersForUser(
       where household_id = $1
         and user_id is null
         and claim_email = lower($3)
+        and link_locked = false
         and not exists (
           select 1 from eater autre
            where autre.household_id = $1 and autre.user_id = $2

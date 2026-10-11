@@ -57,6 +57,12 @@ export interface CreateMealInput {
   title?: string | null;
   rawInput?: string | null;
   createdBy?: string | null;
+  /**
+   * Le plat principal dont ce repas est un sous-plat (019) : le fromage de
+   * l'un, le fruit de l'autre. Créneau et journée sont recopiés du parent, pas
+   * lus du client — un dessert ne peut pas glisser au lendemain.
+   */
+  parentMealId?: string | null;
 }
 
 export interface MealItem extends MealItemInput {
@@ -85,11 +91,23 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette (016). `null` : à l'écran, ses libellés. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA (015). */
   imageUrl: string | null;
   items: MealItem[];
   participants: MealParticipant[];
+  /**
+   * Le plat principal, quand ce repas en est un sous-plat (019). `null` : un
+   * vrai repas, qui peut lui-même porter des sous-plats dans `subMeals`.
+   */
+  parentMealId: string | null;
+  /**
+   * Les sous-plats : fromage, dessert, entrée à part — chacun ses convives,
+   * ses parts, sa nutrition. Un seul niveau : leur propre `subMeals` est
+   * toujours vide. Vide sur un sous-plat, comme dans les listes qui ne
+   * montrent que des plats principaux.
+   */
+  subMeals: Meal[];
   nutrition: StoredNutrition | null;
   /**
    * Nombre de produits de saison de la recette, ce mois-ci (§8bis) — le badge
@@ -118,6 +136,7 @@ export interface StoredNutrition {
   gramsTotal: number | null;
   gramsPlant: number | null;
   gramsClassified: number | null;
+  energyDensity: number | null;
   confidence: Confidence;
 }
 
@@ -149,26 +168,48 @@ export async function createMeal(
     }
   }
 
+  // Un sous-plat hérite du créneau et de la journée de son plat principal, et
+  // d'eux seuls : le reste (convives, parts, nutrition) est un repas normal.
+  // Le parent doit exister dans ce foyer et ne pas être lui-même un sous-plat.
+  let eatenAt = input.eatenAt;
+  let slot = input.slot;
+  const parentMealId = input.parentMealId ?? null;
+  if (parentMealId !== null) {
+    const { rows: parentRows } = await client.query<{
+      eaten_at: Date; slot: Slot; parent_meal_id: string | null;
+    }>(
+      'select eaten_at, slot, parent_meal_id from meal where household_id = $1 and id = $2',
+      [householdId, parentMealId],
+    );
+    const parent = parentRows[0];
+    if (parent === undefined) throw ApiError.badRequest('plat principal introuvable', 'parent_inconnu');
+    if (parent.parent_meal_id !== null) {
+      throw ApiError.badRequest('un sous-plat ne peut pas avoir d’enfant', 'parent_non_principal');
+    }
+    eatenAt = parent.eaten_at.toISOString();
+    slot = parent.slot;
+  }
+
   const { rows } = await client.query<{ id: string }>(
     `insert into meal (household_id, eaten_at, slot, source, recipe_id, servings,
                        leftover_of, guest_count, raw_input, note, created_by,
-                       remaining_servings, image_id, title)
+                       remaining_servings, image_id, title, parent_meal_id)
      -- Les casts ne sont pas décoratifs : sans eux Postgres déduit le type du
      -- littéral de coalesce, et « 2,5 parts » échoue en entier invalide.
      -- Des restes gardent l'image du plat qu'ils resservent (015).
      values ($1, $2::timestamptz, $3, $4, $5, coalesce($6::numeric, 1), $7,
              coalesce($8::int, 0), $9, $10, $11, $12::numeric,
-             (select image_id from meal where household_id = $1 and id = $7), $13)
+             (select image_id from meal where household_id = $1 and id = $7), $13, $14)
      returning id`,
     [
-      householdId, input.eatenAt, input.slot, input.source, recipeId,
+      householdId, eatenAt, slot, input.source, recipeId,
       input.servings ?? null, leftoverOf, input.guestCount ?? null,
       // I6 : le texte brut ne doit jamais atteindre `meal.raw_input`.
       input.rawInput === null || input.rawInput === undefined
         ? null
         : redactShareText(input.rawInput),
       input.note ?? null, input.createdBy ?? null, remainingServings,
-      input.title ?? null,
+      input.title ?? null, parentMealId,
     ],
   );
   const id = rows[0]?.id;
@@ -383,6 +424,21 @@ export async function updateMeal(
   mealId: string,
   patch: MealPatch,
 ): Promise<boolean> {
+  // Un sous-plat vit la journée de son plat principal : y toucher le
+  // déplacerait hors du repas. Le corriger, c'est corriger le parent.
+  if (patch.eatenAt !== undefined || patch.slot !== undefined) {
+    const { rows: parentRows } = await client.query<{ parent_meal_id: string | null }>(
+      'select parent_meal_id from meal where household_id = $1 and id = $2',
+      [householdId, mealId],
+    );
+    if ((parentRows[0]?.parent_meal_id ?? null) !== null) {
+      throw ApiError.badRequest(
+        'un sous-plat suit son plat principal — corrigez le créneau sur celui-ci',
+        'enfant_fige',
+      );
+    }
+  }
+
   const sets: string[] = [];
   const params: unknown[] = [householdId, mealId];
   const set = (column: string, value: unknown): void => {
@@ -536,8 +592,8 @@ export async function recomputeNutrition(
     `insert into meal_nutrition (meal_id, kcal, protein_g, carb_g, fat_g, fiber_g,
                                  kcal_max, protein_g_max, carb_g_max, fat_g_max, fiber_g_max,
                                  plant_ratio, grams_total, grams_plant, grams_classified,
-                                 confidence, computed_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now())
+                                 energy_density, confidence, computed_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, now())
      on conflict (meal_id) do update set
        kcal = excluded.kcal, protein_g = excluded.protein_g, carb_g = excluded.carb_g,
        fat_g = excluded.fat_g, fiber_g = excluded.fiber_g,
@@ -546,12 +602,13 @@ export async function recomputeNutrition(
        fiber_g_max = excluded.fiber_g_max,
        plant_ratio = excluded.plant_ratio, grams_total = excluded.grams_total,
        grams_plant = excluded.grams_plant, grams_classified = excluded.grams_classified,
+       energy_density = excluded.energy_density,
        confidence = excluded.confidence, computed_at = now()`,
     [
       mealId, result.kcal, result.proteinG, result.carbG, result.fatG, result.fiberG,
       result.max.kcal, result.max.proteinG, result.max.carbG, result.max.fatG, result.max.fiberG,
       result.plantRatio, result.gramsTotal, result.gramsPlant, result.gramsClassified,
-      result.confidence,
+      result.energyDensity, result.confidence,
     ],
   );
 
@@ -589,11 +646,11 @@ export async function recomputeMealsUsingIngredient(
 
 const MEAL_SELECT = `
   select m.id, m.eaten_at, m.slot, m.source, m.servings, m.remaining_servings, m.guest_count,
-         m.leftover_of, m.note, m.title, m.image_id,
-         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
+         m.leftover_of, m.note, m.title, m.image_id, m.parent_meal_id,
+         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score, r.green_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
          n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
-         n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.confidence
+         n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.energy_density, n.confidence
   from meal m
   left join recipe r on r.id = m.recipe_id
   left join meal_nutrition n on n.meal_id = m.id`;
@@ -601,15 +658,17 @@ const MEAL_SELECT = `
 interface MealRow {
   id: string; eaten_at: Date; slot: Slot; source: MealSource; servings: number;
   remaining_servings: number | null; guest_count: number; leftover_of: string | null; note: string | null;
-  title: string | null; image_id: string | null;
+  title: string | null; image_id: string | null; parent_meal_id: string | null;
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
-  nutri_score: string | null;
+  nutri_score: string | null; green_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
   fat_g: number | null; fiber_g: number | null;
   kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
   fat_g_max: number | null; fiber_g_max: number | null;
   plant_ratio: number | null;
   grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
+  // numeric sort en chaîne depuis pg
+  energy_density: string | number | null;
   confidence: Confidence | null;
 }
 
@@ -621,10 +680,11 @@ export async function listMeals(
 ): Promise<Meal[]> {
   const { rows } = await db.query<MealRow>(
     `${MEAL_SELECT} where m.household_id = $1 and m.eaten_at >= $2 and m.eaten_at < $3
+     and m.parent_meal_id is null
      order by m.eaten_at desc`,
     [householdId, from, to],
   );
-  return hydrate(db, rows);
+  return withChildren(db, await hydrate(db, rows));
 }
 
 export async function getMeal(db: HouseholdDb, householdId: string, id: string): Promise<Meal | null> {
@@ -632,8 +692,35 @@ export async function getMeal(db: HouseholdDb, householdId: string, id: string):
     `${MEAL_SELECT} where m.household_id = $1 and m.id = $2`,
     [householdId, id],
   );
-  const [meal] = await hydrate(db, rows);
+  const [meal] = await withChildren(db, await hydrate(db, rows));
   return meal ?? null;
+}
+
+/**
+ * Les sous-plats de chaque plat principal, dans l'ordre de leur saisie.
+ *
+ * Un seul niveau : les enfants n'ont jamais eux-mêmes d'enfants, leur
+ * `subMeals` reste vide. Les listes plates (`/api/meals`, l'accueil,
+ * l'historique) ne voient que des plats principaux ; le bilan, la semaine et
+ * l'assistant lisent les lignes brutes et n'ont rien à y changer.
+ */
+async function withChildren(db: HouseholdDb, meals: Meal[]): Promise<Meal[]> {
+  const parents = meals.filter((meal) => meal.parentMealId === null);
+  if (parents.length === 0) return meals;
+  const { rows } = await db.query<MealRow>(
+    `${MEAL_SELECT} where m.parent_meal_id = any($1::uuid[]) order by m.created_at, m.id`,
+    [parents.map((meal) => meal.id)],
+  );
+  const children = await hydrate(db, rows);
+  const byParent = new Map<string, Meal[]>();
+  for (const child of children) {
+    const list = byParent.get(child.parentMealId ?? '') ?? [];
+    list.push(child);
+    byParent.set(child.parentMealId ?? '', list);
+  }
+  return meals.map((meal) =>
+    meal.parentMealId === null ? { ...meal, subMeals: byParent.get(meal.id) ?? [] } : meal,
+  );
 }
 
 /**
@@ -753,10 +840,13 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
             id: row.recipe_id,
             title: row.recipe_title ?? '',
             nutriScore: row.nutri_score,
+            greenScore: row.green_score,
           },
     imageUrl: row.image_url ?? (row.image_id === null ? null : dishImageUrl(row.image_id)),
     items: itemsByMeal.get(row.id) ?? [],
     participants: partsByMeal.get(row.id) ?? [],
+    parentMealId: row.parent_meal_id,
+    subMeals: [],
     seasonalCount: seasonal.get(row.id) ?? 0,
     nutrition:
       row.confidence === null
@@ -770,7 +860,9 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
             },
             plantRatio: row.plant_ratio,
             gramsTotal: row.grams_total, gramsPlant: row.grams_plant,
-            gramsClassified: row.grams_classified, confidence: row.confidence,
+            gramsClassified: row.grams_classified,
+            energyDensity: row.energy_density === null ? null : Number(row.energy_density),
+            confidence: row.confidence,
           },
   }));
 }

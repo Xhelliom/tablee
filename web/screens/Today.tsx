@@ -13,11 +13,13 @@
  * écarté des maquettes : pas de grille uniforme, pas de score, et le titre dit
  * toujours ce qui s'est passé.
  */
-import { useEffect, useState } from 'react';
+import { Children, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
   ApiError, api, type AssistantRecipesResponse, type DashboardResponse, type Meal, type Nutrient,
+  type RecipeSummary, type UpcomingDish,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
+import { imagesRécentes, écouterImages, type ImageAnnoncee } from '../mealImage.ts';
 import { useSession } from '../session.tsx';
 import { Avatar } from '../components/Avatar.tsx';
 import { BilanCard, TONE_COLOR, TONE_ICON } from '../components/Bilan.tsx';
@@ -25,10 +27,11 @@ import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { LeftoverRow } from '../components/Leftovers.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
 import { IconBowl, IconChevron, IconPlus } from '../icons.tsx';
 import {
-  BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, localDate, longDate,
+  BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, currentSlot, eatenAt, localDate, longDate,
 } from '../design/vocabulary.ts';
 
 type Entry = DashboardResponse['dashboard'][number];
@@ -40,6 +43,8 @@ export function TodayScreen(): React.ReactElement {
   /** La personne choisie. `null` : sa propre assiette, sinon la première. */
   const [chosen, setChosen] = useState<string | null>(null);
   const [fridge, setFridge] = useState<Meal[]>([]);
+  /** Incrémenté quand le stock change la journée : relit le bilan. */
+  const [reload, setReload] = useState(0);
 
   // À côté de la journée, pas avant elle : un frigo illisible ne doit pas
   // faire tomber l'accueil. Le frigo est celui de maintenant, quel que soit
@@ -58,13 +63,30 @@ export function TodayScreen(): React.ReactElement {
       .then((next) => { if (current) setData(next); })
       .catch(() => { if (current) setError('impossible de charger la journée'); });
     return () => { current = false; };
-  }, [day]);
+  }, [day, reload]);
+
+  // L'image d'un plat se dessine après son enregistrement : quand elle est
+  // annoncée, elle rejoint la journée et le frigo sans rechargement. Les
+  // annonces récentes rattrapent un détour par un autre onglet entre-temps.
+  useEffect(() => {
+    const appliquer = ({ mealId, imageUrl }: ImageAnnoncee): void => {
+      setData((prev) => prev === null ? prev : {
+        ...prev,
+        meals: prev.meals.map((meal) => meal.id === mealId ? { ...meal, imageUrl } : meal),
+      });
+      setFridge((prev) => prev.map((meal) => meal.id === mealId ? { ...meal, imageUrl } : meal));
+    };
+    for (const annonce of imagesRécentes()) appliquer(annonce);
+    return écouterImages(appliquer);
+  }, []);
 
   if (error !== null) return <p className="empty">{error}</p>;
   if (data === null) return <p className="empty">Un instant…</p>;
 
+  // Le plus récent en premier, en grand : le soir, c'est le dîner qu'on vient
+  // de saisir qu'on veut voir, pas le petit-déj du matin.
   const meals = [...data.meals].sort(
-    (a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot),
+    (a, b) => SLOT_ORDER.indexOf(b.slot) - SLOT_ORDER.indexOf(a.slot),
   );
   const [hero, ...rest] = meals;
   const shown = data.dashboard.find((entry) => entry.eater.id === chosen)
@@ -131,6 +153,8 @@ export function TodayScreen(): React.ReactElement {
           <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
                     onOpen={(id) => navigate(`/repas/${id}`)} />
         ))}
+
+        <UpcomingStock day={day} onChange={() => setReload((n) => n + 1)} />
 
         {fridge.length > 0 ? (
           <>
@@ -382,51 +406,33 @@ function AssistantRecipes(): React.ReactElement | null {
           {response.proposals.length === 0 && response.ideas.length === 0 ? (
             <p className="meta">L’assistant n’a retenu aucune recette cette fois.</p>
           ) : null}
-          {response.proposals.map(({ recipe, reason }) => (
-            <div key={recipe.id} className="card row" style={{ cursor: 'default' }}>
-              {recipe.imageUrl !== null ? (
-                <img src={recipe.imageUrl} alt="" className="thumb" />
-              ) : (
-                <span className="thumb"><IconBowl size={20} /></span>
-              )}
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
-                  {recipe.url !== null ? (
-                    <a href={recipe.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
-                      {recipe.title}
-                    </a>
-                  ) : recipe.title}
-                </span>
-                {reason !== null ? (
-                  <span className="meta" style={{ display: 'block', marginTop: 3, lineHeight: 1.5 }}>
-                    {reason}
-                  </span>
-                ) : null}
-                {recipe.confidence !== 'haute' ? (
-                  <ConfidenceBadge confidence={recipe.confidence} />
-                ) : null}
-              </span>
-            </div>
+          {/* Les suggestions se lisent dans l'ordre de la journée — midi avant
+              soir — et non par utilité nutritionnelle, qui s'y lisait comme du
+              hasard. Recettes connues d'abord, idées ensuite : ce qui se
+              mesure avant ce qui s'invente. */}
+          <MomentGroup title="Pour le midi">
+            {response.proposals.filter((p) => p.moment === 'midi').map(({ recipe, reason }) => (
+              <RecipeCard key={recipe.id} recipe={recipe} reason={reason} />
+            ))}
+            {response.ideas.filter((idea) => idea.moment === 'midi').map((idea) => (
+              <IdeaCard key={idea.title} idea={idea} />
+            ))}
+          </MomentGroup>
+          <MomentGroup title="Pour le soir">
+            {response.proposals.filter((p) => p.moment === 'soir').map(({ recipe, reason }) => (
+              <RecipeCard key={recipe.id} recipe={recipe} reason={reason} />
+            ))}
+            {response.ideas.filter((idea) => idea.moment === 'soir').map((idea) => (
+              <IdeaCard key={idea.title} idea={idea} />
+            ))}
+          </MomentGroup>
+          {/* Sans moment dit, à la fin et sans titre : ce sont les rares
+              réponses que le schéma n'a pas cadrées, pas un troisième repas. */}
+          {response.proposals.filter((p) => p.moment === null).map(({ recipe, reason }) => (
+            <RecipeCard key={recipe.id} recipe={recipe} reason={reason} />
           ))}
-          {response.ideas.length > 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              Idées hors de vos recettes
-            </p>
-          ) : null}
-          {response.ideas.map((idea) => (
-            <div key={idea.title} className="card row" style={{ cursor: 'default' }}>
-              <span className="thumb"><IconBowl size={20} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
-                  {idea.title}
-                </span>
-                <span className="meta" style={{ display: 'block', margin: '3px 0 6px', lineHeight: 1.5 }}>
-                  {idea.reason}
-                </span>
-                {/* R6 : aucune valeur ne vient avec une idée, et ça se voit. */}
-                <ConfidenceBadge confidence="basse" label="Idée de l’assistant — à vérifier" />
-              </span>
-            </div>
+          {response.ideas.filter((idea) => idea.moment === null).map((idea) => (
+            <IdeaCard key={idea.title} idea={idea} />
           ))}
           {response.proposals.length > 0 || response.ideas.length > 0 ? (
             <p className="meta" style={{ lineHeight: 1.5 }}>
@@ -443,5 +449,133 @@ function AssistantRecipes(): React.ReactElement | null {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Un moment de la journée : son titre, puis ses plats. Vide, rien du tout. */
+function MomentGroup({ title, children }: { title: string; children: ReactNode }): ReactElement | null {
+  if (Children.count(children) === 0) return null;
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 8px' }}>{title}</p>
+      <div className="stack">{children}</div>
+    </div>
+  );
+}
+
+/** Une recette du foyer : sa photo, son titre, pourquoi l'assistant l'a retenue. */
+function RecipeCard({ recipe, reason }: { recipe: RecipeSummary; reason: string | null }): ReactElement {
+  return (
+    <div className="card row" style={{ cursor: 'default' }}>
+      {recipe.imageUrl !== null ? (
+        <img src={recipe.imageUrl} alt="" className="thumb" />
+      ) : (
+        <span className="thumb"><IconBowl size={20} /></span>
+      )}
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
+          {recipe.url !== null ? (
+            <a href={recipe.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+              {recipe.title}
+            </a>
+          ) : recipe.title}
+        </span>
+        {reason !== null ? (
+          <span className="meta" style={{ display: 'block', marginTop: 3, lineHeight: 1.5 }}>
+            {reason}
+          </span>
+        ) : null}
+        <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
+        {recipe.confidence !== 'haute' ? (
+          <ConfidenceBadge confidence={recipe.confidence} />
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+/** Une idée hors des recettes : un nom, une phrase, et le badge qui dit qu'elle s'invente. */
+function IdeaCard({ idea }: { idea: { title: string; reason: string } }): ReactElement {
+  return (
+    <div className="card row" style={{ cursor: 'default' }}>
+      <span className="thumb"><IconBowl size={20} /></span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, display: 'block', lineHeight: 1.3 }}>
+          {idea.title}
+        </span>
+        <span className="meta" style={{ display: 'block', margin: '3px 0 6px', lineHeight: 1.5 }}>
+          {idea.reason}
+        </span>
+        {/* R6 : aucune valeur ne vient avec une idée, et ça se voit. */}
+        <ConfidenceBadge confidence="basse" label="Idée de l’assistant — à vérifier" />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Le stock de plats à venir, à portée de pouce : un tap saisit le repas pour
+ * les convives actifs et retire le plat. Annulable tant qu'on ne quitte pas
+ * l'accueil. Stock vide ou illisible : rien à l'écran.
+ */
+function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => void }): ReactElement | null {
+  const [dishes, setDishes] = useState<UpcomingDish[]>([]);
+  /** Le dernier plat mangé, de quoi le remettre. */
+  const [done, setDone] = useState<{ mealId: string; recipeId: string; title: string } | null>(null);
+  const [error, setError] = useState(false);
+  /** Un appel en cours : un second tap ne doit pas partir. */
+  const [busy, setBusy] = useState(false);
+
+  const load = (): Promise<void> => api.get<{ dishes: UpcomingDish[] }>('/api/upcoming-dishes')
+    .then((r) => setDishes(r.dishes))
+    .catch(() => setDishes([]));
+  useEffect(() => { void load(); }, []);
+
+  const act = async (action: () => Promise<void>): Promise<void> => {
+    setError(false);
+    setBusy(true);
+    try {
+      await action();
+    } catch {
+      setError(true);
+    }
+    await load();
+    setBusy(false);
+    onChange();
+  };
+
+  const eat = (dish: UpcomingDish): Promise<void> => act(async () => {
+    const { mealId } = await api.post<{ mealId: string }>(`/api/upcoming-dishes/${dish.id}/eat`, {
+      eatenAt: eatenAt(day), slot: currentSlot(),
+    });
+    setDone({ mealId, recipeId: dish.recipe.id, title: dish.recipe.title });
+  });
+
+  const undo = (): Promise<void> => act(async () => {
+    if (done === null) return;
+    await api.delete(`/api/meals/${done.mealId}`);
+    await api.post('/api/upcoming-dishes', { recipeId: done.recipeId });
+    setDone(null);
+  });
+
+  if (dishes.length === 0 && done === null) return null;
+  return (
+    <>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Au programme</p>
+      {dishes.map((dish) => (
+        <button key={dish.id} type="button" className="card row" disabled={busy} onClick={() => void eat(dish)}>
+          <span className="thumb"><IconBowl size={20} /></span>
+          <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 500 }}>{dish.recipe.title}</span>
+          <span className="meta">On le mange</span>
+        </button>
+      ))}
+      {done !== null ? (
+        <p className="meta" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          « {done.title} » saisi.
+          <button type="button" className="chip" disabled={busy} onClick={() => void undo()}>Annuler</button>
+        </p>
+      ) : null}
+      {error ? <p className="meta">Le changement n’a pas pu être enregistré.</p> : null}
+    </>
   );
 }

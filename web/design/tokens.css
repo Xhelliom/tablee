@@ -336,6 +336,13 @@ a { color: inherit; }
 /* Le liseré garde la taille du `--quiet` qu'il remplace sous le doigt. */
 .btn--danger { background: var(--danger); border: .5px solid var(--danger); }
 
+/* Le segment d'un contrôle segmenté (la fiche d'un repas) : pressé, il répond
+   sous le doigt comme un bouton, sans décoller son groupe. */
+.seg__button {
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 120ms ease;
+}
+.seg__button:active { transform: scale(.97); }
+
 .chip {
   font-size: 12px; padding: 4px 9px; border-radius: var(--radius);
   background: var(--surface-1); color: var(--text-secondary);
@@ -388,21 +395,84 @@ input[type='number']::-webkit-inner-spin-button {
   object-fit: cover;
 }
 
+/* ── Le hero d'une recette (`web/components/RecipeHero.tsx`) ──────────────── */
+/* L'image en grand en tête de page, le titre en affichage dessous. Même
+   langue que la carte de l'accueil : aplat pleine largeur, coins arrondis,
+   sans cadre — ouvrir une recette déplie la carte qu'on venait de taper.
+   `aspect-ratio` plutôt qu'une hauteur : la photo Jow comme le dessin de l'IA
+   se recadrent tout seuls, quelle que soit leur forme d'origine. Sans image,
+   le bol dessiné occupe la même surface : la page ne saute pas. */
+.hero {
+  padding: 14px 16px;
+  background: var(--surface-2);
+}
+.hero__photo {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+.hero__photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.hero__vide {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Le titre est un moment d'affichage, pas une ligne de liste (§8ter). */
+.hero__titre {
+  margin: 12px 0 0;
+  font-family: var(--font-voice);
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -.005em;
+}
+/* Ce qui suit le titre (date, badge, ingrédients) s'en détache à 6 px. */
+.hero__titre + * { margin-top: 6px; }
+
 .nav {
   position: sticky; bottom: 0;
   border-top: .5px solid var(--border);
   display: flex; background: var(--surface-2);
   padding-bottom: env(safe-area-inset-bottom);
+  /* Le « + » déborde vers le haut : rien ne doit le rogner. */
+  overflow: visible;
 }
-.nav button {
-  flex: 1; padding: 10px 0 11px; border: 0; background: none;
+.nav__tab {
+  flex: 1; padding: 10px 0 12px; border: 0; background: none;
   color: var(--text-muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1), color 120ms ease;
 }
-.nav button[aria-current='page'] {
+.nav__tab:active { transform: scale(.93); }
+.nav__tab span {
+  font-size: 10px; line-height: 1.2; font-weight: 400;
+}
+.nav__tab[aria-current='page'] {
   color: var(--coral-fg);
   box-shadow: inset 0 2px 0 var(--coral);
 }
+.nav__tab[aria-current='page'] span { font-weight: 500; }
+/* Le « + » ancré au milieu : un slot souple comme un onglet pour le
+   centrer, et un pastille terracotta pleine qui remonte d'un demi-diamètre.
+   Blanc sur terracotta, comme `.btn` — jamais une couleur de nutriment. */
+.nav__plus-slot {
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+}
+.nav__plus {
+  width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--coral); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: -24px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .22);
+  transition: transform 160ms cubic-bezier(.23, 1, .32, 1);
+}
+.nav__plus:active { transform: scale(.94); }
 
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -430,7 +500,7 @@ input[type='number']::-webkit-inner-spin-button {
 
 /* Moins de mouvement, pas moins d'information : les fondus restent. */
 @media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled), .tuile:active:not(:disabled) { transform: none; }
+  .btn:active:not(:disabled), .tuile:active:not(:disabled), .nav__tab:active, .nav__plus:active { transform: none; }
   .apparait { animation-name: fondu; }
 }
 

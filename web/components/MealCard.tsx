@@ -35,6 +35,11 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 14, display: 'block' }}>{title}</span>
           <Who meal={meal} />
+          {meal.subMeals.length > 0 ? (
+            <span className="meta" style={{ display: 'block', marginTop: 2 }}>
+              Avec : {meal.subMeals.map(sousPlatTitre).join(' · ')}
+            </span>
+          ) : null}
         </span>
       </button>
     );
@@ -71,6 +76,11 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
       <span style={{ display: 'block', padding: '13px 14px' }}>
         <span style={{ fontSize: 17, display: 'block' }}>{title}</span>
         <Who meal={meal} style={{ marginTop: 4 }} />
+        {meal.subMeals.length > 0 ? (
+          <span className="meta" style={{ display: 'block', marginTop: 2 }}>
+            Avec : {meal.subMeals.map(sousPlatTitre).join(' · ')}
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -80,6 +90,11 @@ export function MealCard({ meal, hero = false, seasonalCount = 0, onOpen }: Prop
 function mealTitle(meal: Meal): string {
   if (meal.items.length === 0) return SLOT_LABELS[meal.slot];
   return meal.items.slice(0, 3).map((item) => item.label).join(', ');
+}
+
+/** Un sous-plat se nomme comme la carte qui le porte. */
+function sousPlatTitre(sub: Meal): string {
+  return sub.recipe?.title ?? sub.title ?? mealTitle(sub);
 }
 
 /**

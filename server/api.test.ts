@@ -262,6 +262,145 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.deepEqual(repas, { [moi]: 1, [elle]: 1, [enfant]: 0 });
     });
 
+    describe('sous-plats', () => {
+      /**
+       * Le fromage de l'un, le fruit de l'autre : un sous-plat reprend le
+       * créneau et la journée de son plat principal, mais ses parts ne
+       * comptent que pour ses propres convives — Σ = 1 par repas, chacun.
+       */
+      it('hérite du créneau et de la journée, avec ses propres parts', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const elle = await addEater('Adulte deux', '1987-01-01', 1);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }, { eaterId: elle }],
+        });
+
+        // Le client prétend un autre moment : le serveur recopie le parent.
+        const { body: enfant, status } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-14T12:30:00+02:00', slot: 'dejeuner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(status, 201);
+        assert.equal(enfant.meal.parentMealId, parent.meal.id);
+        assert.equal(enfant.meal.eatenAt, parent.meal.eatenAt);
+        assert.equal(enfant.meal.slot, 'diner');
+        assert.deepEqual(
+          enfant.meal.participants.map((p: any) => [p.eaterId, p.share]),
+          [[moi, 1]],
+        );
+
+        const { body: relu } = await call('GET', `/api/meals/${parent.meal.id}`);
+        assert.equal(relu.meal.subMeals.length, 1);
+        assert.equal(relu.meal.subMeals[0].id, enfant.meal.id);
+        assert.deepEqual(relu.meal.subMeals[0].subMeals, [], 'un seul niveau');
+      });
+
+      it('refuse un parent inconnu, d’un autre repas, ou déjà enfant', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+
+        const inconnu = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: '00000000-0000-4000-8000-000000000000',
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(inconnu.status, 400);
+
+        const petitEnfant = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: enfant.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+        assert.equal(petitEnfant.status, 400);
+      });
+
+      /**
+       * Les listes ne voient que des plats principaux, avec leurs sous-plats
+       * nichés ; le bilan, lui, mange de tout — le dessert compte pour qui l'a
+       * mangé, et pour lui seul.
+       */
+      it('niche les listes, et le bilan compte pour chacun', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const elle = await addEater('Adulte deux', '1987-01-01', 1);
+        const fromage = await insertFood(pool, 'Comté', { kcal: 400, protein: 25, carb: 1, fat: 32, fiber: 0 }, false);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }, { eaterId: elle }],
+        });
+        await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+          items: [{ foodId: fromage, label: 'Comté', quantity: 30, unit: 'g', quantityG: 30 }],
+        });
+
+        const { body: liste } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+        assert.equal(liste.meals.length, 1, 'un seul plat principal dans la liste');
+        assert.equal(liste.meals[0].subMeals.length, 1);
+
+        const { body: bilan } = await call('GET', '/api/dashboard?date=2026-09-13');
+        const repas = Object.fromEntries(
+          bilan.dashboard.map((e: any) => [e.eater.id, e.balance.mealCount]),
+        );
+        assert.deepEqual(repas, { [moi]: 2, [elle]: 1 });
+      });
+
+      it('refuse de déplacer un sous-plat, mais le laisse se corriger', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const fromage = await insertFood(pool, 'Comté', { kcal: 400, protein: 25, carb: 1, fat: 32, fiber: 0 }, false);
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+          items: [{ foodId: fromage, label: 'Comté', quantity: 30, unit: 'g', quantityG: 30 }],
+        });
+
+        const deplace = await call('PATCH', `/api/meals/${enfant.meal.id}`, { slot: 'dejeuner' });
+        assert.equal(deplace.status, 400);
+
+        const corrige = await call('PATCH', `/api/meals/${enfant.meal.id}`, {
+          items: [{ foodId: fromage, label: 'Comté', quantity: 60, unit: 'g', quantityG: 60 }],
+        });
+        assert.equal(corrige.status, 200);
+        assert.equal(corrige.body.meal.nutrition.kcal, 240);
+      });
+
+      it('supprimer le plat principal emporte ses sous-plats', async () => {
+        const moi = await addEater('Adulte', '1985-01-01', 1, 'M');
+
+        const { body: parent } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          participants: [{ eaterId: moi }],
+        });
+        const { body: enfant } = await call('POST', '/api/meals', {
+          eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel',
+          parentMealId: parent.meal.id,
+          participants: [{ eaterId: moi }],
+        });
+
+        assert.equal((await call('DELETE', `/api/meals/${parent.meal.id}`)).status, 200);
+        assert.equal((await call('GET', `/api/meals/${enfant.meal.id}`)).status, 404);
+      });
+    });
+
     // ── Test structurant n° 2 (§15) ─────────────────────────────────────────
     it('avec 2 invités, Σ des parts < 1 et les assiettes du foyer ne gonflent pas', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
@@ -332,6 +471,88 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       });
       assert.equal(modifie.meal.nutrition.kcal, 260);
       assert.deepEqual(modifie.meal.participants.map((p: any) => p.share), parts);
+    });
+
+    /**
+     * « Compléter un repas déjà enregistré » : un bagel le matin, puis, dans un
+     * second temps, un dessert rejoint le **même** repas. Le PATCH écrit sur ce
+     * repas, il n'en crée pas un autre, et les lignes déjà là sont conservées.
+     */
+    it('complète un repas existant sans en créer un second', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const bagel = await insertFood(pool, 'Bagel', { kcal: 260, protein: 10 }, null);
+      const tarte = await insertFood(pool, 'Tarte aux pommes', { kcal: 190, protein: 2 }, true);
+
+      const { body: dabord } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T07:30:00+02:00', slot: 'petit_dej', source: 'texte',
+        participants: [{ eaterId: adulte }],
+        items: [{ foodId: bagel, label: 'Bagel', quantity: 100, unit: 'g', quantityG: 100 }],
+      });
+      const mealId = dabord.meal.id;
+      assert.equal(dabord.meal.items.length, 1);
+
+      // Le client renvoie la liste entière : le bagel **et** le dessert.
+      const { body: complete } = await call('PATCH', `/api/meals/${mealId}`, {
+        items: [
+          { foodId: bagel, label: 'Bagel', quantity: 100, unit: 'g', quantityG: 100 },
+          { foodId: tarte, label: 'Tarte aux pommes', quantity: 120, unit: 'g', quantityG: 120 },
+        ],
+      });
+      assert.equal(complete.meal.id, mealId, 'pas de second repas : c’est le même');
+      assert.deepEqual(
+        complete.meal.items.map((i: any) => i.label).sort(),
+        ['Bagel', 'Tarte aux pommes'],
+      );
+      // 260 kcal du bagel + 120 g de tarte à 190 kcal/100 g.
+      assert.equal(complete.meal.nutrition.kcal, 260 + 190 * 1.2);
+
+      // La journée porte toujours un seul repas, désormais complet.
+      const { body: jour } = await call('GET', '/api/meals?from=2026-09-13&to=2026-09-13');
+      assert.equal(jour.meals.length, 1);
+      assert.equal(jour.meals[0].items.length, 2);
+    });
+
+    /**
+     * « Compléter un repas à recette (Jow) » : le dessert compte dans les
+     * totaux (renversé le 22/09/2026), et la recette elle-même ne bouge pas —
+     * les ajouts vivent dans `meal_item`, pas dans `recipe`.
+     */
+    it('complète un repas Jow sans toucher à la recette', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const tarte = await insertFood(pool, 'Tarte aux pommes', { kcal: 190, protein: 2 }, true);
+      const { rows: lignes } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings,
+                             kcal_serving, protein_serving, carb_serving,
+                             fat_serving, fiber_serving, confidence)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Galette complète', 1,
+                 320, 18, 30, 20, 12, 'haute') returning id`,
+      );
+      const recette = lignes[0] as { id: string };
+
+      const { body: dabord } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-14T12:30:00+02:00', slot: 'dejeuner', source: 'jow',
+        recipe_id: recette.id, servings: 1,
+        participants: [{ eaterId: adulte }],
+      });
+      assert.equal(dabord.meal.nutrition.kcal, 320);
+
+      const { body: complete } = await call('PATCH', `/api/meals/${dabord.meal.id}`, {
+        items: [{ foodId: tarte, label: 'Tarte aux pommes', quantity: 120, unit: 'g', quantityG: 120 }],
+      });
+      assert.equal(complete.meal.id, dabord.meal.id);
+      assert.equal(complete.meal.items.length, 1);
+      // 320 kcal de la galette + 120 g de tarte à 190 kcal/100 g.
+      assert.equal(complete.meal.nutrition.kcal, 320 + 190 * 1.2);
+
+      // « Mes recettes » : la recette et ses ingrédients n'ont pas bougé.
+      const [apres] = await sql<{ kcal_serving: number }>(
+        'select kcal_serving from recipe where id = $1', [recette.id],
+      );
+      const { rows: ingredients } = await pool.query(
+        'select count(*)::int as count from recipe_ingredient where recipe_id = $1', [recette.id],
+      );
+      assert.equal(apres?.kcal_serving, 320, 'le snapshot de la recette est figé');
+      assert.equal((ingredients[0] as { count: number } | undefined)?.count, 0, 'aucun ingrédient créé sur la recette');
     });
 
     it('n’écrit jamais le jeton d’un lien de partage dans raw_input (I6)', async () => {
@@ -494,9 +715,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
 
-      for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
+      // Relatives à aujourd'hui : la fenêtre des suggestions est glissante
+      // (30 jours), des dates en dur finissent par en sortir.
+      for (const n of [1, 2, 3]) {
         await call('POST', '/api/meals', {
-          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          eaten_at: new Date(Date.now() - n * 24 * 3600 * 1000).toISOString(), slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
@@ -519,9 +742,9 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     it('ne suggère rien pour deux occurrences', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
-      for (const day of ['2026-09-12', '2026-09-13']) {
+      for (const n of [1, 2]) {
         await call('POST', '/api/meals', {
-          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          eaten_at: new Date(Date.now() - n * 24 * 3600 * 1000).toISOString(), slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
@@ -648,6 +871,39 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(chili.timesEaten, 0);
       assert.equal(galette.timesEaten, 1);
       assert.ok(typeof galette.lastEatenAt === 'string');
+    });
+
+    it('expose les lettres Jow sur la liste et le repas, et rien sans elles', async () => {
+      const lettrée = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+      const nue = await recette('650b16ade7cc8d0013ce4a6f', 'Chili sin carne');
+      await sql("update recipe set nutri_score = 'B', green_score = 'A+' where id = $1", [lettrée]);
+
+      const { body } = await call('GET', '/api/recipes');
+      const parTitre = (t: string): any => body.recipes.find((r: any) => r.title === t);
+      assert.equal(parTitre('Galette végé').nutriScore, 'B');
+      assert.equal(parTitre('Galette végé').greenScore, 'A+');
+      assert.equal(parTitre('Chili sin carne').nutriScore, null);
+      assert.equal(parTitre('Chili sin carne').greenScore, null);
+
+      const saisir = async (recipeId: string): Promise<any> => (await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'jow', recipeId, servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+      })).body.meal;
+      const avec = await saisir(lettrée);
+      const sans = await saisir(nue);
+      const relu = async (m: any): Promise<any> => (await call('GET', `/api/meals/${m.id}`)).body.meal;
+      assert.deepEqual(
+        [(await relu(avec)).recipe.nutriScore, (await relu(avec)).recipe.greenScore], ['B', 'A+'],
+      );
+      assert.deepEqual(
+        [(await relu(sans)).recipe.nutriScore, (await relu(sans)).recipe.greenScore], [null, null],
+      );
+
+      // Un repas hors Jow n'a pas de recette, donc pas de lettre à inventer.
+      const { body: libre } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel', participants: [],
+      });
+      assert.equal((await relu(libre.meal)).recipe, null);
     });
 
     /**
@@ -873,6 +1129,31 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(body.recipe.ingredients[0].foodId, carotte);
     });
 
+    it('ne donne la densité énergétique que si énergie et grammes se recoupent', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const { a, ingredientA } = await deuxRecettes();
+      const repas = {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
+        recipe_id: a, servings: 2, participants: [{ eaterId: adulte }],
+      };
+
+      // 320 kcal par portion pour 100 g d'ingrédients par portion.
+      const { body: complet } = await call('POST', '/api/meals', repas);
+      assert.equal(complet.meal.nutrition.energyDensity, 320);
+      const { body: relu } = await call('GET', `/api/meals/${complet.meal.id}`);
+      assert.equal(relu.meal.nutrition.energyDensity, 320);
+
+      // Un ingrédient sans grammes : les kcal du snapshot couvrent plus que les grammes.
+      await pool.query(
+        `insert into recipe_ingredient (recipe_id, jow_food_id, label, quantity, unit, position)
+         values ($1, 'x', 'Sauce', 1, 'Poignée', 1)`,
+        [a],
+      );
+      const { body: partiel } = await call('POST', '/api/meals', repas);
+      assert.equal(partiel.meal.nutrition.energyDensity, null);
+      void ingredientA;
+    });
+
     it('recalcule la part végétale des repas concernés', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const { a, ingredientA } = await deuxRecettes();
@@ -1007,6 +1288,25 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const proteines = balance.bars.find((b: any) => b.nutrient === 'proteinG');
       assert.equal(proteines.state, 'disponible');
       assert.equal(proteines.consumed, 4.05);
+    });
+
+    it('I5 : la moyenne d’énergie sur 7 jours existe pour un majeur, jamais pour un mineur', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2018-01-01', 2, 'F');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
+      for (const [eaten_at, who] of [['2026-09-10', adulte], ['2026-09-13', adulte], ['2026-09-13', enfant]] as const) {
+        await call('POST', '/api/meals', {
+          eaten_at: `${eaten_at}T12:30:00+02:00`, slot: 'dejeuner', source: 'manuel',
+          participants: [{ eaterId: who }],
+          items: [{ foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 }],
+        });
+      }
+      const { body } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const of = (id: string) => body.dashboard.find((d: any) => d.eater.id === id).balance;
+      assert.equal(of(adulte).energyAverage7d.days, 2);
+      assert.equal(of(adulte).energyAverage7d.average, 130);
+      assert.equal('energyAverage7d' in of(enfant), false);
+      assert.equal(of(enfant).bars.some((b: any) => b.nutrient === 'kcal'), false);
     });
 
     it('demande l’unité plutôt que de la deviner tant que unit_default est vide', async () => {

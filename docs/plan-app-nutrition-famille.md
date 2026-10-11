@@ -593,6 +593,12 @@ Mot de passe hashé en argon2id. Pas de JWT — inutile ici, et plus dur à rév
 > celles de l'anneau, des compteurs du foyer et de la fiche d'un repas, et ce
 > sont elles qui portent les cinq couleurs du §8ter.
 >
+> **Densité énergétique d'un plat (09/10/2026).** Le propriétaire l'affiche sur
+> la fiche d'un repas, pour tous, mineurs compris : kcal pour 100 g de ce qui a
+> été mangé, propriété du plat et non d'une personne. `null` — donc absente —
+> quand énergie et grammes n'ont pas le même périmètre ; pas de seuil
+> « léger / dense » sans source. Migration 022.
+>
 > L'énergie n'est chiffrée que dans le **bilan détaillé** d'une personne, en
 > dernière position, en gris, et **jamais sur un profil mineur** (I5, trois
 > filets — voir l'en-tête de la migration 017). Ce qui l'a rendue possible est
@@ -1175,6 +1181,9 @@ calculerNutrition(meal):
   si meal.recipe_id existe ET recipe a un snapshot nutritionnel complet:
       totaux = snapshot_par_portion × meal.servings
       confidence = recipe.confidence
+      # ⚠️ Renversé le 22/09/2026 : les ajouts comptent désormais.
+      pour chaque item de meal_item:            # les « ajouts au plat »
+          totaux += résoudreItem(item)          # même logique qu'à droite
   sinon:
       totaux = 0 ; confidence = 'haute'
       pour chaque item de meal_item:
@@ -1207,6 +1216,16 @@ calculerNutrition(meal):
 >
 > La fraction est déclarée à table, en paliers. Elle ne dégrade pas la
 > confiance, pas plus que le nombre de parts d'un repas Jow ne l'a jamais fait.
+>
+> > **⚠️ Renversé le 22/09/2026 — « compléter un repas » : les ajouts comptent,
+> > recette ou pas.** Un repas déjà enregistré se complète après coup (un
+> > dessert qui rejoint un bagel, ou le plat Jow). Ce qui le rend vrai, c'est
+> > que l'ajout **pèse dans les totaux** : avant, un item ajouté à un repas à
+> > recette s'affichait sans compter — le snapshot faisait foi (§11, ci-dessus).
+> > Désormais les deux s'additionnent : le snapshot publie des valeurs exactes
+> > par portion, l'ajout s'y ajoute, et un ajout que le référentiel ne connaît
+> > pas déborne le haut sans effacer le minorant, comme n'importe quel item
+> > hors recette. Les parts (`share`) ne bougent pas : R2 tient.
 
 ```
 calculerShares(meal, membres_présents):
@@ -1257,6 +1276,19 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 | `GET` | `/api/insights/weekly?week=` | Synthèse hebdo (V3) |
 | `POST` | `/api/notes` | Ajouter une `family_note` (V3) |
 
+> **Compléter un repas existant (22/09/2026).** La fiche d'un repas
+> (`/api/meals/:id`) permet d'y **ajouter un aliment après coup** — un dessert
+> qui rejoint un bagel, les jours suivants. La composition y est éditable pour
+> tous les repas, recette ou non (avec recette, ses lignes s'appellent « Ajouté
+> au plat »). L'ajout part par `PATCH /api/meals/:id`, qui écrit sur ce repas
+> — jamais un second — et le client renvoie la liste entière, ce qui conserve
+> les lignes d'avant. Il compte dans les totaux, recette ou pas (§11, renversé
+> le même jour). L'ajout se fait par la recherche d'aliment, par un libellé
+> seul quand le référentiel ne connaît rien, et — depuis le même jour — en
+> **décrivant avec l'IA ou en photographiant**, via le composant commun
+> `DécrirePlat`. La recette, elle, ne bouge jamais : les ajouts vivent dans
+> `meal_item`, pas dans `recipe`.
+
 > **Routes ajoutées depuis** (13/09/2026), toutes sous la même session :
 >
 > | Méthode | Route | Pourquoi elle existe |
@@ -1271,7 +1303,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `POST` | `/api/foods` | Créer un aliment saisi à la main, sans aucune valeur déduite. |
 > | `DELETE` | `/api/templates/:id` | |
 > | `GET` | `/api/templates/suggestions` | V2 — « ce repas revient souvent, en faire un bouton ? » |
-> | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. |
+> | `GET` | `/api/week?from=&days=` | V2 — la grille 7 jours × membres. *06/10/2026 :* `nutrients` en plus — moyennes des % du repère par jour pour les quatre macros, foyer uniquement (§15). |
 >
 > **Ajoutées le 15/09/2026** :
 >
@@ -1338,6 +1370,12 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 Le client envoie `present`, **pas** `share` : le serveur calcule les shares
 depuis les `portion_coef` courants (R2).
 
+*06/10/2026 — `parentMealId` en plus :* un sous-plat (dessert, fromage, entrée
+à part), avec ses propres convives et ses propres parts. Créneau et journée
+recopiés du plat principal, qui doit exister dans le foyer et ne pas être
+lui-même un sous-plat. Les listes nichent (`subMeals`), le bilan somme sans
+rien y changer.
+
 ---
 
 ## 13. Écrans
@@ -1348,7 +1386,7 @@ depuis les `portion_coef` courants (R2).
 | **/share** | Intercepte le partage Jow. Affiche la recette, le nombre de parts, les cases « qui a mangé ». Deux taps pour valider. |
 | **Ajout rapide** | Templates en premier (gros boutons), puis **« Restes de… »** (repas des 3 derniers jours avec recette), puis recherche texte, puis photo. |
 | **Détail repas** | Composition, nutrition, participants, badge de confiance. Éditable. |
-| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. *Précisé le 14/09/2026 :* seule la part végétale est tracée, un petit graphe par personne avec la moyenne des jours saisis. `/api/week` ne renvoie pas les quatre autres barres, et « dans le repère 5 jours sur 7 » serait un score (§14bis). |
+| **Semaine** | Grille 7 jours × membres. Tendances des 5 barres. *Précisé le 14/09/2026 :* seule la part végétale est tracée, un petit graphe par personne avec la moyenne des jours saisis. `/api/week` ne renvoie pas les quatre autres barres, et « dans le repère 5 jours sur 7 » serait un score (§14bis). *Précisé le 06/10/2026 :* les quatre barres se lisent quand même, mais **en moyenne du foyer** — un graphe unique de colonnes empilées (« La tablée, jour par jour »), jamais par personne, sans chiffres sur les segments. Les graphes par convive restent végétaux. |
 | **Membres** | Fiches : âge, sexe, coefficient, régimes, préférences, allergènes. Depuis le 14/09/2026, l'état du rattachement à un compte (à personne / réservée à une adresse / rattachée), et le poids **des majeurs seulement**. |
 | **/bienvenue** | *Ajouté le 14/09/2026.* Un foyer vide n'a rien à afficher et rien à enregistrer : un repas sans assiette n'a personne à qui être attribué. Deux temps — votre assiette, puis qui d'autre est à table, avec l'invitation préparée dans le même geste pour un adulte. Sautable pour qui a un compte sans manger ici. `/share` en est exclu : détourner cette navigation perdrait la recette partagée. |
 | **/reinitialiser** | *Ajouté le 14/09/2026.* L'écran qu'ouvre le lien « mot de passe oublié » reçu par mail ; better-auth a vérifié le jeton avant d'y rediriger. Placé avant la porte d'authentification, puisqu'on y arrive par définition sans session. Utile seulement sur une instance qui envoie des mails (encart du §7) : ailleurs, l'écran de connexion dit à qui s'adresser. |
