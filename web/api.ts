@@ -251,7 +251,7 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette, reformulé par l'IA au découpage. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA. */
   imageUrl: string | null;
   items: MealItem[];
@@ -350,6 +350,7 @@ export interface RecipeSummary {
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;

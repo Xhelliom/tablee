@@ -35,6 +35,7 @@ import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge, Warnings } from '../components/Confidence.tsx';
 import { RemainsPicker, eatenHint, split } from '../components/Leftovers.tsx';
 import { RecipeHero } from '../components/RecipeHero.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { WhoWasThere } from '../components/WhoWasThere.tsx';
 import {
@@ -193,8 +194,8 @@ export function SharedRecipe(
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <ConfidenceBadge confidence={confidence}
                                label={confidence === 'haute' ? 'Résolue' : undefined} />
-              {recipe?.nutriScore != null ? (
-                <span className="meta">Nutri-Score {recipe.nutriScore}</span>
+              {recipe !== null ? (
+                <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
               ) : null}
               {state.seasonal > 0 ? (
                 <span className="meta">
