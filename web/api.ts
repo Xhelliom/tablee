@@ -456,3 +456,10 @@ export interface WeekResponse {
     eaters: number;
   }[];
 }
+
+/** Un plat du stock « plats à venir » (023) : une recette, sans jour. */
+export interface UpcomingDish {
+  id: string;
+  addedAt: string;
+  recipe: { id: string; title: string; imageUrl: string | null; baseServings: number; url: string | null };
+}
