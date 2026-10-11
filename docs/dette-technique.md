@@ -834,6 +834,49 @@ Dependabot, puisqu'une empreinte qui bouge se relit alors en diff.
 
 ---
 
+## 27. Les rappels push : horaires fixes, un seul processus, et la fiabilité de chaque plateforme
+
+**Où** — `server/push.ts`, `server/routes/push.ts`, migration 024, `web/public/sw.js`,
+bloc « Rappels » de `web/screens/HouseholdSettings.tsx`.
+
+Web push + VAPID (lib `web-push`, JavaScript pur : rien à compiler sur le
+Raspberry Pi arm64). Le serveur lui-même tourne un tour par minute
+(`setInterval` dans `server/index.ts`) ; chaque foyer est lu dans son fuseau
+(`household.timezone`, comme le découpage des journées).
+
+**Ce qui est approximatif.**
+
+- **Horaires fixes : 12 h et 19 h, heure du foyer.** Ils ne se règlent pas
+  (`REMINDER_SLOTS`). Un créneau manqué — serveur arrêté, tour en retard — se
+  rattrape dans les 30 minutes qui suivent, pas au-delà.
+- **Le verrou `reminder_sent`** garantit un envoi par foyer, jour et créneau,
+  même avec deux instances. Mais il est posé **avant** l'envoi : un envoi qui
+  échoue pour tous les appareils n'est pas retenté.
+- **Ni prénom ni valeur dans le texte** : seulement les titres des recettes
+  **Jow** (3 au plus, puis « et N autres »). Une recette saisie à la main est
+  comptée, jamais nommée — son titre est écrit par le foyer et peut porter un
+  prénom.
+- **Un abonnement appartient au foyer actif du compte au moment du tap.** Un
+  compte qui quitte le foyer garde son appareil abonné jusqu'au prochain
+  envoi refusé par le service push (404/410), qui le supprime.
+- **Android / Chrome** : fiable, PWA installée ou non. **iOS** : seulement
+  depuis iOS 16.4 et **une fois la PWA ajoutée à l'écran d'accueil** ; le bloc
+  n'apparaît pas sinon. Les économiseurs de batterie agressifs de certains
+  constructeurs Android retardent ou perdent des messages : rien n'est garanti
+  à la minute.
+- **Non vérifié sur un vrai téléphone** (pas de HTTPS ni d'appareil dans le
+  cadre de cette tâche) : à ajouter à la séquence de `docs/mise-en-service.md`.
+
+**Ce qui le lèverait.** Deux colonnes sur `household` (heure du midi et du soir)
+et un champ dans l'écran du foyer ; pour le rattrapage, retirer la ligne
+`reminder_sent` si aucun appareil n'a été joignable.
+
+**Clés.** `TABLEE_VAPID_PUBLIC`, `TABLEE_VAPID_PRIVATE`, `TABLEE_VAPID_SUBJECT`
+(`mailto:…`), les trois ou aucune ; générées par `npx web-push generate-vapid-keys`.
+Changer la paire désabonne de fait tous les appareils.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

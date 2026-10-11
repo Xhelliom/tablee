@@ -69,3 +69,31 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// Rappel « Aujourd'hui, lequel ? » : le serveur n'envoie qu'un titre, une
+// phrase et une adresse à ouvrir — jamais de prénom ni de valeur nutritionnelle.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { /* message illisible : repli ci-dessous */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Aujourd’hui, lequel ?', {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      // Un seul rappel à la fois à l'écran : le suivant remplace le précédent.
+      tag: 'rappel-du-jour',
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => 'focus' in w);
+      // Une fenêtre déjà ouverte est ramenée à l'accueil plutôt que doublée.
+      return open ? open.navigate(url).then((w) => w && w.focus()) : self.clients.openWindow(url);
+    }),
+  );
+});
