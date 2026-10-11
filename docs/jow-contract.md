@@ -339,3 +339,78 @@ diff inattendu signifie que Jow a bougé, donc que le contrat est à relire.
    été testée : elle retombera en `confidence='basse'`.
 5. **Poids d'une `Pièce` chez Jow** — ni publié, ni déductible des pages
    ingrédients (§5). Se renseigne à la main dans `food.unit_weights`.
+
+---
+
+## 10. Le lien de commande (`menuSharing`) — constat du 11/10/2026
+
+**Étude, rien de livré en code.** Question : que publie le lien qu'on partage
+depuis une commande Jow, et peut-on le lire sans l'API interne ? Aucune
+valeur de `key` ni de `userId` n'a servi : toutes les requêtes ci-dessous
+visent des pages publiques, avec un `sharingId` factice (24 zéros).
+
+### Ce que publie le lien
+
+```
+app.jow.com/…?action=menuSharing        (lien Branch)
+  → https://jow.fr/cooking/recipes-selection/<sharingId>?key=…&userId=…
+```
+
+- La page est la route Next `/cooking/recipes-selection/[sharingId]`. Son
+  `__NEXT_DATA__` existe mais **`props.pageProps` est vide** (`{}`), et la
+  réponse est identique pour n'importe quel `sharingId` : c'est une coquille
+  statique (200, ~67 Ko, aucun `/recipes/` dans le HTML). Rien à parser
+  côté serveur, contrairement aux pages recette (§2).
+- Les plats se chargent **dans le navigateur**. Lecture du bundle public de la
+  page : le client lit `sharingId`, `key`, `userId` dans la query string, puis
+  appelle l'API interne **`GET /share/link/details`** avec ces trois valeurs
+  (`getSharedRecipes`). `key` et `userId` sont les jetons de compte de I6 ;
+  sans eux la liste n'est pas obtenue. Cet appel n'a **pas** été émis ici
+  (règle « pages publiques uniquement ») : la forme de sa réponse est donc
+  inconnue, et ce qui suit sur son contenu vient de la description de la carte
+  (titre, durée, lien `/recipes/<slug>-<id>`).
+- Le `sharingId` seul est inutilisable : c'est l'identifiant du partage, pas
+  une recette.
+
+### Le format de lien `/recipes/<slug>-<id20>` — le parseur le sait déjà
+
+Le suffixe de 20 caractères est celui de l'URL canonique du §1
+(`…-8vch9drbhyhc03wu0epa`), **pas** un ObjectId. Vérifié :
+
+- `resolveShare("https://jow.fr/recipes/salade-cesar-<id20>")` → recette
+  complète, `confidence: 'haute'` (chemin `fetchRecipeByUrl`, via `isRecipePage`).
+- Le **slug est ignoré** par Jow : `/recipes/<id20>`, `/fr/recipes/<id20>` et
+  `/recipes/n-importe-quoi-<id20>` répondent tous 308 vers l'URL canonique.
+  Le `<id20>` suffit donc comme clé, comme l'ObjectId au §1.
+- Ce qui **ne** marche **pas** : `parseShareText` ne reconnaît un identifiant
+  que s'il fait 24 caractères hexadécimaux. Un `<id20>` nu (sans URL) n'est pas
+  extrait — seule l'URL complète passe, par `isRecipePage`. Et le texte d'un
+  lien `menuSharing` ne contient aucune URL `/recipes/` : il tombe en
+  `confidence: 'basse'`, sans erreur (comportement attendu, §1).
+- Piège à surveiller, non vérifié : si le `sharingId` est lui-même un ObjectId
+  (24 hex), `parseShareText` le prendrait pour un `recipeId`
+  (`OBJECT_ID`, nu dans le texte). La résolution échouerait en 404 puis
+  retomberait en `basse` — sans conséquence, mais ce n'est pas un rejet propre.
+
+### Options
+
+| # | Option | Coût | Règle « pages publiques » |
+|---|---|---|---|
+| A | **Statu quo** : un lien `menuSharing` donne la saisie manuelle ; on colle les recettes une à une (déjà possible) | 0 | respectée |
+| B | **Collage multiple** : l'utilisateur ouvre le lien dans son navigateur, copie les adresses des plats ; l'app extrait *toutes* les URLs `/recipes/…-<id20>` d'un texte et résout chacune (pages publiques, déjà couvertes par `fetchRecipeByUrl`) | petit : un extracteur multi-URL dans `share.ts`, une boucle dans `resolveShare`, un écran de choix. Reste un geste manuel par commande ; `<id20>` nu à accepter en option | respectée |
+| C | **Navigateur sans tête** côté serveur : charger la page de sélection avec `key`/`userId`, lire le DOM rendu | lourd : Chromium sur Raspberry Pi arm64, mémoire, lenteur, fragilité au moindre changement de page. Exige de faire **transiter les jetons** jusqu'au serveur et de les garder le temps du rendu (I6) | **à décider** : on ne touche pas l'API à la main, mais la page appelle l'API interne avec le jeton du propriétaire |
+| D | **Appel direct de `GET /share/link/details`** avec `sharingId`, `key`, `userId` | le plus léger : une requête, du JSON, sans rendu. Mais réponse non observée, contrat non documenté, jetons de compte envoyés par l'app à Jow depuis le serveur | **lève la règle** : c'est l'API interne non documentée du CLAUDE.md |
+| E | Lire côté client (la PWA, sur le téléphone) | probable blocage CORS ; même nature que D, non testé | lève la règle comme D |
+
+**Pour décision du propriétaire** : C et D (et E) exigent de lever ou
+d'interpréter la règle « pages publiques uniquement » et d'assouplir I6 (le
+jeton doit être reçu et utilisé, pas seulement écarté). Aucune n'est faite.
+Recommandation de l'étude, sans la trancher : **B** couvre le besoin sans rien
+lever ; C/D ne valent la peine que si le geste manuel de B est jugé trop lourd
+à l'usage.
+
+### Ce qui n'a pas été fait
+
+Pas de capture : `npm run jow:capture` ne sait capturer qu'une page recette, et
+la page de sélection n'en contient aucune. Aucune fixture ajoutée, aucun code
+modifié.
