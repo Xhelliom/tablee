@@ -338,6 +338,7 @@ export interface RecipeIngredient {
 
 export interface Recipe {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   url: string | null;
   imageUrl: string | null;
@@ -355,6 +356,7 @@ export interface Recipe {
 /** Une recette du foyer, telle que la liste « Mes recettes » la montre. */
 export interface RecipeSummary {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   imageUrl: string | null;
   baseServings: number;
