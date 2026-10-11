@@ -127,6 +127,16 @@ describe('plats à venir', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal((await call('GET', '/api/upcoming-dishes', nous.cookie)).body.dishes.length, 1);
     });
 
+    it('deux taps rapprochés : un seul repas, le second en 404', async () => {
+      const id = (await call('POST', '/api/upcoming-dishes', nous.cookie, { recipeId: recetteId })).body.dish.id;
+      const statuts = (await Promise.all([manger(nous.cookie, id), manger(nous.cookie, id)]))
+        .map((r) => r.status).sort();
+      assert.deepEqual(statuts, [201, 404]);
+      const { rows } = await withHousehold(pool, nous.householdId, (db) =>
+        db.query<{ n: number }>('select count(*)::int as n from meal'));
+      assert.equal(rows[0]?.n, 1);
+    });
+
     it('refuse un plat inconnu, ou celui d’un autre foyer, sans rien créer', async () => {
       const autre = (await call('POST', '/api/upcoming-dishes', voisins.cookie, { recipeId: recetteId })).body.dish.id;
       assert.equal((await manger(nous.cookie, autre)).status, 404);

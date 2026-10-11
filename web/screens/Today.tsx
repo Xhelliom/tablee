@@ -521,6 +521,8 @@ function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => 
   /** Le dernier plat mangé, de quoi le remettre. */
   const [done, setDone] = useState<{ mealId: string; recipeId: string; title: string } | null>(null);
   const [error, setError] = useState(false);
+  /** Un appel en cours : un second tap ne doit pas partir. */
+  const [busy, setBusy] = useState(false);
 
   const load = (): Promise<void> => api.get<{ dishes: UpcomingDish[] }>('/api/upcoming-dishes')
     .then((r) => setDishes(r.dishes))
@@ -529,12 +531,14 @@ function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => 
 
   const act = async (action: () => Promise<void>): Promise<void> => {
     setError(false);
+    setBusy(true);
     try {
       await action();
     } catch {
       setError(true);
     }
     await load();
+    setBusy(false);
     onChange();
   };
 
@@ -557,7 +561,7 @@ function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => 
     <>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Au programme</p>
       {dishes.map((dish) => (
-        <button key={dish.id} type="button" className="card row" onClick={() => void eat(dish)}>
+        <button key={dish.id} type="button" className="card row" disabled={busy} onClick={() => void eat(dish)}>
           <span className="thumb"><IconBowl size={20} /></span>
           <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 500 }}>{dish.recipe.title}</span>
           <span className="meta">On le mange</span>
@@ -566,7 +570,7 @@ function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => 
       {done !== null ? (
         <p className="meta" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           « {done.title} » saisi.
-          <button type="button" className="chip" onClick={() => void undo()}>Annuler</button>
+          <button type="button" className="chip" disabled={busy} onClick={() => void undo()}>Annuler</button>
         </p>
       ) : null}
       {error ? <p className="meta">Le changement n’a pas pu être enregistré.</p> : null}

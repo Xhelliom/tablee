@@ -27,7 +27,7 @@ export function upcomingRoutes(app: FastifyInstance, _ctx: AppContext): void {
   app.delete<{ Params: { id: string } }>('/api/upcoming-dishes/:id', async (request) => {
     const removed = await removeUpcomingDish(
       request.db, request.householdId(), uuid(request.params.id, 'id'));
-    if (!removed) throw ApiError.notFound('plat introuvable');
+    if (removed === null) throw ApiError.notFound('plat introuvable');
     return { ok: true };
   });
 
@@ -45,18 +45,18 @@ export function upcomingRoutes(app: FastifyInstance, _ctx: AppContext): void {
     const slotValue = slot(input['slot']);
 
     const mealId = await transaction(request.db, async (client) => {
-      const dish = (await listUpcomingDishes(client, householdId)).find((d) => d.id === id);
-      if (dish === undefined) throw ApiError.notFound('plat introuvable');
+      // Retirer d'abord : deux taps rapprochés ne font qu'un repas, le second
+      // attend le verrou de la ligne et repart en 404.
+      const recipeId = await removeUpcomingDish(client, householdId, id);
+      if (recipeId === null) throw ApiError.notFound('plat introuvable');
       const eaters = await listEaters(client, householdId);
-      const created = await createMeal(client, householdId, {
-        eatenAt, slot: slotValue, source: 'jow', recipeId: dish.recipe.id,
+      return createMeal(client, householdId, {
+        eatenAt, slot: slotValue, source: 'jow', recipeId,
         // Une part par convive, jamais sous 1 : comme l'écran de partage.
         servings: Math.max(eaters.length, 1),
         participants: eaters.map((e) => ({ eaterId: e.id, present: true })),
         createdBy: request.identity().userId,
       });
-      await removeUpcomingDish(client, householdId, id);
-      return created;
     });
     reply.code(201);
     return { mealId };
