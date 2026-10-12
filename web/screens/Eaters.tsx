@@ -28,6 +28,7 @@ import { api, ApiError, type DailyBalance, type DashboardResponse, type Eater } 
 import { useSession } from '../session.tsx';
 import { NutrientBars } from '../components/NutrientBars.tsx';
 import { IconPlus } from '../icons.tsx';
+import { DietIcon } from '../components/DietIcon.tsx';
 import { dietLabel, NUTRIENT_COLOR } from '../design/vocabulary.ts';
 import { navigate } from '../router.tsx';
 import { AddEaterForm, créerInvitation, LienÀTransmettre } from '../components/AddEater.tsx';
@@ -181,7 +182,11 @@ function FicheConvive({
             </p>
             <p className="meta" style={{ marginTop: 2 }}>
               {eater.age} ans
-              {eater.diets.length > 0 ? ` · ${eater.diets.map(dietLabel).join(', ')}` : ''}
+              {eater.diets.map((d) => (
+                <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 8 }}>
+                  <DietIcon diet={d} />{dietLabel(d)}
+                </span>
+              ))}
             </p>
             <Mesures eater={eater} />
           </div>

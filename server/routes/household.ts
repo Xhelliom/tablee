@@ -21,7 +21,7 @@ import type { FastifyInstance } from 'fastify';
 import { assertParent } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
 import { body, optionalStr, timezone } from '../http/validate.ts';
-import { householdNoFish, updateHousehold } from '../repo/households.ts';
+import { updateHousehold } from '../repo/households.ts';
 import type { AppContext } from '../app.ts';
 
 export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
@@ -30,10 +30,9 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
    * que l'écran de gestion puisse se rafraîchir sans recharger la session
    * entière.
    */
-  app.get('/api/household', async (request) => {
+  app.get('/api/household', (request) => {
     const identity = request.identity();
     return {
-      noFish: await householdNoFish(request.db, identity.householdId),
       household: {
         id: identity.householdId,
         name: identity.householdName,
@@ -51,7 +50,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
     assertParent(identity, 'seul un parent modifie le foyer');
 
     const input = body(request.body);
-    const patch: { name?: string; timezone?: string; noFish?: boolean } = {};
+    const patch: { name?: string; timezone?: string } = {};
 
     const name = optionalStr(input['name'], 'name', { max: 80 });
     if (name !== undefined && name !== null) {
@@ -62,12 +61,7 @@ export function householdRoutes(app: FastifyInstance, _ctx: AppContext): void {
       patch.timezone = timezone(input['timezone'], 'timezone');
     }
 
-    if (input['noFish'] !== undefined) {
-      if (typeof input['noFish'] !== 'boolean') throw ApiError.badRequest('« noFish » doit être vrai ou faux');
-      patch.noFish = input['noFish'];
-    }
-
-    if (patch.name === undefined && patch.timezone === undefined && patch.noFish === undefined) {
+    if (patch.name === undefined && patch.timezone === undefined) {
       throw ApiError.badRequest('rien à modifier');
     }
 

@@ -121,14 +121,19 @@ describe('repères de fréquence', { skip: enabled ? false : SKIP_MESSAGE }, () 
     assert.equal(s.current, null);
   });
 
-  it('« on ne mange pas de poisson » retire les lignes poisson, et elles seules', async () => {
-    assert.ok(status(await week(), 'poisson'));
-    const r = await app.inject({
-      method: 'PATCH', url: '/api/household', headers: { cookie }, payload: { noFish: true },
-    });
-    assert.equal(r.statusCode, 200);
-    const body = await week();
-    assert.equal(status(body, 'poisson'), undefined);
-    assert.ok(status(body, 'legumes_secs'));
+  it('un repère est masqué si le régime de tous les adultes l’exclut, gardé si un seul en mange', async () => {
+    const veg = await sql<{ id: string }>(
+      `insert into eater (household_id, first_name, birth_date, sex, diets)
+       values ($1, 'Test', '1985-01-01', 'F', '{vegetarien}') returning id`, [householdId],
+    );
+    assert.ok(veg[0]);
+    let body = await week();
+    assert.equal(status(body, 'poisson'), undefined, 'seul adulte végétarien : poisson masqué');
+    assert.ok(status(body, 'legumes_secs'), 'les légumes secs ne sont jamais masqués');
+    assert.equal(status(body, 'charcuterie'), undefined, 'et la charcuterie avec');
+    await eater('1983-01-01');
+    body = await week();
+    assert.ok(status(body, 'poisson'), 'un adulte qui en mange suffit à garder le repère');
+    assert.ok(status(body, 'charcuterie'));
   });
 });

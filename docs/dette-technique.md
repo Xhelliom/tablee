@@ -981,10 +981,11 @@ forme qu'il a. Le détail est dans l'historique git.
   chargement — hors les photos de plats de Jow, qui sont le sujet même du
   §8ter.
 
-**Réglage « on ne mange pas de poisson » (migration 027, demandé le 12/10/2026).**
-Une case dans les réglages du foyer (`household.no_fish`, parent seulement)
-retire les lignes dont le code commence par `poisson` de `/api/week`. C'est
-tout : pas de régime par personne, pas de repère de remplacement. Un foyer où
-une seule personne évite le poisson laisse la case décochée — les repas des
-autres comptent. Le lever : un régime par convive, qui demanderait de décider
-ce qu'on en fait pour les mineurs.
+**Régimes et repères masqués (12/10/2026).** Pas de réglage de foyer : les
+régimes sont ceux des convives (`eater.diets`, dont `sans_viande` et
+`sans_poisson`, ajoutés aux pastilles). Un repère poisson, viande ou charcuterie
+ne s'affiche pas quand **tous** les adultes actifs l'excluent
+(`hiddenFrequencyCodes`) ; un seul adulte qui en mange le garde, et ses repas
+comptent. « Végétarien » et « végétalien » excluent viande et poisson. Un régime
+est une valeur déclarée librement : une faute de frappe dans `diets` ne masque
+rien. Les enfants ne pèsent pas dans ce calcul, comme dans les repères.

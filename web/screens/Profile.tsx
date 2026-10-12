@@ -33,6 +33,7 @@ import { useSession } from '../session.tsx';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { Avatar, accountSeed } from '../components/Avatar.tsx';
 import { coefLabel } from '../components/EaterForm.tsx';
+import { DietIcon } from '../components/DietIcon.tsx';
 import { dietLabel } from '../design/vocabulary.ts';
 import { ÉditionFiche, Mesures } from './Eaters.tsx';
 
@@ -123,7 +124,11 @@ export function ProfileScreen(): ReactElement {
                   <Ligne libellé="Sexe">{fiche.sex === 'F' ? 'Féminin' : 'Masculin'}</Ligne>
                   <Ligne libellé="Portion">{coefLabel(fiche.portionCoef)}</Ligne>
                   <Ligne libellé="Régime">
-                    {fiche.diets.length > 0 ? fiche.diets.map(dietLabel).join(', ') : 'Aucun'}
+                    {fiche.diets.length > 0 ? fiche.diets.map((d) => (
+                      <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginRight: 10 }}>
+                        <DietIcon diet={d} />{dietLabel(d)}
+                      </span>
+                    )) : 'Aucun'}
                   </Ligne>
                 </dl>
                 <Mesures eater={fiche} />

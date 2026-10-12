@@ -118,3 +118,28 @@ export function bilanFrequences(input: {
     };
   });
 }
+
+/**
+ * Les repères qu'aucun adulte du foyer ne peut atteindre à cause de son régime
+ * (`eater.diets`) : ils ne s'affichent pas, plutôt que de rester « non atteints »
+ * comme un reproche. Un seul adulte qui en mange suffit à les garder — les repas
+ * des autres comptent. Ne remplace aucune valeur : un repère masqué n'est pas
+ * réécrit (I1). Légumes secs et fruits à coque ne sont jamais masqués.
+ */
+const EXCLUDED_BY: { prefix: string; diets: string[] }[] = [
+  { prefix: 'poisson', diets: ['vegetarien', 'vegetalien', 'sans_poisson'] },
+  { prefix: 'viande', diets: ['vegetarien', 'vegetalien', 'sans_viande'] },
+  { prefix: 'charcuterie', diets: ['vegetarien', 'vegetalien', 'sans_viande'] },
+];
+
+export function hiddenFrequencyCodes(adults: { diets: string[] }[], codes: string[]): Set<string> {
+  const hidden = new Set<string>();
+  if (adults.length === 0) return hidden;
+  for (const code of codes) {
+    const rule = EXCLUDED_BY.find((r) => code.startsWith(r.prefix));
+    if (rule !== undefined && adults.every((a) => a.diets.some((d) => rule.diets.includes(d)))) {
+      hidden.add(code);
+    }
+  }
+  return hidden;
+}

@@ -61,6 +61,7 @@ export const NUTRIENT_WORDS: Record<AdviceNutrient, string> = {
 const DIET_WORDS: Record<string, string> = {
   vegetarien: 'végétarien', vegetalien: 'végétalien', sans_porc: 'sans porc',
   sans_gluten: 'sans gluten', sans_lactose: 'sans lactose',
+  sans_viande: 'sans viande', sans_poisson: 'sans poisson',
 };
 
 export interface HouseholdFacts {
