@@ -64,7 +64,11 @@ export function weeklyMeans(days: WeekDayInput[], references: ReferenceTable[]):
 export interface DiversityRow {
   mealId: string;
   eaterId: string;
+  /** Le jour du repas, AAAA-MM-JJ, dans le fuseau du foyer. */
+  date: string;
   foodId: string | null;
+  /** Le nom de l'aliment rattaché (`food.name`). */
+  label: string | null;
   category: string | null;
 }
 
@@ -101,4 +105,29 @@ export function diversityByEater(rows: DiversityRow[]): { household: Diversity; 
     household: diversity(rows),
     byEater: Object.fromEntries([...groups].map(([id, g]) => [id, diversity(g)])),
   };
+}
+
+/**
+ * Les familles qui sont passées à table, jour par jour, pour le foyer, avec les
+ * aliments différents de ce jour-là : le nombre est l'intensité du point, les
+ * noms sont ce que la ligne dépliée affiche. Jamais un nombre de fois ni de
+ * grammes : cinq fois le même pain valent un aliment. Triées par nom pour que
+ * l'ordre ne dise pas « la plus mangée » ; une famille absente n'a pas de ligne.
+ */
+export function familyDays(rows: DiversityRow[]): { family: string; days: { date: string; foods: string[] }[] }[] {
+  const byFamily = new Map<string, Map<string, Map<string, string>>>();
+  for (const row of rows) {
+    if (row.category === null || row.foodId === null) continue;
+    const days = byFamily.get(row.category) ?? new Map<string, Map<string, string>>();
+    const foods = days.get(row.date) ?? new Map<string, string>();
+    byFamily.set(row.category, days.set(row.date, foods.set(row.foodId, row.label ?? '')));
+  }
+  return [...byFamily]
+    .map(([family, days]) => ({
+      family,
+      days: [...days]
+        .map(([date, foods]) => ({ date, foods: [...foods.values()].sort((a, b) => a.localeCompare(b)) }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }))
+    .sort((a, b) => a.family.localeCompare(b.family));
 }

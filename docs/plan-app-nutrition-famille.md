@@ -632,13 +632,22 @@ objectif (R7, I5).
 > **Levée le 09/10/2026 — la diversité alimentaire existe.** L'objection
 > ci-dessus (« demande une fenêtre glissante ») ne tient plus : la fenêtre de
 > 7 jours existe, la barre Végétal s'en sert déjà. La vue semaine affiche
-> « N aliments différents, M familles » (`food.category`), pour le foyer et par
-> convive, sans repère, sans cible, sans pourcentage — une tendance, comme
-> Végétal. Un repas sans aliment rattaché est **signalé** (« n repas sans
+> « N aliments différents, M catégories » (`food.category`), sans repère, sans
+> cible, sans pourcentage — une tendance, comme Végétal. Un repas sans aliment rattaché est **signalé** (« n repas sans
 > aliment rattaché »), jamais compté comme zéro : un rattachement Jow manquant
 > sous-estime le compte, il ne le fausse pas. Ce n'est pas une sixième barre :
 > elle n'entre ni dans l'anneau ni dans les compteurs. Détail dans
 > `docs/indicateurs-possibles.md` §2.
+>
+> **Précisé le 12/10/2026 — la forme à l'écran.** Pour le **foyer seulement** :
+> le compte par convive, d'abord affiché, est retiré de l'écran (I5 : un compte
+> par personne se lit comme un classement ; `byEater` reste dans l'API mais
+> n'est pas affiché). À la place, une rangée « Diversité » (combien de
+> catégories différentes chaque jour) et, à la demande, une grille
+> catégorie × jour dont l'intensité est le nombre d'aliments **différents** —
+> jamais un nombre de fois ni de grammes. Teinte : le terracotta de la marque,
+> en dégradé d'opacité. Les seuils de la rangée (1, 2 à 3, 4 et plus) n'ont pas
+> de source et ne disent ni « bien » ni « trop ».
 
 ---
 

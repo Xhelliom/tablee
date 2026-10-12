@@ -9,7 +9,7 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
-import { diversityByEater, weeklyMeans } from '../nutrition/weekly.ts';
+import { diversityByEater, familyDays, weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
@@ -125,7 +125,7 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
       nutrients,
-      diversity: diversityByEater(diversity),
+      diversity: { ...diversityByEater(diversity), families: familyDays(diversity) },
     };
   });
 }
