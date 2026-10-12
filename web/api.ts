@@ -474,6 +474,8 @@ export interface WeekResponse {
   diversity: {
     household: DiversityCount;
     byEater: Record<string, DiversityCount>;
+    /** Les familles passées à table, jour par jour, avec les aliments différents de ce jour-là. */
+    families: { family: string; days: { date: string; foods: string[] }[] }[];
   };
 }
 

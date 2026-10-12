@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { DailyMeal } from './daily.ts';
 import type { ReferenceTable } from './references.ts';
-import { diversityByEater, weeklyMeans, type WeekDayInput } from './weekly.ts';
+import { diversityByEater, familyDays, weeklyMeans, type WeekDayInput } from './weekly.ts';
 
 /** Repères fictifs, de test uniquement — même règle que `daily.test.ts`. */
 const REPERES: ReferenceTable[] = [
@@ -85,7 +85,7 @@ describe('weeklyMeans', () => {
 
 describe('diversityByEater', () => {
   const row = (mealId: string, eaterId: string, foodId: string | null, category: string | null) =>
-    ({ mealId, eaterId, foodId, category });
+    ({ mealId, eaterId, date: '2026-10-06', foodId, label: foodId, category });
 
   it('compte aliments et familles distincts, et signale le repas sans aliment rattaché', () => {
     const { household, byEater } = diversityByEater([
@@ -95,5 +95,26 @@ describe('diversityByEater', () => {
     ]);
     assert.deepEqual(household, { foods: 3, families: 2, mealsWithoutFood: 1 });
     assert.deepEqual(byEater['b'], { foods: 1, families: 1, mealsWithoutFood: 1 });
+  });
+});
+
+describe('familyDays', () => {
+  it('rend, par famille et par jour, les aliments différents — sans doublon, sans repas nus', () => {
+    const r = (date: string, foodId: string | null, category: string | null) =>
+      ({ mealId: 'm', eaterId: 'a', date, foodId, label: foodId, category });
+    assert.deepEqual(
+      familyDays([
+        r('2026-10-07', 'poireau', 'legume'), r('2026-10-05', 'carotte', 'legume'),
+        r('2026-10-05', 'carotte', 'legume'), r('2026-10-05', 'courgette', 'legume'),
+        r('2026-10-05', 'riz', 'cereale'), r('2026-10-06', null, null),
+      ]),
+      [
+        { family: 'cereale', days: [{ date: '2026-10-05', foods: ['riz'] }] },
+        { family: 'legume', days: [
+          { date: '2026-10-05', foods: ['carotte', 'courgette'] },
+          { date: '2026-10-07', foods: ['poireau'] },
+        ] },
+      ],
+    );
   });
 });

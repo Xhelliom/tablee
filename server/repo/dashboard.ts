@@ -234,9 +234,10 @@ export async function diversityRows(
   timezone: string,
 ): Promise<DiversityRow[]> {
   const { rows } = await db.query<{
-    meal_id: string; eater_id: string; food_id: string | null; category: string | null;
+    meal_id: string; eater_id: string; day: string; food_id: string | null; label: string | null; category: string | null;
   }>(
-    `select m.id as meal_id, mp.eater_id, f.id as food_id, f.category
+    `select m.id as meal_id, mp.eater_id, f.id as food_id, f.name as label, f.category,
+            ((m.eaten_at at time zone $4)::date)::text as day
      from meal m
      join meal_participant mp on mp.meal_id = m.id
      left join lateral (
@@ -251,6 +252,6 @@ export async function diversityRows(
     [householdId, from, String(days), timezone],
   );
   return rows.map((r) => ({
-    mealId: r.meal_id, eaterId: r.eater_id, foodId: r.food_id, category: r.category,
+    mealId: r.meal_id, eaterId: r.eater_id, date: r.day, foodId: r.food_id, label: r.label, category: r.category,
   }));
 }

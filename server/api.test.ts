@@ -1225,6 +1225,10 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const { body } = await call('GET', '/api/week?from=2026-10-05&days=7');
       assert.deepEqual(body.diversity.household, { foods: 2, families: 2, mealsWithoutFood: 1 });
       assert.deepEqual(body.diversity.byEater[adulte], { foods: 2, families: 2, mealsWithoutFood: 1 });
+      assert.deepEqual(body.diversity.families, [
+        { family: 'cereales', days: [{ date: '2026-10-06', foods: ['Riz, cuit'] }] },
+        { family: 'legumes', days: [{ date: '2026-10-06', foods: ['Carotte, crue'] }] },
+      ]);
     });
   });
 
