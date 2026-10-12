@@ -117,16 +117,26 @@ export async function listHouseholdsForUser(
 export async function updateHousehold(
   db: HouseholdDb,
   householdId: string,
-  fields: { name?: string; timezone?: string },
+  fields: { name?: string; timezone?: string; noFish?: boolean },
 ): Promise<Household | null> {
   const { rows } = await db.query<Row>(
     `update household
      set name     = coalesce($2, name),
-         timezone = coalesce($3, timezone)
+         timezone = coalesce($3, timezone),
+         no_fish  = coalesce($4, no_fish)
      where id = $1
      returning id, name, timezone, organization_id`,
-    [householdId, fields.name ?? null, fields.timezone ?? null],
+    [householdId, fields.name ?? null, fields.timezone ?? null, fields.noFish ?? null],
   );
   const row = rows[0];
   return row === undefined ? null : toHousehold(row);
+}
+
+/** Le foyer ne mange pas de poisson : les repères de poisson ne s'affichent pas (027). */
+export async function householdNoFish(db: HouseholdDb, householdId: string): Promise<boolean> {
+  const { rows } = await db.query<{ no_fish: boolean }>(
+    'select no_fish from household where id = $1',
+    [householdId],
+  );
+  return rows[0]?.no_fish ?? false;
 }

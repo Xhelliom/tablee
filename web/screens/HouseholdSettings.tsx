@@ -387,9 +387,14 @@ function HouseholdForm({ onSaved }: { onSaved: () => Promise<void> }): React.Rea
   const { household } = useSession();
   const [name, setName] = useState(household?.name ?? '');
   const [timezone, setTimezone] = useState(household?.timezone ?? 'Europe/Paris');
+  const [noFish, setNoFish] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    api.get<{ noFish: boolean }>('/api/household').then((r) => setNoFish(r.noFish)).catch(() => undefined);
+  }, []);
 
   const zones = supportedTimezones(timezone);
 
@@ -398,7 +403,7 @@ function HouseholdForm({ onSaved }: { onSaved: () => Promise<void> }): React.Rea
     setBusy(true);
     setError(null);
     try {
-      await api.patch('/api/household', { name: name.trim(), timezone });
+      await api.patch('/api/household', { name: name.trim(), timezone, noFish });
       await onSaved();
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);
@@ -434,6 +439,14 @@ function HouseholdForm({ onSaved }: { onSaved: () => Promise<void> }): React.Rea
             leur regroupement par jour qui suit.
           </p>
         </div>
+
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" checked={noFish} onChange={(e) => setNoFish(e.target.checked)} />
+          On ne mange pas de poisson
+        </label>
+        <p className="meta" style={{ lineHeight: 1.5 }}>
+          Retire les repères de poisson de la semaine. Rien d’autre ne change.
+        </p>
 
         {error !== null ? (
           <p style={{ fontSize: 13, color: 'var(--text-warning)' }}>{error}</p>

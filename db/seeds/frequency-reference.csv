@@ -1,0 +1,24 @@
+# frequency_reference — repères alimentaires en aliments et en fréquences.
+#
+# Source unique : Santé publique France, « Recommandations relatives à
+# l'alimentation, à l'activité physique et à la sédentarité pour les adultes »,
+# décembre 2018 (diffusées en 2019), annexe 5 « Tableau de recommandations du
+# CAT », pages 48-49.
+# https://www.santepubliquefrance.fr/sites/default/files/rdd/document/42466_spf00000619.pdf
+#
+# Contenu validé par le propriétaire le 09/10/2026 (docs/dette-technique.md).
+# La colonne `citation` est la phrase du document, recopiée ; `value` et `kind`
+# en sont la lecture. Le document ne vise que les ADULTES et ne donne aucun
+# repère pour les enfants : il n'y en a donc pas ici (I1).
+#
+# `categories` : food.category séparées par « | ». `name_pattern` : regex
+# (insensible à la casse) sur le nom Ciqual, quand la catégorie ne suffit pas.
+# Les exemples du document font foi du motif — « saumon, maquereau, sardine,
+# hareng… » ; « bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche ».
+code,label,kind,value,categories,name_pattern,source,citation
+legumes_secs,Légumes secs,min_times,2,legumineuse,,"Santé publique France, déc. 2018, annexe 5, p. 49","Légumes secs (lentilles, haricots, pois chiches, quinoa…) : Au moins 2 fois par semaine ; peuvent remplacer la viande et la volaille"
+poisson,Poisson et fruits de mer,min_times,2,poisson|fruit_de_mer,,"Santé publique France, déc. 2018, annexe 5, p. 49","Poisson et fruits de mer : 2 fois par semaine (dont un poisson gras*)"
+poisson_gras,dont un poisson gras,min_times,1,poisson,saumon|maquereau|sardine|hareng,"Santé publique France, déc. 2018, annexe 5, p. 49","2 fois par semaine (dont un poisson gras*) — * saumon, maquereau, sardine, hareng…"
+fruits_a_coque,Fruits à coque,min_days,7,oleagineux,,"Santé publique France, déc. 2018, annexe 5, p. 48","Fruits à coque sans sel ajouté (noix, noisettes, pistaches, amandes…) : une petite poignée par jour."
+viande,Viande hors volaille,max_grams,500,viande,b(oe|œ)uf|porc|veau|mouton|ch[èe]vre|cheval|sanglier|biche,"Santé publique France, déc. 2018, annexe 5, p. 49","Privilégier la volaille et ne pas dépasser 500g de viande* par semaine — * bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche"
+charcuterie,Charcuterie,max_grams,150,charcuterie,,"Santé publique France, déc. 2018, annexe 5, p. 49","Charcuterie (dont jambon blanc) : Limiter la consommation. Ne pas dépasser 150g par semaine et privilégier le jambon blanc"
