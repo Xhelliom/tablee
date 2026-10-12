@@ -14,6 +14,7 @@ import { closePool, getPool } from './db.ts';
 import { assertIsolation, IsolationError } from './db/guard.ts';
 import { buildDrawDish } from './llm/image.ts';
 import { buildLlm } from './llm/index.ts';
+import { buildPush, PushConfigError, runReminders } from './push.ts';
 
 const port = Number(process.env['PORT'] ?? 3000);
 const host = process.env['HOST'] ?? '0.0.0.0';
@@ -95,6 +96,21 @@ const llm = buildLlm(process.env);
  */
 const drawDish = buildDrawDish(process.env);
 
+/**
+ * Les rappels « Aujourd'hui, lequel ? », facultatifs : clés VAPID, voir
+ * `server/push.ts`. À moitié remplies, refus de démarrer.
+ */
+let push: ReturnType<typeof buildPush>;
+try {
+  push = buildPush(process.env);
+} catch (error) {
+  if (error instanceof PushConfigError) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  throw error;
+}
+
 const pool = getPool();
 
 // Avant toute chose : l'étanchéité entre foyers est-elle réellement en place ?
@@ -112,7 +128,7 @@ try {
 
 const auth = buildAuth({ pool, baseURL, secret, secureCookies, mail, google });
 
-const app = buildApp({ pool, auth, baseURL, llm, drawDish });
+const app = buildApp({ pool, auth, baseURL, llm, drawDish, push });
 await app.listen({ port, host });
 console.log(
   `Tablée écoute sur http://${host}:${port} (origine publique : ${baseURL}, `
@@ -121,9 +137,16 @@ console.log(
     + `images : ${drawDish === null ? 'non' : 'oui'})`,
 );
 
+// Un tour par minute ; `reminder_sent` empêche tout doublon, même après un
+// redémarrage ou avec deux instances.
+const reminders = push === null ? null : setInterval(() => {
+  runReminders(pool, push.send).catch((error: unknown) => console.error('rappels :', error));
+}, 60_000);
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     void (async () => {
+      if (reminders !== null) clearInterval(reminders);
       await app.close();
       await closePool();
       process.exit(0);

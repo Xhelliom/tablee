@@ -9,12 +9,14 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
-import { weeklyMeans } from '../nutrition/weekly.ts';
+import { bilanFrequences, hiddenFrequencyCodes } from '../nutrition/frequency.ts';
+import { diversityByEater, familyDays, weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
-import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
+import { loadFrequencyReferences, loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
-  householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
+  diversityRows, frequencyInputs, householdPlantAverage, householdTimezone, mealsForDay,
+  mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
 import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
@@ -29,11 +31,12 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« date » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, references, meals, plantAverage] = await Promise.all([
+    const [eaters, references, meals, plantAverage, weekMeals] = await Promise.all([
       listEaters(request.db, householdId),
       loadReferences(request.db),
       mealsForDay(request.db, householdId, date, timezone),
       householdPlantAverage(request.db, householdId, 7),
+      mealsForRange(request.db, householdId, shiftDay(date, -6), 7, timezone),
     ]);
 
     const byMember = new Map<string, typeof meals>();
@@ -41,6 +44,7 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       byMember.set(meal.eaterId, [...(byMember.get(meal.eaterId) ?? []), meal]);
     }
 
+    const weekDates = Array.from({ length: 7 }, (_, i) => shiftDay(date, i - 6));
     const dashboard = eaters.map((eater) => ({
       eater: {
         id: eater.id,
@@ -57,6 +61,8 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
         meals: byMember.get(eater.id) ?? [],
         references,
         householdPlantAverage7d: plantAverage,
+        energyWeek: weekDates.map((day) =>
+          weekMeals.filter((row) => row.eaterId === eater.id && row.date === day)),
       }),
     }));
 
@@ -90,11 +96,14 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, cells, references, ranged] = await Promise.all([
+    const [eaters, cells, references, ranged, frequencyRefs, frequency, diversity] = await Promise.all([
       listEaters(request.db, householdId),
       weekGrid(request.db, householdId, from, days, timezone),
       loadReferences(request.db),
       mealsForRange(request.db, householdId, from, days, timezone),
+      loadFrequencyReferences(request.db),
+      frequencyInputs(request.db, householdId, from, days, timezone),
+      diversityRows(request.db, householdId, from, days, timezone),
     ]);
 
     // Les tendances du foyer (§15, 10/2026) : moyennes des % du repère par
@@ -114,12 +123,23 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       references,
     );
 
+    // Un repère que le régime de tous les adultes exclut ne s'affiche pas.
+    const hidden = hiddenFrequencyCodes(
+      eaters.filter((e) => e.active && !isMinor(e.birthDate)),
+      frequencyRefs.map((r) => r.code),
+    );
+    const shownFrequencies = frequencyRefs.filter((r) => !hidden.has(r.code));
+
     return {
       from,
       days,
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
       nutrients,
+      // Repères de fréquence (SPF, adultes) : au niveau du foyer seulement, et
+      // aucun par convive — un plafond n'a rien à faire sur la fiche d'un enfant.
+      frequencies: bilanFrequences({ references: shownFrequencies, ...frequency }),
+      diversity: { ...diversityByEater(diversity), families: familyDays(diversity) },
     };
   });
 }

@@ -59,3 +59,75 @@ export function weeklyMeans(days: WeekDayInput[], references: ReferenceTable[]):
     };
   });
 }
+
+/** Une ligne par (repas, convive, aliment rattaché) ; `foodId` nul : repas sans aliment rattaché. */
+export interface DiversityRow {
+  mealId: string;
+  eaterId: string;
+  /** Le jour du repas, AAAA-MM-JJ, dans le fuseau du foyer. */
+  date: string;
+  foodId: string | null;
+  /** Le nom de l'aliment rattaché (`food.name`). */
+  label: string | null;
+  category: string | null;
+}
+
+export interface Diversity {
+  foods: number;
+  families: number;
+  /** Repas dont aucun aliment n'est rattaché : signalés, jamais comptés comme « zéro aliment ». */
+  mealsWithoutFood: number;
+}
+
+/**
+ * §8, diversité alimentaire sur la fenêtre : combien d'aliments et de familles
+ * (`food.category`) distincts. Aucun repère, aucun pourcentage — un compte.
+ * Un rattachement manquant sous-estime, il ne fausse pas : le compte ne peut
+ * que monter.
+ */
+export function diversity(rows: DiversityRow[]): Diversity {
+  const foods = new Set<string>();
+  const families = new Set<string>();
+  const bare = new Set<string>();
+  for (const row of rows) {
+    if (row.foodId === null) { bare.add(row.mealId); continue; }
+    foods.add(row.foodId);
+    if (row.category !== null) families.add(row.category);
+  }
+  return { foods: foods.size, families: families.size, mealsWithoutFood: bare.size };
+}
+
+/** Le foyer, puis chaque convive qui a mangé — un convive absent de la fenêtre n'a pas d'entrée. */
+export function diversityByEater(rows: DiversityRow[]): { household: Diversity; byEater: Record<string, Diversity> } {
+  const groups = new Map<string, DiversityRow[]>();
+  for (const row of rows) groups.set(row.eaterId, [...(groups.get(row.eaterId) ?? []), row]);
+  return {
+    household: diversity(rows),
+    byEater: Object.fromEntries([...groups].map(([id, g]) => [id, diversity(g)])),
+  };
+}
+
+/**
+ * Les familles qui sont passées à table, jour par jour, pour le foyer, avec les
+ * aliments différents de ce jour-là : le nombre est l'intensité du point, les
+ * noms sont ce que la ligne dépliée affiche. Jamais un nombre de fois ni de
+ * grammes : cinq fois le même pain valent un aliment. Triées par nom pour que
+ * l'ordre ne dise pas « la plus mangée » ; une famille absente n'a pas de ligne.
+ */
+export function familyDays(rows: DiversityRow[]): { family: string; days: { date: string; foods: string[] }[] }[] {
+  const byFamily = new Map<string, Map<string, Map<string, string>>>();
+  for (const row of rows) {
+    if (row.category === null || row.foodId === null) continue;
+    const days = byFamily.get(row.category) ?? new Map<string, Map<string, string>>();
+    const foods = days.get(row.date) ?? new Map<string, string>();
+    byFamily.set(row.category, days.set(row.date, foods.set(row.foodId, row.label ?? '')));
+  }
+  return [...byFamily]
+    .map(([family, days]) => ({
+      family,
+      days: [...days]
+        .map(([date, foods]) => ({ date, foods: [...foods.values()].sort((a, b) => a.localeCompare(b)) }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }))
+    .sort((a, b) => a.family.localeCompare(b.family));
+}

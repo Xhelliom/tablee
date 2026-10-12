@@ -21,6 +21,8 @@ import type { Nutrient, Slot } from '../api.ts';
 export const DIET_CHOICES: { value: string; label: string }[] = [
   { value: 'vegetarien', label: 'Végétarien' },
   { value: 'vegetalien', label: 'Végétalien' },
+  { value: 'sans_viande', label: 'Sans viande' },
+  { value: 'sans_poisson', label: 'Sans poisson' },
   { value: 'sans_porc', label: 'Sans porc' },
   { value: 'sans_gluten', label: 'Sans gluten' },
   { value: 'sans_lactose', label: 'Sans lactose' },
@@ -182,3 +184,19 @@ export function eatenAt(day: string | null): string {
 
 /** Initiale affichée dans l'anneau d'un membre. */
 export const initial = (firstName: string): string => firstName.slice(0, 1).toUpperCase();
+
+/** Les familles d'aliments (`food.category`) en français ; le repli défait le trait bas. */
+const FAMILY_LABELS: Record<string, string> = {
+  legume: 'Légumes', tubercule: 'Tubercules', legumineuse: 'Légumineuses', fruit: 'Fruits',
+  oleagineux: 'Oléagineux', cereale: 'Céréales', pain: 'Pains', viande: 'Viandes',
+  charcuterie: 'Charcuterie', poisson: 'Poissons', fruit_de_mer: 'Fruits de mer', oeuf: 'Œufs',
+  substitut_vegetal: 'Substituts végétaux', lait: 'Lait', produit_laitier: 'Produits laitiers',
+  fromage: 'Fromages', creme: 'Crèmes', plat_compose: 'Plats composés', soupe: 'Soupes',
+  sandwich: 'Sandwichs', biscuit_aperitif: 'Biscuits apéritifs', viennoiserie: 'Viennoiseries',
+  patisserie: 'Pâtisseries', huile_vegetale: 'Huiles végétales', epice: 'Épices', herbe: 'Herbes',
+};
+
+export function familyLabel(family: string): string {
+  const label = FAMILY_LABELS[family] ?? family.replace(/_/g, ' ');
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}

@@ -834,6 +834,91 @@ Dependabot, puisqu'une empreinte qui bouge se relit alors en diff.
 
 ---
 
+## 27. Les rappels push : horaires fixes, un seul processus, et la fiabilité de chaque plateforme
+
+**Où** — `server/push.ts`, `server/routes/push.ts`, `server/repo/push.ts`, migrations 024 et 025, `web/public/sw.js`,
+bloc « Rappels » de `web/screens/HouseholdSettings.tsx`.
+
+Web push + VAPID (lib `web-push`, JavaScript pur : rien à compiler sur le
+Raspberry Pi arm64). Le serveur lui-même tourne un tour par minute
+(`setInterval` dans `server/index.ts`) ; chaque foyer est lu dans son fuseau
+(`household.timezone`, comme le découpage des journées).
+
+**Ce qui est approximatif.**
+
+- **Horaires fixes : 12 h et 19 h, heure du foyer.** Ils ne se règlent pas
+  (`REMINDER_SLOTS`). Un créneau manqué — serveur arrêté, tour en retard — se
+  rattrape dans les 30 minutes qui suivent, pas au-delà.
+- **Le verrou `reminder_sent`** garantit un envoi par foyer, jour et créneau,
+  même avec deux instances. Mais il est posé **avant** l'envoi : un envoi qui
+  échoue pour tous les appareils n'est pas retenté.
+- **Ni prénom ni valeur dans le texte** : seulement les titres des recettes
+  **Jow** (3 au plus, puis « et N autres »). Une recette saisie à la main est
+  comptée, jamais nommée — son titre est écrit par le foyer et peut porter un
+  prénom.
+- **Un abonnement appartient au foyer actif du compte au moment du tap.** Un
+  compte qui quitte le foyer garde son appareil abonné jusqu'au prochain
+  envoi refusé par le service push (404/410), qui le supprime.
+- **Android / Chrome** : fiable, PWA installée ou non. **iOS** : seulement
+  depuis iOS 16.4 et **une fois la PWA ajoutée à l'écran d'accueil** ; le bloc
+  n'apparaît pas sinon. Les économiseurs de batterie agressifs de certains
+  constructeurs Android retardent ou perdent des messages : rien n'est garanti
+  à la minute.
+- **N'importe quel hôte https est accepté comme endpoint**
+  (`server/routes/push.ts`). Un membre connecté peut donc faire envoyer au
+  serveur, à l'heure des rappels, un POST chiffré vers une adresse https de son
+  choix, interne comprise, sans en voir la réponse (SSRF aveugle). Impact
+  faible : corps chiffré, réponse jamais rendue, compte authentifié requis. Le
+  remède : n'accepter que les hôtes des services push connus (FCM, Mozilla
+  autopush, Apple, Windows).
+- **Non vérifié sur un vrai téléphone** (pas de HTTPS ni d'appareil dans le
+  cadre de cette tâche) : à ajouter à la séquence de `docs/mise-en-service.md`.
+
+**Ce qui le lèverait.** Deux colonnes sur `household` (heure du midi et du soir)
+et un champ dans l'écran du foyer ; pour le rattrapage, retirer la ligne
+`reminder_sent` si aucun appareil n'a été joignable.
+
+**Clés.** `TABLEE_VAPID_PUBLIC`, `TABLEE_VAPID_PRIVATE`, `TABLEE_VAPID_SUBJECT`
+(`mailto:…`), les trois ou aucune ; générées par `npx web-push generate-vapid-keys`.
+Changer la paire désabonne de fait tous les appareils.
+
+
+---
+
+## 28. Les repères de fréquence du PNNS : adultes seulement, et trois lectures approchées
+
+**Validé par le propriétaire le 09/10/2026**, point par point, avant toute
+écriture. Source unique : Santé publique France, *Recommandations relatives à
+l'alimentation, à l'activité physique et à la sédentarité pour les adultes*
+(décembre 2018, diffusé en 2019), annexe 5, p. 48-49. Les valeurs et leur
+citation sont dans `db/seeds/frequency-reference.csv` ; la semaine les compte
+pour le **foyer** (`/api/week`, `frequencies`), jamais par convive.
+
+**Ce qui est approximatif, et ce que ça coûte.**
+
+- **Aucun repère pour les enfants.** Le document est strictement adulte ; il
+  dit que des repères enfants existent, sans les donner (p. 5). Rien n'est
+  inventé (I1) : un plafond n'est calculé que sur les grammes des adultes et
+  n'apparaît sur aucune fiche. Le lever suppose la source enfants.
+- **Poisson gras et viande hors volaille se lisent au nom Ciqual**, pas au
+  sous-groupe (`food` ne le stocke pas). Les motifs reprennent les exemples du
+  document, donc incomplets : « saumon, maquereau, sardine, hareng… » ;
+  « bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche » laisse hors
+  compte agneau et abats. Le total viande est un minimum.
+- **Le quinoa** est cité avec les légumes secs par le document, mais Ciqual le
+  classe en `cereale` : il n'est pas compté.
+- **Les fruits à coque** sont « une petite poignée par jour » : lus en jours
+  par semaine (7), pas en fois.
+- **Les grammes d'un ingrédient de recette Jow** sont par convive et comptés
+  tels quels pour chaque adulte à table, sans `portion_coef`. Un plat saisi à
+  la main se répartit par `share`. Un gramme inconnu rend le total « au moins ».
+- **Un ingrédient Jow non rattaché ne compte pas** — il ne retire rien non plus ;
+  le compte peut être sous-estimé, jamais abaissé.
+
+**Ce qui le lèverait.** La source enfants ; le sous-groupe Ciqual stocké sur
+`food` ; la volaille n'a pas de chiffre dans le document et n'est pas affichée.
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la
@@ -895,3 +980,12 @@ forme qu'il a. Le détail est dans l'historique git.
   caractère n'en sort. 84 Ko au total, et plus aucune requête vers un tiers au
   chargement — hors les photos de plats de Jow, qui sont le sujet même du
   §8ter.
+
+**Régimes et repères masqués (12/10/2026).** Pas de réglage de foyer : les
+régimes sont ceux des convives (`eater.diets`, dont `sans_viande` et
+`sans_poisson`, ajoutés aux pastilles). Un repère poisson, viande ou charcuterie
+ne s'affiche pas quand **tous** les adultes actifs l'excluent
+(`hiddenFrequencyCodes`) ; un seul adulte qui en mange le garde, et ses repas
+comptent. « Végétarien » et « végétalien » excluent viande et poisson. Un régime
+est une valeur déclarée librement : une faute de frappe dans `diets` ne masque
+rien. Les enfants ne pèsent pas dans ce calcul, comme dans les repères.

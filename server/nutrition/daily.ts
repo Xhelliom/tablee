@@ -96,10 +96,30 @@ export interface DailyMeal extends Macros {
   gramsClassified: number | null;
 }
 
+/**
+ * L'énergie sur 7 jours : pour le poids, une journée ne veut rien dire, une
+ * semaine si. Moyenne par **jour renseigné** (un jour sans repas est un jour
+ * non saisi, pas un jour à zéro), contre le repère BNM. Absente sous 18 ans :
+ * I5, comme la barre du jour.
+ *
+ * C'est un minorant : une journée partiellement saisie compte comme entière
+ * (dette n° 20), et un repas sans énergie connue n'ajoute rien.
+ */
+export interface EnergyAverage {
+  /** kcal par jour renseigné, borne basse. `null` si aucun repas n'a d'énergie. */
+  average: number | null;
+  /** Jours comptés dans la moyenne, sur 7 au plus. */
+  days: number;
+  reference: NutrientReference | null;
+  percent: number | null;
+}
+
 export interface DailyBalance {
   bars: NutrientBar[];
   plant: PlantBar;
   mealCount: number;
+  /** Absent sous 18 ans, et quand l'appelant n'a pas fourni la semaine. */
+  energyAverage7d?: EnergyAverage;
 }
 
 export interface BalanceInput {
@@ -108,6 +128,8 @@ export interface BalanceInput {
   meals: DailyMeal[];
   references: ReferenceTable[];
   householdPlantAverage7d?: number | null;
+  /** Les repas de chacun des 7 derniers jours, jour par jour. */
+  energyWeek?: DailyMeal[][];
 }
 
 export function bilanJournalier(input: BalanceInput): DailyBalance {
@@ -123,7 +145,19 @@ export function bilanJournalier(input: BalanceInput): DailyBalance {
     bars,
     plant: plantBar(input),
     mealCount: input.meals.length,
+    ...(input.energyWeek !== undefined && !isMinorAge(input.age)
+      ? { energyAverage7d: energyAverage(input, input.energyWeek) }
+      : {}),
   };
+}
+
+function energyAverage(input: BalanceInput, week: DailyMeal[][]): EnergyAverage {
+  const totals = week
+    .map((meals) => bar('kcal', { ...input, meals }).consumed)
+    .filter((kcal): kcal is number => kcal !== null);
+  const average = totals.length === 0 ? null : round(totals.reduce((a, b) => a + b, 0) / totals.length);
+  const reference = findReference(input.references, input.sex, input.age, 'kcal');
+  return { average, days: totals.length, reference, percent: percentOf(average, reference) };
 }
 
 function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {

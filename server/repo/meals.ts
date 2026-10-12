@@ -19,7 +19,10 @@ import { ApiError } from '../http/errors.ts';
 import { calculerShares } from '../nutrition/shares.ts';
 import { loadFoodValues } from './foods.ts';
 import { dishImageUrl } from './images.ts';
-import { ingredientsAsItems, loadIngredients, loadRecipe } from './recipes.ts';
+import {
+  ingredientsAsItems, loadIngredients, loadRecipe, saveManualRecipe,
+  type RecipeIngredient,
+} from './recipes.ts';
 import { loadUnitDefaults } from './refs.ts';
 
 export const SLOTS = ['petit_dej', 'dejeuner', 'gouter', 'diner', 'collation'] as const;
@@ -88,7 +91,7 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette (016). `null` : à l'écran, ses libellés. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA (015). */
   imageUrl: string | null;
   items: MealItem[];
@@ -144,6 +147,27 @@ export async function createMeal(
   householdId: string,
   input: CreateMealInput,
 ): Promise<string> {
+  const recipeId = input.recipeId ?? null;
+  const servings = input.servings ?? 1;
+  const remainingServings = input.remainingServings ?? null;
+
+  // Des restes sans composition reprennent celle du plat, réduite à ce qui
+  // restait (§6bis) — la même règle que les habituels, au même endroit.
+  const leftoverOf = input.leftoverOf ?? null;
+  let items = input.items
+    ?? (leftoverOf === null ? [] : await portionOfItems(client, householdId, leftoverOf, 'remaining'));
+
+  // Rejouer une recette manuelle (« Mes recettes ») sans composition : elle ne
+  // publie aucune valeur — contrairement à Jow — donc le repas reprend ses
+  // ingrédients, remis à l'échelle des parts mangées. Sans cela le repas serait
+  // vide et sa nutrition inconnue.
+  if (input.items === undefined && recipeId !== null) {
+    const manual = await loadRecipe(client, recipeId);
+    if (manual !== null && manual.source === 'manuel') {
+      items = scaleManualItems(manual.ingredients, servings);
+    }
+  }
+
   // Un sous-plat hérite du créneau et de la journée de son plat principal, et
   // d'eux seuls : le reste (convives, parts, nutrition) est un repas normal.
   // Le parent doit exister dans ce foyer et ne pas être lui-même un sous-plat.
@@ -178,28 +202,98 @@ export async function createMeal(
              (select image_id from meal where household_id = $1 and id = $7), $13, $14)
      returning id`,
     [
-      householdId, eatenAt, slot, input.source, input.recipeId ?? null,
-      input.servings ?? null, input.leftoverOf ?? null, input.guestCount ?? null,
+      householdId, eatenAt, slot, input.source, recipeId,
+      input.servings ?? null, leftoverOf, input.guestCount ?? null,
       // I6 : le texte brut ne doit jamais atteindre `meal.raw_input`.
       input.rawInput === null || input.rawInput === undefined
         ? null
         : redactShareText(input.rawInput),
-      input.note ?? null, input.createdBy ?? null, input.remainingServings ?? null,
+      input.note ?? null, input.createdBy ?? null, remainingServings,
       input.title ?? null, parentMealId,
     ],
   );
   const id = rows[0]?.id;
   if (id === undefined) throw new Error('repas non créé');
 
-  // Des restes sans composition reprennent celle du plat, réduite à ce qui
-  // restait (§6bis) — la même règle que les habituels, au même endroit.
-  const leftoverOf = input.leftoverOf ?? null;
-  const items = input.items
-    ?? (leftoverOf === null ? [] : await portionOfItems(client, householdId, leftoverOf, 'remaining'));
   await writeItems(client, id, items);
   await writeShares(client, householdId, id, input.participants, input.guestCount ?? 0);
+
+  // Un repas décrit avec l'IA ou photographié crée sa recette manuelle : c'est
+  // elle qui apparaît dans « Mes recettes », comme une recette Jow lue puis
+  // mangée. Le repas garde ses propres items — la recette n'est qu'une copie
+  // pour la liste (voir `recomputeNutrition` : une recette manuelle ne change
+  // rien au calcul).
+  if ((input.source === 'ia' || input.source === 'photo') && recipeId === null && items.length > 0) {
+    let link: string | null = null;
+    if (leftoverOf !== null) {
+      // Un second service du même plat rejoint la recette du premier, il n'en
+      // ouvre pas une deuxième.
+      const { rows: parentRows } = await client.query<{ recipe_id: string | null }>(
+        'select recipe_id from meal where household_id = $1 and id = $2',
+        [householdId, leftoverOf],
+      );
+      link = parentRows[0]?.recipe_id ?? null;
+    }
+    if (link === null) {
+      link = await saveManualRecipe(client, householdId, {
+        title: manualTitle(input.title, items),
+        baseServings: servings + (remainingServings ?? 0),
+        confidence: input.source === 'photo' ? 'basse' : 'moyenne',
+        items: perServing(items, servings + (remainingServings ?? 0)),
+      });
+    }
+    await client.query('update meal set recipe_id = $2 where id = $1', [id, link]);
+  }
+
   await recomputeNutrition(client, id);
   return id;
+}
+
+/**
+ * Le titre de la recette manuelle : celui reformulé par l'IA (016), ou à
+ * défaut ce qui a été servi. Une recette sans titre n'est ni listable ni
+ * rejouable : le repli reprend ce que l'écran affiche déjà à la place.
+ */
+function manualTitle(title: string | null | undefined, items: MealItemInput[]): string {
+  const direct = title?.trim();
+  if (direct !== undefined && direct !== '') return direct.slice(0, 120);
+  const served = items
+    .map((item) => item.label.trim())
+    .filter((label) => label !== '')
+    .slice(0, 3)
+    .join(', ');
+  return served === '' ? 'Plat' : served.slice(0, 120);
+}
+
+/**
+ * Les items du plat ramenés à la part cuisinée : la recette stocke des
+ * quantités par part — comme les ingrédients Jow sont par convive — pour se
+ * rejouer à une autre échelle sans conversion.
+ */
+function perServing(items: MealItemInput[], cooked: number): MealItemInput[] {
+  const divisor = Number.isFinite(cooked) && cooked > 0 ? cooked : 1;
+  return items.map((item) => ({
+    foodId: item.foodId,
+    label: item.label,
+    quantity: item.quantity === null ? null : Math.round((item.quantity / divisor) * 1000) / 1000,
+    unit: item.unit,
+    quantityG: item.quantityG === null ? null : Math.round((item.quantityG / divisor) * 100) / 100,
+  }));
+}
+
+/**
+ * Les ingrédients d'une recette manuelle remis à l'échelle des parts mangées :
+ * le pendant de `perServing`, dans l'autre sens.
+ */
+function scaleManualItems(ingredients: RecipeIngredient[], servings: number): MealItemInput[] {
+  const factor = Number.isFinite(servings) && servings > 0 ? servings : 1;
+  return ingredients.map((ingredient) => ({
+    foodId: ingredient.foodId,
+    label: ingredient.label,
+    quantity: ingredient.quantity === null ? null : Math.round(ingredient.quantity * factor * 1000) / 1000,
+    unit: ingredient.unit,
+    quantityG: ingredient.quantityG === null ? null : Math.round(ingredient.quantityG * factor * 100) / 100,
+  }));
 }
 
 /**
@@ -213,16 +307,22 @@ export async function portionOfItems(
   part: 'eaten' | 'remaining',
 ): Promise<MealItemInput[]> {
   const { rows: mealRows } = await db.query<{
-    servings: number; remaining_servings: number | null; recipe_id: string | null;
+    servings: number; remaining_servings: number | null;
+    recipe_id: string | null; recipe_source: 'jow' | 'manuel' | null;
   }>(
-    'select servings, remaining_servings, recipe_id from meal where household_id = $1 and id = $2',
+    `select m.servings, m.remaining_servings, m.recipe_id, r.source as recipe_source
+     from meal m left join recipe r on r.id = m.recipe_id
+     where m.household_id = $1 and m.id = $2`,
     [householdId, mealId],
   );
   const meal = mealRows[0];
   if (meal === undefined) return [];
   // Avec recette, les items sont des ajouts, pas le plat : ils ne se resservent
-  // pas, et un habituel les rejoue entiers — comme avant le 15/09/2026.
-  const eaten = meal.recipe_id === null ? eatenFraction(meal.servings, meal.remaining_servings) : 1;
+  // pas, et un habituel les rejoue entiers — comme avant le 15/09/2026. Une
+  // recette manuelle, elle, n'est qu'une copie des items pour « Mes recettes » :
+  // le plat se ressert comme un repas sans recette.
+  const eaten = meal.recipe_id === null || meal.recipe_source === 'manuel'
+    ? eatenFraction(meal.servings, meal.remaining_servings) : 1;
   const factor = part === 'eaten' ? eaten : 1 - eaten;
   // Rien à resservir : pas de composition, plutôt que des items à 0 g qui
   // afficheraient « 0 kcal » en confiance haute.
@@ -459,9 +559,18 @@ export async function recomputeNutrition(
       servings: meal.servings,
       remainingServings: meal.remaining_servings,
       source: meal.source,
-      recipe: recipe?.snapshot ?? null,
+      // Une recette manuelle n'est qu'une copie des items pour
+      // « Mes recettes » : elle ne publie aucune valeur, et ses ingrédients
+      // sont déjà les items du repas. La passer comme une recette Jow
+      // compterait les restes comme mangés (`eaten` vaudrait 1) et pèserait
+      // chaque aliment deux fois dans la part végétale. Le repas se calcule
+      // donc comme s'il n'en avait pas — comme avant qu'elle existe.
+      recipe: recipe === null || recipe.source === 'manuel' ? null : recipe.snapshot,
       items,
-      recipeIngredients: ingredientsAsItems(ingredients, foods),
+      recipeIngredients:
+        recipe === null || recipe.source === 'manuel'
+          ? []
+          : ingredientsAsItems(ingredients, foods),
     },
     defaults,
   );
@@ -538,7 +647,7 @@ export async function recomputeMealsUsingIngredient(
 const MEAL_SELECT = `
   select m.id, m.eaten_at, m.slot, m.source, m.servings, m.remaining_servings, m.guest_count,
          m.leftover_of, m.note, m.title, m.image_id, m.parent_meal_id,
-         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score,
+         r.id as recipe_id, r.title as recipe_title, r.image_url, r.nutri_score, r.green_score,
          n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
          n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
          n.plant_ratio, n.grams_total, n.grams_plant, n.grams_classified, n.energy_density, n.confidence
@@ -551,7 +660,7 @@ interface MealRow {
   remaining_servings: number | null; guest_count: number; leftover_of: string | null; note: string | null;
   title: string | null; image_id: string | null; parent_meal_id: string | null;
   recipe_id: string | null; recipe_title: string | null; image_url: string | null;
-  nutri_score: string | null;
+  nutri_score: string | null; green_score: string | null;
   kcal: number | null; protein_g: number | null; carb_g: number | null;
   fat_g: number | null; fiber_g: number | null;
   kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
@@ -731,6 +840,7 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
             id: row.recipe_id,
             title: row.recipe_title ?? '',
             nutriScore: row.nutri_score,
+            greenScore: row.green_score,
           },
     imageUrl: row.image_url ?? (row.image_id === null ? null : dishImageUrl(row.image_id)),
     items: itemsByMeal.get(row.id) ?? [],

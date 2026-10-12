@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { api, type RecipeSummary } from '../api.ts';
 import { ModalHeader } from '../components/Chrome.tsx';
 import { ConfidenceBadge } from '../components/Confidence.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { IconBowl, IconChevron } from '../icons.tsx';
 import { relativeDay } from '../design/vocabulary.ts';
 import { SharedRecipe } from './Share.tsx';
@@ -59,7 +60,8 @@ export function Recipes({ onClose }: { onClose: () => void }): React.ReactElemen
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
             Aucune recette pour l’instant. Elles arrivent toutes seules : une
             recette partagée depuis Jow, ou collée ici, reste connue du foyer
-            même si le repas n’est pas enregistré.
+            même si le repas n’est pas enregistré — et un plat décrit avec
+            l’IA, ou photographié, y entre dès qu’il est enregistré.
           </p>
         </div>
       ) : null}
@@ -124,6 +126,7 @@ function Section({ title, hint, recipes, onChoose }: {
                   <ConfidenceBadge confidence={recipe.confidence} />
                 ) : null}
               </span>
+              <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
             </span>
 
             <IconChevron size={17} style={{ color: 'var(--text-muted)' }} />

@@ -16,7 +16,7 @@
 import { Children, useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
   ApiError, api, type AssistantRecipesResponse, type DashboardResponse, type Meal, type Nutrient,
-  type RecipeSummary,
+  type RecipeSummary, type UpcomingDish,
 } from '../api.ts';
 import { navigate } from '../router.tsx';
 import { imagesRécentes, écouterImages, type ImageAnnoncee } from '../mealImage.ts';
@@ -27,10 +27,11 @@ import { ConfidenceBadge } from '../components/Confidence.tsx';
 import { LeftoverRow } from '../components/Leftovers.tsx';
 import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
+import { RecipeScores } from '../components/RecipeScores.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
 import { IconBowl, IconChevron, IconPlus } from '../icons.tsx';
 import {
-  BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, localDate, longDate,
+  BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, currentSlot, eatenAt, localDate, longDate,
 } from '../design/vocabulary.ts';
 
 type Entry = DashboardResponse['dashboard'][number];
@@ -42,6 +43,8 @@ export function TodayScreen(): React.ReactElement {
   /** La personne choisie. `null` : sa propre assiette, sinon la première. */
   const [chosen, setChosen] = useState<string | null>(null);
   const [fridge, setFridge] = useState<Meal[]>([]);
+  /** Incrémenté quand le stock change la journée : relit le bilan. */
+  const [reload, setReload] = useState(0);
 
   // À côté de la journée, pas avant elle : un frigo illisible ne doit pas
   // faire tomber l'accueil. Le frigo est celui de maintenant, quel que soit
@@ -60,7 +63,7 @@ export function TodayScreen(): React.ReactElement {
       .then((next) => { if (current) setData(next); })
       .catch(() => { if (current) setError('impossible de charger la journée'); });
     return () => { current = false; };
-  }, [day]);
+  }, [day, reload]);
 
   // L'image d'un plat se dessine après son enregistrement : quand elle est
   // annoncée, elle rejoint la journée et le frigo sans rechargement. Les
@@ -150,6 +153,8 @@ export function TodayScreen(): React.ReactElement {
           <MealCard key={meal.id} meal={meal} seasonalCount={meal.seasonalCount}
                     onOpen={(id) => navigate(`/repas/${id}`)} />
         ))}
+
+        <UpcomingStock day={day} onChange={() => setReload((n) => n + 1)} />
 
         {fridge.length > 0 ? (
           <>
@@ -480,6 +485,7 @@ function RecipeCard({ recipe, reason }: { recipe: RecipeSummary; reason: string 
             {reason}
           </span>
         ) : null}
+        <RecipeScores nutriScore={recipe.nutriScore} greenScore={recipe.greenScore} />
         {recipe.confidence !== 'haute' ? (
           <ConfidenceBadge confidence={recipe.confidence} />
         ) : null}
@@ -504,5 +510,72 @@ function IdeaCard({ idea }: { idea: { title: string; reason: string } }): ReactE
         <ConfidenceBadge confidence="basse" label="Idée de l’assistant — à vérifier" />
       </span>
     </div>
+  );
+}
+
+/**
+ * Le stock de plats à venir, à portée de pouce : un tap saisit le repas pour
+ * les convives actifs et retire le plat. Annulable tant qu'on ne quitte pas
+ * l'accueil. Stock vide ou illisible : rien à l'écran.
+ */
+function UpcomingStock({ day, onChange }: { day: string | null; onChange: () => void }): ReactElement | null {
+  const [dishes, setDishes] = useState<UpcomingDish[]>([]);
+  /** Le dernier plat mangé, de quoi le remettre. */
+  const [done, setDone] = useState<{ mealId: string; recipeId: string; title: string } | null>(null);
+  const [error, setError] = useState(false);
+  /** Un appel en cours : un second tap ne doit pas partir. */
+  const [busy, setBusy] = useState(false);
+
+  const load = (): Promise<void> => api.get<{ dishes: UpcomingDish[] }>('/api/upcoming-dishes')
+    .then((r) => setDishes(r.dishes))
+    .catch(() => setDishes([]));
+  useEffect(() => { void load(); }, []);
+
+  const act = async (action: () => Promise<void>): Promise<void> => {
+    setError(false);
+    setBusy(true);
+    try {
+      await action();
+    } catch {
+      setError(true);
+    }
+    await load();
+    setBusy(false);
+    onChange();
+  };
+
+  const eat = (dish: UpcomingDish): Promise<void> => act(async () => {
+    const { mealId } = await api.post<{ mealId: string }>(`/api/upcoming-dishes/${dish.id}/eat`, {
+      eatenAt: eatenAt(day), slot: currentSlot(),
+    });
+    setDone({ mealId, recipeId: dish.recipe.id, title: dish.recipe.title });
+  });
+
+  const undo = (): Promise<void> => act(async () => {
+    if (done === null) return;
+    await api.delete(`/api/meals/${done.mealId}`);
+    await api.post('/api/upcoming-dishes', { recipeId: done.recipeId });
+    setDone(null);
+  });
+
+  if (dishes.length === 0 && done === null) return null;
+  return (
+    <>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Au programme</p>
+      {dishes.map((dish) => (
+        <button key={dish.id} type="button" className="card row" disabled={busy} onClick={() => void eat(dish)}>
+          <span className="thumb"><IconBowl size={20} /></span>
+          <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 500 }}>{dish.recipe.title}</span>
+          <span className="meta">On le mange</span>
+        </button>
+      ))}
+      {done !== null ? (
+        <p className="meta" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          « {done.title} » saisi.
+          <button type="button" className="chip" disabled={busy} onClick={() => void undo()}>Annuler</button>
+        </p>
+      ) : null}
+      {error ? <p className="meta">Le changement n’a pas pu être enregistré.</p> : null}
+    </>
   );
 }

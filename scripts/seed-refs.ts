@@ -351,6 +351,41 @@ async function loadSeasonal(db: pg.Pool): Promise<void> {
   });
 }
 
+// ── frequency_reference (SPF, adultes) ──────────────────────────────────────
+
+async function loadFrequencies(db: pg.Pool): Promise<void> {
+  const file = 'frequency-reference.csv';
+  const { rows } = await read(file);
+  let written = 0;
+
+  for (const row of rows) {
+    const source = requireSource(file, row);
+    const kind = requiredText(file, row, 'kind');
+    if (!['min_times', 'min_days', 'max_grams'].includes(kind)) {
+      throw new SeedError(file, row.line, `kind inconnu : ${kind}`);
+    }
+    const citation = requiredText(file, row, 'citation');
+    const categories = requiredText(file, row, 'categories').split('|').map((c) => c.trim());
+    const pattern = (row.values['name_pattern'] ?? '').trim();
+    if (!dryRun) {
+      await db.query(
+        `insert into frequency_reference
+           (code, label, kind, value, categories, name_pattern, source, citation)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         on conflict (code) do update set
+           label = excluded.label, kind = excluded.kind, value = excluded.value,
+           categories = excluded.categories, name_pattern = excluded.name_pattern,
+           source = excluded.source, citation = excluded.citation`,
+        [requiredText(file, row, 'code'), requiredText(file, row, 'label'), kind,
+         requiredNumber(file, row, 'value'), categories, pattern === '' ? null : pattern,
+         source, citation],
+      );
+    }
+    written += 1;
+  }
+  reports.push({ file, written, skipped: 0, reason: '' });
+}
+
 // ── rapport ─────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -358,6 +393,7 @@ async function main(): Promise<void> {
   const expected = [
     'nutrient-reference.csv', 'energy-reference.csv',
     'unit-default.csv', 'food-unit-weight.csv', 'seasonal-produce.csv',
+    'frequency-reference.csv',
   ];
   const missing = expected.filter((f) => !files.includes(f));
   if (missing.length > 0) throw new Error(`fichier(s) de seed absent(s) : ${missing.join(', ')}`);
@@ -371,6 +407,7 @@ async function main(): Promise<void> {
     await loadUnits(pool);
     await loadFoodUnitWeights(pool);
     await loadSeasonal(pool);
+    await loadFrequencies(pool);
 
     console.log(dryRun ? 'Simulation — rien n’a été écrit.\n' : '');
     for (const report of reports) {

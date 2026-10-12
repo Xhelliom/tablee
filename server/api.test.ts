@@ -715,9 +715,11 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain complet', { kcal: 250 }, true);
 
-      for (const day of ['2026-09-11', '2026-09-12', '2026-09-13']) {
+      // Relatives à aujourd'hui : la fenêtre des suggestions est glissante
+      // (30 jours), des dates en dur finissent par en sortir.
+      for (const n of [1, 2, 3]) {
         await call('POST', '/api/meals', {
-          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          eaten_at: new Date(Date.now() - n * 24 * 3600 * 1000).toISOString(), slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
@@ -740,9 +742,9 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     it('ne suggère rien pour deux occurrences', async () => {
       const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
       const pain = await insertFood(pool, 'Pain', { kcal: 250 }, true);
-      for (const day of ['2026-09-12', '2026-09-13']) {
+      for (const n of [1, 2]) {
         await call('POST', '/api/meals', {
-          eaten_at: `${day}T07:30:00+02:00`, slot: 'petit_dej', source: 'texte',
+          eaten_at: new Date(Date.now() - n * 24 * 3600 * 1000).toISOString(), slot: 'petit_dej', source: 'texte',
           participants: [{ eaterId: adulte }],
           items: [{ foodId: pain, label: 'Pain', quantity: 80, unit: 'g', quantityG: 80 }],
         });
@@ -871,6 +873,39 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.ok(typeof galette.lastEatenAt === 'string');
     });
 
+    it('expose les lettres Jow sur la liste et le repas, et rien sans elles', async () => {
+      const lettrée = await recette('650b16ade7cc8d0013ce4a6e', 'Galette végé');
+      const nue = await recette('650b16ade7cc8d0013ce4a6f', 'Chili sin carne');
+      await sql("update recipe set nutri_score = 'B', green_score = 'A+' where id = $1", [lettrée]);
+
+      const { body } = await call('GET', '/api/recipes');
+      const parTitre = (t: string): any => body.recipes.find((r: any) => r.title === t);
+      assert.equal(parTitre('Galette végé').nutriScore, 'B');
+      assert.equal(parTitre('Galette végé').greenScore, 'A+');
+      assert.equal(parTitre('Chili sin carne').nutriScore, null);
+      assert.equal(parTitre('Chili sin carne').greenScore, null);
+
+      const saisir = async (recipeId: string): Promise<any> => (await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'jow', recipeId, servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+      })).body.meal;
+      const avec = await saisir(lettrée);
+      const sans = await saisir(nue);
+      const relu = async (m: any): Promise<any> => (await call('GET', `/api/meals/${m.id}`)).body.meal;
+      assert.deepEqual(
+        [(await relu(avec)).recipe.nutriScore, (await relu(avec)).recipe.greenScore], ['B', 'A+'],
+      );
+      assert.deepEqual(
+        [(await relu(sans)).recipe.nutriScore, (await relu(sans)).recipe.greenScore], [null, null],
+      );
+
+      // Un repas hors Jow n'a pas de recette, donc pas de lettre à inventer.
+      const { body: libre } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'manuel', participants: [],
+      });
+      assert.equal((await relu(libre.meal)).recipe, null);
+    });
+
     /**
      * Le piège que cette suite existe pour attraper (§16).
      *
@@ -913,6 +948,109 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
         'select raw_input from meal where id = $1', [body.meal.id],
       );
       assert.equal(rows[0]!.raw_input, null, 'aucun texte de partage à inventer');
+    });
+
+    /**
+     * Un repas décrit avec l'IA crée sa recette manuelle : c'est elle qui
+     * apparaît dans « Mes recettes », comme une recette Jow lue puis mangée.
+     */
+    it('enregistre une recette créée par l’IA dans « mes recettes »', async () => {
+      const riz = await insertFood(
+        pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true,
+      );
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 2,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 200, unit: 'g', quantityG: 200 }],
+      });
+      assert.equal(status, 201);
+      const recipeId = body.meal.recipe?.id;
+      assert.ok(typeof recipeId === 'string', 'le repas pointe sa recette');
+      // La recette manuelle n'est qu'une copie pour la liste : la nutrition
+      // vient toujours des items, sans double compte.
+      assert.equal(body.meal.nutrition.kcal, 260);
+      assert.equal(body.meal.nutrition.confidence, 'moyenne');
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.deepEqual(liste.recipes.map((r: any) => r.title), ['Riz aux légumes']);
+      assert.equal(liste.recipes[0].id, recipeId);
+      assert.equal(liste.recipes[0].source, 'manuel');
+      assert.equal(liste.recipes[0].timesEaten, 1);
+      assert.ok(typeof liste.recipes[0].lastEatenAt === 'string');
+    });
+
+    it('enregistre une recette photographiée, même sans titre reformulé', async () => {
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'dejeuner', source: 'photo',
+        servings: 1,
+        participants: [{ eaterId: await addEater('Alex', '1988-04-12'), present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 150, unit: 'g', quantityG: 150 }],
+      });
+      assert.equal(status, 201);
+      assert.equal(body.meal.nutrition.confidence, 'basse');
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.deepEqual(liste.recipes.map((r: any) => r.title), ['Riz']);
+      assert.equal(liste.recipes[0].source, 'manuel');
+      assert.equal(liste.recipes[0].timesEaten, 1);
+    });
+
+    it('rejoue une recette manuelle avec sa composition', async () => {
+      const mangeur = await addEater('Alex', '1988-04-12');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { body: origine } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 2,
+        participants: [{ eaterId: mangeur, present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 200, unit: 'g', quantityG: 200 }],
+      });
+      const recipeId = origine.meal.recipe.id;
+
+      // Ce que fait l'écran « Mes recettes » : relire, puis enregistrer — sans
+      // composition. Une recette manuelle ne publie aucune valeur : le repas
+      // reprend donc ses ingrédients, remis à l'échelle.
+      const { status, body } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'manuel',
+        recipeId, servings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+      });
+      assert.equal(status, 201);
+      assert.equal(body.meal.recipe.id, recipeId);
+      assert.equal(body.meal.items.length, 1);
+      assert.equal(body.meal.items[0].quantityG, 100);
+      assert.equal(body.meal.nutrition.kcal, 130);
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.equal(liste.recipes[0].timesEaten, 2);
+    });
+
+    it('un second service rejoint la recette du premier, sans la dupliquer', async () => {
+      const mangeur = await addEater('Alex', '1988-04-12');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130 }, true);
+      const { body: plat } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'diner', source: 'ia',
+        title: 'Riz aux légumes', servings: 3, remainingServings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+        items: [{ foodId: riz, label: 'Riz', quantity: 400, unit: 'g', quantityG: 400 }],
+      });
+      // 300 g mangés : les restes n'entrent pas dans le total.
+      assert.equal(plat.meal.nutrition.kcal, 390);
+
+      const { status, body: restes } = await call('POST', '/api/meals', {
+        eatenAt: new Date().toISOString(), slot: 'dejeuner', source: 'ia',
+        leftoverOf: plat.meal.id, servings: 1,
+        participants: [{ eaterId: mangeur, present: true }],
+      });
+      assert.equal(status, 201);
+      assert.equal(restes.meal.recipe.id, plat.meal.recipe.id);
+      assert.equal(restes.meal.items[0].quantityG, 100);
+      assert.equal(restes.meal.nutrition.kcal, 130);
+
+      const { body: liste } = await call('GET', '/api/recipes');
+      assert.equal(liste.recipes.length, 1, 'une seule recette pour les deux services');
+      assert.equal(liste.recipes[0].timesEaten, 2);
     });
   });
 
@@ -1056,6 +1194,44 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
   // ── saisonnalité et fuseau du foyer ───────────────────────────────────────
 
+  describe('diversité de la semaine', () => {
+    it('compte aliments et familles, et signale un repas sans aliment rattaché', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const carotte = await insertFood(pool, 'Carotte, crue', { kcal: 35 }, true);
+      const riz = await insertFood(pool, 'Riz, cuit', { kcal: 130 }, true);
+      await pool.query('update food set category = $2 where id = $1', [carotte, 'legumes']);
+      await pool.query('update food set category = $2 where id = $1', [riz, 'cereales']);
+      const { rows } = await pool.query<{ id: string }>(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', '650b16ade7cc8d0013ce4a6e', 'Riz carottes', 1) returning id`,
+      );
+      for (const [i, foodId] of [carotte, riz].entries()) {
+        await pool.query(
+          `insert into recipe_ingredient (recipe_id, food_id, label, quantity_g, position)
+           values ($1, $2, 'x', 100, $3)`,
+          [rows[0]!.id, foodId, i],
+        );
+      }
+      await call('POST', '/api/meals', {
+        eaten_at: '2026-10-06T12:00:00+02:00', slot: 'dejeuner', source: 'jow',
+        recipe_id: rows[0]!.id, participants: [{ eaterId: adulte }],
+      });
+      await call('POST', '/api/meals', {
+        eaten_at: '2026-10-07T12:00:00+02:00', slot: 'dejeuner', source: 'manuel',
+        title: 'Sans rien', items: [{ label: 'Plat maison', quantity: 100, unit: 'g', quantityG: 100 }],
+        participants: [{ eaterId: adulte }],
+      });
+
+      const { body } = await call('GET', '/api/week?from=2026-10-05&days=7');
+      assert.deepEqual(body.diversity.household, { foods: 2, families: 2, mealsWithoutFood: 1 });
+      assert.deepEqual(body.diversity.byEater[adulte], { foods: 2, families: 2, mealsWithoutFood: 1 });
+      assert.deepEqual(body.diversity.families, [
+        { family: 'cereales', days: [{ date: '2026-10-06', foods: ['Riz, cuit'] }] },
+        { family: 'legumes', days: [{ date: '2026-10-06', foods: ['Carotte, crue'] }] },
+      ]);
+    });
+  });
+
   describe('mois de saisonnalité', () => {
     /** Un produit de saison rattaché à un aliment, pour pouvoir être coché. */
     const courgette = async (): Promise<string> => {
@@ -1150,6 +1326,25 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const proteines = balance.bars.find((b: any) => b.nutrient === 'proteinG');
       assert.equal(proteines.state, 'disponible');
       assert.equal(proteines.consumed, 4.05);
+    });
+
+    it('I5 : la moyenne d’énergie sur 7 jours existe pour un majeur, jamais pour un mineur', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const enfant = await addEater('Enfant', '2018-01-01', 2, 'F');
+      const riz = await insertFood(pool, 'Riz cuit', { kcal: 130, protein: 2.7, carb: 28, fat: 0.3, fiber: 0.4 }, true);
+      for (const [eaten_at, who] of [['2026-09-10', adulte], ['2026-09-13', adulte], ['2026-09-13', enfant]] as const) {
+        await call('POST', '/api/meals', {
+          eaten_at: `${eaten_at}T12:30:00+02:00`, slot: 'dejeuner', source: 'manuel',
+          participants: [{ eaterId: who }],
+          items: [{ foodId: riz, label: 'Riz', quantity: 100, unit: 'g', quantityG: 100 }],
+        });
+      }
+      const { body } = await call('GET', '/api/dashboard?date=2026-09-13');
+      const of = (id: string) => body.dashboard.find((d: any) => d.eater.id === id).balance;
+      assert.equal(of(adulte).energyAverage7d.days, 2);
+      assert.equal(of(adulte).energyAverage7d.average, 130);
+      assert.equal('energyAverage7d' in of(enfant), false);
+      assert.equal(of(enfant).bars.some((b: any) => b.nutrient === 'kcal'), false);
     });
 
     it('demande l’unité plutôt que de la deviner tant que unit_default est vide', async () => {

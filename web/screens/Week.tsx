@@ -14,11 +14,11 @@
  * moyenne des jours saisis, la dernière valeur écrite
  * (`docs/proposition-accueil.html`). Toujours rien qui se compte par personne.
  */
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api, type Nutrient, type WeekResponse } from '../api.ts';
 import { Avatar } from '../components/Avatar.tsx';
 import {
-  BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, localDate, shortDay,
+  BAR_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, familyLabel, localDate, shortDay,
 } from '../design/vocabulary.ts';
 
 /** La hauteur d'un graphe, pour 100 % de part végétale. */
@@ -76,6 +76,7 @@ export function WeekScreen(): React.ReactElement {
         }}>
           <p style={{ fontSize: 14 }}>La tablée, jour par jour</p>
           <HouseholdWeek days={days} nutrients={data.nutrients} today={today} />
+          <Diversity data={data.diversity} days={days} />
           <p style={{ fontSize: 14, marginTop: 8 }}>Part végétale, jour par jour</p>
           <Legend average={average} />
           {data.eaters.map((eater) => (
@@ -91,8 +92,166 @@ export function WeekScreen(): React.ReactElement {
           ))}
         </section>
       )}
+      {data.frequencies.length > 0 ? <Frequencies items={data.frequencies} /> : null}
       <div className="fab-space" />
     </>
+  );
+}
+
+/**
+ * Les repères en aliments et en fréquences de Santé publique France. Ce sont
+ * des repères **adultes**, lus pour le foyer : aucun plafond ne descend sur la
+ * fiche d'un convive, et le texte du document est cité sous chaque ligne.
+ */
+function Frequencies({ items }: { items: WeekResponse['frequencies'] }): React.ReactElement {
+  return (
+    <section className="sec" style={{ paddingBottom: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <p style={{ fontSize: 14 }}>Les repères de la semaine</p>
+      <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+        Repères de Santé publique France pour les adultes, comptés pour le foyer.
+      </p>
+      {items.map((item) => {
+        const limit = item.kind === 'max_grams';
+        const current = item.current === null
+          ? 'rien de saisi'
+          : `${item.partial ? 'au moins ' : ''}${item.current}\u00a0${item.unit}`;
+        return (
+          <div key={item.code} className="card" style={{ padding: '12px 15px' }}>
+            <p style={{ fontSize: 14 }}>{item.label}</p>
+            <p style={{ fontSize: 13, marginTop: 2 }}>
+              {`${current} · repère\u00a0: ${limit ? 'au plus' : 'au moins'} ${item.target}\u00a0${item.unit}`}
+            </p>
+            <p style={{ fontSize: 11, marginTop: 4, color: 'var(--text-secondary)' }}>
+              {`« ${item.citation} » — ${item.source}`}
+            </p>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+/**
+ * La variété du foyer (10/2026) : un titre-compte, une rangée-résumé (combien
+ * de catégories d'aliments différentes chaque jour — la « diversité »), puis, à la
+ * demande, la grille catégorie × jour. L'intensité d'un point de la grille est le nombre d'aliments
+ * **différents** de la catégorie ce jour-là — plus foncé = plus varié, jamais
+ * « plus mangé » : cinq fois le même pain valent un aliment. Pas de cible, pas
+ * de pourcentage, pas de ligne par convive (I5) ; un jour vide n'est pas un
+ * manque, c'est un point à peine tracé. Teinte : le terracotta de la marque,
+ * en dégradé d'opacité ; il ne bascule pas la nuit (voir tokens.css). Toucher une catégorie déplie ses aliments.
+ */
+const OPACITY = [0, .35, .65, 1];
+// ponytail: seuils de la rangée-résumé (1, 2-3, 4 et plus) choisis à l'œil, sans
+// source : ils ne disent rien d'un « bien » ou d'un « trop ». À revoir si la
+// légende prête à confusion.
+const familyLevel = (n: number): number => (n >= 4 ? 3 : n >= 2 ? 2 : n);
+
+function Dot({ level, label }: { level: number; label: string }): React.ReactElement {
+  return (
+    <span role="img" aria-label={label} style={{ display: 'flex', justifyContent: 'center' }}>
+      <span style={level > 0
+        ? { width: 12, height: 12, borderRadius: 6, background: 'var(--coral)', opacity: OPACITY[level] ?? 1 }
+        : { width: 3, height: 3, borderRadius: 2, background: 'var(--border-strong)', opacity: .5 }} />
+    </span>
+  );
+}
+
+function Diversity({ data, days }: {
+  data: WeekResponse['diversity'];
+  days: string[];
+}): React.ReactElement {
+  const [detail, setDetail] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+  const { foods, families, mealsWithoutFood } = data.household;
+  const columns = `108px repeat(${days.length}, minmax(0, 1fr))`;
+  const grid = { display: 'grid', gridTemplateColumns: columns, alignItems: 'center' } as const;
+  const muted = { fontSize: 11, color: 'var(--text-muted)' } as const;
+  const perDay = days.map((date) => data.families.filter((f) => f.days.some((d) => d.date === date)).length);
+  const key = (text: string, n: number): React.ReactElement => (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8 }}>
+      <Dot level={n} label="" />{text}
+    </span>
+  );
+  return (
+    <div className="card" style={{ padding: '14px 15px' }}>
+      <p style={{ fontSize: 15 }}>
+        {`${foods} aliment${foods > 1 ? 's' : ''} différent${foods > 1 ? 's' : ''}, ` +
+          `${families} catégorie${families > 1 ? 's' : ''}`}
+      </p>
+      {mealsWithoutFood > 0 ? (
+        <p style={{ ...muted, marginTop: 2 }}>
+          {`${mealsWithoutFood} repas sans aliment rattaché, non compté${mealsWithoutFood > 1 ? 's' : ''}`}
+        </p>
+      ) : null}
+      {data.families.length > 0 ? (
+        <>
+          <div style={{ ...grid, marginTop: 14 }}>
+            <span />
+            {days.map((date) => (
+              <span key={date} style={{ ...muted, textAlign: 'center' }}>{shortDay(date).slice(0, 2)}</span>
+            ))}
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '10px 0' }}>Diversité</span>
+            {days.map((date, i) => (
+              <Dot key={date} level={familyLevel(perDay[i] ?? 0)}
+                label={`${shortDay(date)} : ${perDay[i]} catégorie${(perDay[i] ?? 0) > 1 ? 's' : ''}`} />
+            ))}
+          </div>
+          <div style={{ ...muted, display: 'flex', marginTop: 4 }}>
+            {key('1 catégorie', 1)}{key('2 à 3', 2)}{key('4 et plus', 3)}
+          </div>
+          <button type="button" aria-expanded={detail} onClick={() => setDetail(!detail)}
+            style={{
+              all: 'unset', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)',
+              textDecoration: 'underline', textUnderlineOffset: 3, display: 'block', marginTop: 12,
+            }}>
+            {detail ? 'Masquer le détail' : 'Détail par catégorie'}
+          </button>
+          {detail ? (
+            <>
+              <div style={{ ...grid, marginTop: 8 }}>
+                {data.families.map(({ family, days: present }) => {
+                  const expanded = open === family;
+                  return (
+                    <Fragment key={family}>
+                      <button type="button" aria-expanded={expanded}
+                        onClick={() => setOpen(expanded ? null : family)}
+                        style={{
+                          all: 'unset', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)',
+                          padding: '9px 0',
+                          ...(expanded ? { textDecoration: 'underline', textUnderlineOffset: 3 } : {}),
+                        }}>
+                        {familyLabel(family)}
+                      </button>
+                      {days.map((date) => {
+                        const n = present.find((d) => d.date === date)?.foods.length ?? 0;
+                        return (
+                          <Dot key={date} level={Math.min(n, 3)}
+                            label={`${familyLabel(family)}, ${shortDay(date)} : ${n} aliment${n > 1 ? 's' : ''}`} />
+                        );
+                      })}
+                      {expanded ? (
+                        <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-secondary)', paddingBottom: 6 }}>
+                          {present.map(({ date, foods: names }) => (
+                            <p key={date} style={{ marginTop: 2 }}>
+                              <span style={{ color: 'var(--text-muted)' }}>{shortDay(date)} </span>
+                              {names.join(', ')}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </div>
+              <div style={{ ...muted, display: 'flex', marginTop: 8 }}>
+                {key('1 aliment', 1)}{key('2 aliments', 2)}{key('3 et plus', 3)}
+              </div>
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </div>
   );
 }
 

@@ -220,10 +220,19 @@ export interface PlantBar {
   householdAverage7d: number | null;
 }
 
+export interface EnergyAverage {
+  average: number | null;
+  days: number;
+  reference: NutrientReference | null;
+  percent: number | null;
+}
+
 export interface DailyBalance {
   bars: NutrientBar[];
   plant: PlantBar;
   mealCount: number;
+  /** Absent sous 18 ans (I5). */
+  energyAverage7d?: EnergyAverage;
 }
 
 export interface MealItem {
@@ -251,7 +260,7 @@ export interface Meal {
   note: string | null;
   /** Le titre d'un repas sans recette, reformulé par l'IA au découpage. */
   title: string | null;
-  recipe: { id: string; title: string; nutriScore: string | null } | null;
+  recipe: { id: string; title: string; nutriScore: string | null; greenScore: string | null } | null;
   /** La photo de la recette, sinon l'image dessinée d'un repas saisi avec l'IA. */
   imageUrl: string | null;
   items: MealItem[];
@@ -329,6 +338,7 @@ export interface RecipeIngredient {
 
 export interface Recipe {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   url: string | null;
   imageUrl: string | null;
@@ -346,10 +356,12 @@ export interface Recipe {
 /** Une recette du foyer, telle que la liste « Mes recettes » la montre. */
 export interface RecipeSummary {
   id: string;
+  source: 'jow' | 'manuel';
   title: string;
   imageUrl: string | null;
   baseServings: number;
   nutriScore: string | null;
+  greenScore: string | null;
   confidence: Confidence;
   /** `null` = lue depuis Jow, jamais enregistrée comme repas. */
   lastEatenAt: string | null;
@@ -455,4 +467,39 @@ export interface WeekResponse {
     means: Record<'proteinG' | 'carbG' | 'fatG' | 'fiberG', number | null>;
     eaters: number;
   }[];
+  /**
+   * Repères de fréquence (SPF, adultes), au niveau du foyer : jamais par
+   * convive. `current` vaut `null` quand rien n'est saisi.
+   */
+  frequencies: {
+    code: string;
+    label: string;
+    kind: 'min_times' | 'min_days' | 'max_grams';
+    target: number;
+    unit: 'fois' | 'jours' | 'g';
+    current: number | null;
+    met: boolean | null;
+    partial: boolean;
+    source: string;
+    citation: string;
+  }[];
+  /**
+   * Diversité sur la fenêtre (10/2026) : un compte, sans repère ni
+   * pourcentage. `mealsWithoutFood` : repas sans aliment rattaché, non comptés.
+   */
+  diversity: {
+    household: DiversityCount;
+    byEater: Record<string, DiversityCount>;
+    /** Les familles passées à table, jour par jour, avec les aliments différents de ce jour-là. */
+    families: { family: string; days: { date: string; foods: string[] }[] }[];
+  };
+}
+
+export interface DiversityCount { foods: number; families: number; mealsWithoutFood: number }
+
+/** Un plat du stock « plats à venir » (023) : une recette, sans jour. */
+export interface UpcomingDish {
+  id: string;
+  addedAt: string;
+  recipe: { id: string; title: string; imageUrl: string | null; baseServings: number; url: string | null };
 }

@@ -629,6 +629,26 @@ Repère `végétal` : **pas de cible chiffrée affichée**. La barre montre la v
 du jour et la moyenne des 7 derniers jours du foyer. C'est une tendance, pas un
 objectif (R7, I5).
 
+> **Levée le 09/10/2026 — la diversité alimentaire existe.** L'objection
+> ci-dessus (« demande une fenêtre glissante ») ne tient plus : la fenêtre de
+> 7 jours existe, la barre Végétal s'en sert déjà. La vue semaine affiche
+> « N aliments différents, M catégories » (`food.category`), sans repère, sans
+> cible, sans pourcentage — une tendance, comme Végétal. Un repas sans aliment rattaché est **signalé** (« n repas sans
+> aliment rattaché »), jamais compté comme zéro : un rattachement Jow manquant
+> sous-estime le compte, il ne le fausse pas. Ce n'est pas une sixième barre :
+> elle n'entre ni dans l'anneau ni dans les compteurs. Détail dans
+> `docs/indicateurs-possibles.md` §2.
+>
+> **Précisé le 12/10/2026 — la forme à l'écran.** Pour le **foyer seulement** :
+> le compte par convive, d'abord affiché, est retiré de l'écran (I5 : un compte
+> par personne se lit comme un classement ; `byEater` reste dans l'API mais
+> n'est pas affiché). À la place, une rangée « Diversité » (combien de
+> catégories différentes chaque jour) et, à la demande, une grille
+> catégorie × jour dont l'intensité est le nombre d'aliments **différents** —
+> jamais un nombre de fois ni de grammes. Teinte : le terracotta de la marque,
+> en dégradé d'opacité. Les seuils de la rangée (1, 2 à 3, 4 et plus) n'ont pas
+> de source et ne disent ni « bien » ni « trop ».
+
 ---
 
 ## 8bis. Saisonnalité — **en V1**
@@ -1319,7 +1339,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `POST` | `/api/meals/decoupage` | V3 — un texte libre découpé en lignes rapprochées de Ciqual, **sans rien écrire** : l'écran enregistre ce que la personne garde. Deux appels au modèle par requête depuis le 14/09/2026 : le découpage, puis le choix de l'aliment, par numéro, parmi quinze candidats Ciqual par ligne. Dix appels par minute par compte, et par route, parce que chaque appel se paie. 503 sans clé API. |
 > | `POST` | `/api/assistant` | V3 — une question sur les repas du foyer, avec la conversation en cours que l'écran renvoie (douze messages au plus). Rien n'est gardé. Même plafond et même 503 que le découpage. Encart du §14. *Précisé le 15/09/2026* : la réponse arrive en Server-Sent Events — des `texte` au fil de la génération, puis `fin`, qui porte la réponse entière et fait foi, ou `erreur` si le flux casse en route. Ce qui est refusé avant le flux (400, 429, 503) reste une erreur JSON. |
 > | `POST` | `/api/assistant/recipes` | V3 — le bouton « Demander à l'assistant des recettes » de l'accueil, pour rendre la semaine plus équilibrée. Même résumé du foyer que `/api/assistant`, plus l'ordre des repères et la liste des recettes Jow du foyer : le modèle **choisit** par numéro parmi elles et ajoute une ou deux idées de plats marquées « à vérifier », sans jamais écrire une valeur (R1). Le texte envoyé revient dans la réponse, pour se relire à l'écran. `409` quand il n'aurait rien sur quoi s'appuyer ; même plafond et même 503 que le découpage. Ce qu'il approxime : dette n° 20. |
-> | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. |
+> | `GET` | `/api/recipes` | Les recettes que le foyer connaît, jamais mangées en tête. Elles étaient déjà toutes en base — `saveJowRecipe` écrit à la lecture du partage, avant l'enregistrement du repas — et aucun écran ne les montrait. Voir la 011 : une recette Jow est globale, c'est `household_recipe` qui dit qui la connaît. *Depuis le 25/09/2026, un repas décrit avec l'IA ou photographié y entre aussi : `createMeal` lui crée une recette `manuel` (titre reformulé, quantités par part) et l'y rattache — sinon « Mes recettes » ignorait tout ce qui ne venait pas de Jow. La recette est un instantané comme le snapshot Jow : le calcul nutritionnel l'ignore et lit les items du repas, et la rejouer sans composition reprend ses ingrédients remis à l'échelle.* |
 >
 > **Ajoutées le 13/09/2026 avec les comptes** (§7 renversé) :
 >
