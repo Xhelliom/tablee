@@ -17,7 +17,8 @@
  * déclarés — « végétarien », « sans porc ». « Mange mal » n'est pas un régime
  * (I2).
  */
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { DietIcon } from './DietIcon.tsx';
 import { DIET_CHOICES } from '../design/vocabulary.ts';
 
 /** Repères grossiers du §10 : « démarrer grossier, affiner à l'usage ». */
@@ -206,6 +207,7 @@ export function ProfileFields({ value, onChange, idPrefix, showBody = true }: Pr
                 })
               }
               libellé={label}
+              icône={<DietIcon diet={régime} />}
             />
           ))}
         </div>
@@ -249,8 +251,8 @@ export function ProfileFields({ value, onChange, idPrefix, showBody = true }: Pr
  * (§8ter).
  */
 export function Choix({
-  actif, onClick, libellé,
-}: { actif: boolean; onClick: () => void; libellé: string }): ReactElement {
+  actif, onClick, libellé, icône,
+}: { actif: boolean; onClick: () => void; libellé: string; icône?: ReactNode }): ReactElement {
   return (
     <button
       type="button"
@@ -260,9 +262,11 @@ export function Choix({
         cursor: 'pointer',
         background: actif ? 'var(--coral)' : 'var(--surface-1)',
         color: actif ? '#fff' : 'var(--text-secondary)',
+        ...(icône ? { display: 'inline-flex', alignItems: 'center', gap: 5 } : {}),
       }}
       onClick={onClick}
     >
+      {icône}
       {libellé}
     </button>
   );

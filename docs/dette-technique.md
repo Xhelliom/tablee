@@ -882,6 +882,41 @@ et un champ dans l'écran du foyer ; pour le rattrapage, retirer la ligne
 (`mailto:…`), les trois ou aucune ; générées par `npx web-push generate-vapid-keys`.
 Changer la paire désabonne de fait tous les appareils.
 
+
+---
+
+## 28. Les repères de fréquence du PNNS : adultes seulement, et trois lectures approchées
+
+**Validé par le propriétaire le 09/10/2026**, point par point, avant toute
+écriture. Source unique : Santé publique France, *Recommandations relatives à
+l'alimentation, à l'activité physique et à la sédentarité pour les adultes*
+(décembre 2018, diffusé en 2019), annexe 5, p. 48-49. Les valeurs et leur
+citation sont dans `db/seeds/frequency-reference.csv` ; la semaine les compte
+pour le **foyer** (`/api/week`, `frequencies`), jamais par convive.
+
+**Ce qui est approximatif, et ce que ça coûte.**
+
+- **Aucun repère pour les enfants.** Le document est strictement adulte ; il
+  dit que des repères enfants existent, sans les donner (p. 5). Rien n'est
+  inventé (I1) : un plafond n'est calculé que sur les grammes des adultes et
+  n'apparaît sur aucune fiche. Le lever suppose la source enfants.
+- **Poisson gras et viande hors volaille se lisent au nom Ciqual**, pas au
+  sous-groupe (`food` ne le stocke pas). Les motifs reprennent les exemples du
+  document, donc incomplets : « saumon, maquereau, sardine, hareng… » ;
+  « bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche » laisse hors
+  compte agneau et abats. Le total viande est un minimum.
+- **Le quinoa** est cité avec les légumes secs par le document, mais Ciqual le
+  classe en `cereale` : il n'est pas compté.
+- **Les fruits à coque** sont « une petite poignée par jour » : lus en jours
+  par semaine (7), pas en fois.
+- **Les grammes d'un ingrédient de recette Jow** sont par convive et comptés
+  tels quels pour chaque adulte à table, sans `portion_coef`. Un plat saisi à
+  la main se répartit par `share`. Un gramme inconnu rend le total « au moins ».
+- **Un ingrédient Jow non rattaché ne compte pas** — il ne retire rien non plus ;
+  le compte peut être sous-estimé, jamais abaissé.
+
+**Ce qui le lèverait.** La source enfants ; le sous-groupe Ciqual stocké sur
+`food` ; la volaille n'a pas de chiffre dans le document et n'est pas affichée.
 ---
 
 ## Levées
@@ -945,3 +980,12 @@ forme qu'il a. Le détail est dans l'historique git.
   caractère n'en sort. 84 Ko au total, et plus aucune requête vers un tiers au
   chargement — hors les photos de plats de Jow, qui sont le sujet même du
   §8ter.
+
+**Régimes et repères masqués (12/10/2026).** Pas de réglage de foyer : les
+régimes sont ceux des convives (`eater.diets`, dont `sans_viande` et
+`sans_poisson`, ajoutés aux pastilles). Un repère poisson, viande ou charcuterie
+ne s'affiche pas quand **tous** les adultes actifs l'excluent
+(`hiddenFrequencyCodes`) ; un seul adulte qui en mange le garde, et ses repas
+comptent. « Végétarien » et « végétalien » excluent viande et poisson. Un régime
+est une valeur déclarée librement : une faute de frappe dans `diets` ne masque
+rien. Les enfants ne pèsent pas dans ce calcul, comme dans les repères.

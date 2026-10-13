@@ -9,12 +9,14 @@
 import type { FastifyInstance } from 'fastify';
 import { ageAt, isMinor } from '../nutrition/age.ts';
 import { bilanJournalier } from '../nutrition/daily.ts';
+import { bilanFrequences, hiddenFrequencyCodes } from '../nutrition/frequency.ts';
 import { diversityByEater, familyDays, weeklyMeans } from '../nutrition/weekly.ts';
 import { ApiError } from '../http/errors.ts';
 import { listEaters } from '../repo/eaters.ts';
-import { loadReferences, seasonalForMonth } from '../repo/refs.ts';
+import { loadFrequencyReferences, loadReferences, seasonalForMonth } from '../repo/refs.ts';
 import {
-  diversityRows, householdPlantAverage, householdTimezone, mealsForDay, mealsForRange, weekGrid,
+  diversityRows, frequencyInputs, householdPlantAverage, householdTimezone, mealsForDay,
+  mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
 import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
@@ -94,11 +96,13 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« from » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, cells, references, ranged, diversity] = await Promise.all([
+    const [eaters, cells, references, ranged, frequencyRefs, frequency, diversity] = await Promise.all([
       listEaters(request.db, householdId),
       weekGrid(request.db, householdId, from, days, timezone),
       loadReferences(request.db),
       mealsForRange(request.db, householdId, from, days, timezone),
+      loadFrequencyReferences(request.db),
+      frequencyInputs(request.db, householdId, from, days, timezone),
       diversityRows(request.db, householdId, from, days, timezone),
     ]);
 
@@ -119,12 +123,22 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       references,
     );
 
+    // Un repère que le régime de tous les adultes exclut ne s'affiche pas.
+    const hidden = hiddenFrequencyCodes(
+      eaters.filter((e) => e.active && !isMinor(e.birthDate)),
+      frequencyRefs.map((r) => r.code),
+    );
+    const shownFrequencies = frequencyRefs.filter((r) => !hidden.has(r.code));
+
     return {
       from,
       days,
       eaters: eaters.map((m) => ({ id: m.id, firstName: m.firstName, color: m.color })),
       cells,
       nutrients,
+      // Repères de fréquence (SPF, adultes) : au niveau du foyer seulement, et
+      // aucun par convive — un plafond n'a rien à faire sur la fiche d'un enfant.
+      frequencies: bilanFrequences({ references: shownFrequencies, ...frequency }),
       diversity: { ...diversityByEater(diversity), families: familyDays(diversity) },
     };
   });

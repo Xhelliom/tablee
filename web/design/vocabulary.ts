@@ -21,6 +21,8 @@ import type { Nutrient, Slot } from '../api.ts';
 export const DIET_CHOICES: { value: string; label: string }[] = [
   { value: 'vegetarien', label: 'Végétarien' },
   { value: 'vegetalien', label: 'Végétalien' },
+  { value: 'sans_viande', label: 'Sans viande' },
+  { value: 'sans_poisson', label: 'Sans poisson' },
   { value: 'sans_porc', label: 'Sans porc' },
   { value: 'sans_gluten', label: 'Sans gluten' },
   { value: 'sans_lactose', label: 'Sans lactose' },
