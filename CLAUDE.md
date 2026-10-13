@@ -137,7 +137,10 @@ pas filtré par la RLS.
 - **Ne jamais logger ni persister** le paramètre `key` ou `userId` d'un lien de
   partage Jow : c'est un token de compte.
 - **Ne pas utiliser l'API interne non documentée de Jow.** Pages publiques
-  uniquement.
+  uniquement. **Seule exception, décidée par le propriétaire le 13/10/2026 :**
+  `GET /share/link/details` d'un lien de commande (`server/jow/order.ts`), dont
+  `key`/`userId` sont ceux d'un partage public. I6 reste entier : jamais
+  stockés ni loggés.
 
 Sur les trois premiers points : en cas de doute, s'arrêter et demander. Ce ne
 sont pas des préférences de style.

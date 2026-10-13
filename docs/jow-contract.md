@@ -414,3 +414,18 @@ lever ; C/D ne valent la peine que si le geste manuel de B est jugé trop lourd
 Pas de capture : `npm run jow:capture` ne sait capturer qu'une page recette, et
 la page de sélection n'en contient aucune. Aucune fixture ajoutée, aucun code
 modifié.
+
+### Décision du 13/10/2026 — option D retenue, pour le stock uniquement
+
+Le propriétaire tient `key` et `userId` d'un lien de **partage** pour des clés
+publiques et lève I7 **pour ce seul appel** : `GET https://api.jow.fr/public/share/link/details?key&userId&sharingId`
+(hôte lu dans le bundle public ; aucune autre route de l'API interne). Livré :
+`server/jow/order.ts`, `POST /api/upcoming-dishes/from-order`, champ sur
+l'écran « Plats à venir ». I6 est maintenu : les trois valeurs ne vivent que
+le temps de l'appel, jamais stockées, jamais loggées, jamais dans une erreur.
+
+**Non observé** : la réponse réelle. `meals[].recipe.id` vient de la lecture du
+bundle (`getSharedRecipes`), le même `accessToken` facultatif y est passé. À
+confirmer avec un vrai lien de commande ; si la forme diffère, seul
+`fetchOrderRecipeIds` change. Chaque plat est ensuite lu sur sa page recette
+publique, comme un partage ordinaire.

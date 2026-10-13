@@ -16,6 +16,8 @@ export function UpcomingDishesScreen(): React.ReactElement {
   const [dishes, setDishes] = useState<UpcomingDish[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [d, r] = await Promise.all([
@@ -37,6 +39,25 @@ export function UpcomingDishesScreen(): React.ReactElement {
       await load();
     } catch {
       setError('Le changement n’a pas pu être enregistré.');
+    }
+  };
+
+  /**
+   * Le lien de commande part tel quel au serveur et n'est gardé nulle part
+   * ici : le champ est vidé dès la réponse (I6).
+   */
+  const importer = async (): Promise<void> => {
+    setError(null);
+    setNotice(null);
+    try {
+      const r = await api.post<{ dishes: UpcomingDish[]; failed: number }>(
+        '/api/upcoming-dishes/from-order', { text: order });
+      setOrder('');
+      setNotice(`${r.dishes.length} plat${r.dishes.length > 1 ? 's' : ''} ajouté${r.dishes.length > 1 ? 's' : ''}`
+        + (r.failed > 0 ? `, ${r.failed} non lu${r.failed > 1 ? 's' : ''} (à saisir à la main).` : '.'));
+      await load();
+    } catch {
+      setError('Ce lien de commande n’a pas pu être lu.');
     }
   };
 
@@ -68,6 +89,18 @@ export function UpcomingDishesScreen(): React.ReactElement {
           )}
         </div>
       ) : null}
+
+      <div className="sec" style={{ paddingTop: 20 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+          Importer une commande Jow
+        </p>
+        <textarea rows={2} value={order} onChange={(e) => setOrder(e.target.value)}
+                  placeholder="Colle le lien de partage de la commande"
+                  style={{ width: '100%', marginBottom: 8 }} />
+        <button type="button" className="chip" disabled={order.trim() === ''}
+                onClick={() => void importer()}>Importer les plats</button>
+        {notice !== null ? <p className="meta" style={{ marginTop: 8 }}>{notice}</p> : null}
+      </div>
 
       {recipes.length > 0 ? (
         <div className="sec" style={{ paddingTop: 20 }}>
