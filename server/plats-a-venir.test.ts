@@ -162,3 +162,53 @@ describe('plats à venir', { skip: enabled ? false : SKIP_MESSAGE }, () => {
     });
   });
 });
+
+describe('plats à venir — depuis une commande Jow', { skip: enabled ? false : SKIP_MESSAGE }, () => {
+  it('ajoute les plats de la commande, compte ceux qui ne se lisent pas, ne garde aucun jeton', async (t) => {
+    const pool = await testPool();
+    const auth = buildTestAuth(pool);
+    const app = buildApp({ pool, auth, baseURL: TEST_BASE_URL }, { webDir: '/dev/null/absent' });
+    await app.ready();
+    try {
+      await resetDatabase(pool);
+      const nous = await signUpWithHousehold(auth, pool, 'nous@exemple.test', 'Chez nous');
+      const connue = '650b16ade7cc8d0013ce4a6e';
+      const absente = 'f'.repeat(24);
+      await pool.query(
+        `insert into recipe (source, jow_recipe_id, title, base_servings)
+         values ('jow', $1, 'Galette végé', 2)`, [connue]);
+      const vues: string[] = [];
+      t.mock.method(globalThis, 'fetch', (u: URL | string) => {
+        vues.push(String(u));
+        return Promise.resolve(String(u).includes('/share/link/details')
+          ? Response.json({ meals: [{ recipe: { id: connue } }, { recipe: { id: connue } }, { recipe: { id: absente } }] })
+          : new Response('', { status: 404 }));
+      });
+
+      const r = await app.inject({
+        method: 'POST', url: '/api/upcoming-dishes/from-order',
+        headers: { cookie: nous.cookie, origin: TEST_BASE_URL },
+        payload: { text: 'https://jow.fr/cooking/recipes-selection/s1?key=SECRETKEY&userId=SECRETUSER' },
+      });
+      assert.equal(r.statusCode, 201, r.body);
+      assert.equal(r.json().dishes.length, 2, 'même recette deux fois = deux lignes');
+      assert.equal(r.json().failed, 1);
+      assert.doesNotMatch(r.body, /SECRETKEY|SECRETUSER/);
+      const liste = await app.inject({
+        method: 'GET', url: '/api/upcoming-dishes',
+        headers: { cookie: nous.cookie, origin: TEST_BASE_URL },
+      });
+      assert.equal(liste.json().dishes.length, 2);
+
+      const sans = await app.inject({
+        method: 'POST', url: '/api/upcoming-dishes/from-order',
+        headers: { cookie: nous.cookie, origin: TEST_BASE_URL },
+        payload: { text: 'pas un lien' },
+      });
+      assert.equal(sans.statusCode, 400);
+    } finally {
+      await app.close();
+      await closeTestPool();
+    }
+  });
+});
