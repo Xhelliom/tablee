@@ -1,6 +1,7 @@
 /**
  * Lire les plats d'une commande Jow à partir de son lien de partage
- * (`recipes-selection/<sharingId>?key=…&userId=…`).
+ * (`recipes-selection/<sharingId>?key=…&userId=…`, ou la forme
+ * `app.jow.com/<court>?action=menuSharing&sharingId=…&userId=…&key=…`).
  *
  * ⚠️ Seule exception à I7, décidée par le propriétaire le 13/10/2026 : la page
  * de ce lien est une coquille vide (`docs/jow-contract.md` §10), les plats ne
@@ -26,7 +27,8 @@ export function parseOrderLink(text: string): OrderLink | null {
     let url: URL;
     try { url = new URL(raw); } catch { continue; }
     if (!/(^|\.)jow\.(fr|com)$/i.test(url.hostname)) continue;
-    const sharingId = url.pathname.match(/\/recipes-selection\/([^/?#]+)/i)?.[1];
+    const sharingId = url.pathname.match(/\/recipes-selection\/([^/?#]+)/i)?.[1]
+      ?? url.searchParams.get('sharingId') ?? undefined;
     const key = url.searchParams.get('key');
     const userId = url.searchParams.get('userId');
     if (sharingId !== undefined && key !== null && userId !== null) {

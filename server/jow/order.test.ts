@@ -12,6 +12,11 @@ describe('parseOrderLink', () => {
     assert.deepEqual(parseOrderLink(`Ma commande : ${LIEN}`),
       { sharingId: 's123', key: 'CLE', userId: 'U1' });
   });
+  it('reconnaît la forme app.jow.com avec sharingId en paramètre', () => {
+    assert.deepEqual(
+      parseOrderLink('https://app.jow.com/abc?action=menuSharing&sharingId=s456&userId=U2&key=CLE2'),
+      { sharingId: 's456', key: 'CLE2', userId: 'U2' });
+  });
   it('refuse une recette, un autre domaine ou un lien sans clé', () => {
     assert.equal(parseOrderLink(`https://jow.fr/recipes/x-${'c'.repeat(20)}`), null);
     assert.equal(parseOrderLink('https://exemple.test/cooking/recipes-selection/s?key=a&userId=b'), null);
