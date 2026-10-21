@@ -69,6 +69,18 @@ describe('bilanJournalier', () => {
     assert.equal(result.energyAverage7d?.percent, 57.1);
   });
 
+  it('répartit l’énergie des 7 jours par créneau, part figée comprise, sans repère', () => {
+    const result = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST, meals: [],
+      energyWeek: [
+        [repas({ kcal: 400, slot: 'petit_dej' }), repas({ kcal: 1200, share: 0.5, slot: 'diner' })],
+        [repas({ kcal: 800, slot: 'dejeuner' }), repas({ kcal: null, slot: 'collation' })],
+      ],
+    });
+    // 400 + 600 + 800 = 1800 ; une collation sans énergie connue n'a pas de clé.
+    assert.deepEqual(result.energyAverage7d?.bySlot, { petit_dej: 22, diner: 33, dejeuner: 44 });
+  });
+
   it('filet 2 : aucune moyenne d’énergie sous 18 ans', () => {
     const result = bilanJournalier({
       sex: 'F', age: 17, references: REPERES_DE_TEST, meals: [],

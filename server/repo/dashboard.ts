@@ -11,6 +11,7 @@ import { isMinor } from '../nutrition/age.ts';
 import type { DailyMeal } from '../nutrition/daily.ts';
 import type { FrequencyLine, FrequencyParticipant } from '../nutrition/frequency.ts';
 import type { DiversityRow } from '../nutrition/weekly.ts';
+import type { Slot } from './meals.ts';
 
 export async function householdTimezone(db: HouseholdDb, householdId: string): Promise<string> {
   const { rows } = await db.query<{ timezone: string }>(
@@ -56,6 +57,7 @@ export async function mealsForRange(
 ): Promise<RangedMealForMember[]> {
   const { rows } = await db.query<{
     date: string; meal_id: string; eater_id: string; share: number;
+    slot: Slot;
     kcal: number | null; protein_g: number | null; carb_g: number | null;
     fat_g: number | null; fiber_g: number | null;
     kcal_max: number | null; protein_g_max: number | null; carb_g_max: number | null;
@@ -63,7 +65,7 @@ export async function mealsForRange(
     grams_total: number | null; grams_plant: number | null; grams_classified: number | null;
   }>(
     `select (m.eaten_at at time zone $4)::date::text as date,
-            m.id as meal_id, mp.eater_id, mp.share,
+            m.id as meal_id, m.slot, mp.eater_id, mp.share,
             n.kcal, n.protein_g, n.carb_g, n.fat_g, n.fiber_g,
             n.kcal_max, n.protein_g_max, n.carb_g_max, n.fat_g_max, n.fiber_g_max,
             n.grams_total, n.grams_plant, n.grams_classified
@@ -79,6 +81,7 @@ export async function mealsForRange(
 
   return rows.map((r) => ({
     date: r.date,
+    slot: r.slot,
     mealId: r.meal_id,
     eaterId: r.eater_id,
     share: r.share,

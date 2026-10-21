@@ -1343,6 +1343,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       const of = (id: string) => body.dashboard.find((d: any) => d.eater.id === id).balance;
       assert.equal(of(adulte).energyAverage7d.days, 2);
       assert.equal(of(adulte).energyAverage7d.average, 130);
+      assert.deepEqual(of(adulte).energyAverage7d.bySlot, { dejeuner: 100 });
       assert.equal('energyAverage7d' in of(enfant), false);
       assert.equal(of(enfant).bars.some((b: any) => b.nutrient === 'kcal'), false);
     });

@@ -28,7 +28,7 @@ import { useState } from 'react';
 import type { BarState, DailyBalance, EnergyAverage, Nutrient, NutrientBar, PlantBar } from '../api.ts';
 import { Avatar } from './Avatar.tsx';
 import { IconCheckCircle, IconInfo, IconPlusCircle, IconUpCircle } from '../icons.tsx';
-import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS } from '../design/vocabulary.ts';
+import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER } from '../design/vocabulary.ts';
 import { formatPercentRange, formatQuantity } from '../design/quantities.ts';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
 
@@ -248,6 +248,31 @@ function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElemen
         {energy.average === null
           ? 'Indisponible : aucun repas des 7 derniers jours n’a d’énergie connue.'
           : 'Une journée saisie en partie compte comme entière : la moyenne est un minimum, peut-être plus haute en vrai.'}
+      </p>
+      <EnergySlots bySlot={energy.bySlot} />
+    </div>
+  );
+}
+
+/**
+ * La part de l'énergie des 7 jours par moment de la journée. Une répartition,
+ * pas une cible : aucun repère, aucun statut, la couleur neutre du texte.
+ */
+function EnergySlots({ bySlot }: { bySlot: EnergyAverage['bySlot'] }): React.ReactElement | null {
+  const slots = SLOT_ORDER.filter((slot) => bySlot[slot] !== undefined);
+  if (slots.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span className="meta">Répartition par moment de la journée, sur 7 jours</span>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
+        {slots.map((slot) => (
+          <li key={slot} style={{ fontSize: 13 }}>
+            {SLOT_LABELS[slot]} <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{bySlot[slot]} %</strong>
+          </li>
+        ))}
+      </ul>
+      <p className="meta">
+        Les collations s’oublient souvent à la saisie : leur part est peut-être sous-estimée.
       </p>
     </div>
   );

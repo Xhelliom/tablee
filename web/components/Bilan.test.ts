@@ -21,7 +21,7 @@ const base: DailyBalance = { bars: [], mealCount: 0, plant: {
 
 describe('BilanCard — moyenne d’énergie', () => {
   it('l’affiche, avec la mise en garde « minimum », quand elle existe', () => {
-    const html = rendu({ ...base, energyAverage7d: { average: 1200, days: 2, reference: null, percent: null } });
+    const html = rendu({ ...base, energyAverage7d: { average: 1200, days: 2, reference: null, percent: null, bySlot: {} } });
     assert.match(html, /Énergie, moyenne sur 7 jours/);
     assert.match(html, /est un minimum/);
   });
@@ -30,5 +30,15 @@ describe('BilanCard — moyenne d’énergie', () => {
     const html = rendu(base);
     assert.doesNotMatch(html, /Énergie/);
     assert.doesNotMatch(html, /minimum/);
+    assert.doesNotMatch(html, /Répartition/);
+  });
+
+  it('répartit par moment de la journée et dit que les collations peuvent manquer', () => {
+    const html = rendu({ ...base, energyAverage7d: {
+      average: 1200, days: 2, reference: null, percent: null, bySlot: { diner: 60, dejeuner: 40 },
+    } });
+    assert.match(html, /Déjeuner <strong[^>]*>40 %/);
+    assert.ok(html.indexOf('Déjeuner') < html.indexOf('Dîner'), 'ordre de la journée');
+    assert.match(html, /collations[^<]*sous-estimée/);
   });
 });
