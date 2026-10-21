@@ -248,12 +248,12 @@ export async function frequencyInputs(
 
   const items = await db.query<{
     meal_id: string; date: string; category: string | null; name: string;
-    grams: number | null; basis: 'portion' | 'plat';
+    grams: number | null; basis: 'portion' | 'plat'; alcohol_100g: number | null;
   }>(
     // Un plat saisi à la main se réduit des restes (`eatenFraction`) ; un
     // ingrédient de recette Jow est déjà par convive.
     `select m.id as meal_id, (m.eaten_at at time zone $4)::date::text as date,
-            f.category, f.name, 'plat' as basis,
+            f.category, f.name, 'plat' as basis, f.alcohol_100g,
             mi.quantity_g * case when m.recipe_id is null
               then m.servings / (m.servings + greatest(coalesce(m.remaining_servings, 0), 0))
               else 1 end as grams
@@ -263,7 +263,7 @@ export async function frequencyInputs(
      where ${window}
      union all
      select m.id, (m.eaten_at at time zone $4)::date::text,
-            f.category, f.name, 'portion', ri.quantity_g
+            f.category, f.name, 'portion', f.alcohol_100g, ri.quantity_g
      from meal m
      join recipe_ingredient ri on ri.recipe_id = m.recipe_id
      join food f on f.id = ri.food_id
@@ -289,7 +289,7 @@ export async function frequencyInputs(
   return {
     lines: items.rows.map((r) => ({
       mealId: r.meal_id, date: r.date, category: r.category, name: r.name,
-      grams: r.grams, basis: r.basis,
+      grams: r.grams, basis: r.basis, alcoholPer100g: r.alcohol_100g,
     })),
     participants: people.rows.map((r) => ({
       mealId: r.meal_id, eaterId: r.eater_id, share: r.share,

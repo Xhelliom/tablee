@@ -130,9 +130,9 @@ describe('parseCompoChunk', () => {
     assert.equal(rows[1]?.teneur.max, null, 'traces reste sans majorant');
   });
 
-  it('couvre exactement les cinq macros du §9', () => {
+  it('couvre exactement les cinq macros du §9, et l’alcool (027)', () => {
     assert.deepEqual(Object.values(CIQUAL_NUTRIENTS).sort(), [
-      'carb_100g', 'fat_100g', 'fiber_100g', 'kcal_100g', 'protein_100g',
+      'alcohol_100g', 'carb_100g', 'fat_100g', 'fiber_100g', 'kcal_100g', 'protein_100g',
     ]);
   });
 });

@@ -15,6 +15,15 @@
 # (insensible à la casse) sur le nom Ciqual, quand la catégorie ne suffit pas.
 # Les exemples du document font foi du motif — « saumon, maquereau, sardine,
 # hareng… » ; « bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche ».
+#
+# Ajout du 21/10/2026, `alcool` : le repère alcool de Santé publique France et
+# de l'INCa (2017). Le PDF ci-dessus était injoignable ce jour-là (503) : la
+# citation est recopiée de la page de l'Ordre national des pharmaciens qui
+# relaie la campagne de SPF, lue le 21/10/2026. À revérifier dans le document
+# SPF lui-même (docs/dette-technique.md). `value` est en verres standard
+# (10 g d'alcool pur), par adulte sur la semaine. La troisième dimension, « des
+# jours sans consommation », ne donne aucun nombre : elle reste dans la
+# citation, pas dans `value`.
 code,label,kind,value,categories,name_pattern,source,citation
 legumes_secs,Légumes secs,min_times,2,legumineuse,,"Santé publique France, déc. 2018, annexe 5, p. 49","Légumes secs (lentilles, haricots, pois chiches, quinoa…) : Au moins 2 fois par semaine ; peuvent remplacer la viande et la volaille"
 poisson,Poisson et fruits de mer,min_times,2,poisson|fruit_de_mer,,"Santé publique France, déc. 2018, annexe 5, p. 49","Poisson et fruits de mer : 2 fois par semaine (dont un poisson gras*)"
@@ -22,3 +31,4 @@ poisson_gras,dont un poisson gras,min_times,1,poisson,saumon|maquereau|sardine|h
 fruits_a_coque,Fruits à coque,min_days,7,oleagineux,,"Santé publique France, déc. 2018, annexe 5, p. 48","Fruits à coque sans sel ajouté (noix, noisettes, pistaches, amandes…) : une petite poignée par jour."
 viande,Viande hors volaille,max_grams,500,viande,b(oe|œ)uf|porc|veau|mouton|ch[èe]vre|cheval|sanglier|biche,"Santé publique France, déc. 2018, annexe 5, p. 49","Privilégier la volaille et ne pas dépasser 500g de viande* par semaine — * bœuf, porc, veau, mouton, chèvre, cheval, sanglier, biche"
 charcuterie,Charcuterie,max_grams,150,charcuterie,,"Santé publique France, déc. 2018, annexe 5, p. 49","Charcuterie (dont jambon blanc) : Limiter la consommation. Ne pas dépasser 150g par semaine et privilégier le jambon blanc"
+alcool,Boissons alcoolisées,max_drinks,10,boisson_alcoolisee,,"Santé publique France et INCa, repère 2017, relayé par l'Ordre national des pharmaciens le 17/03/2022 — https://www.ordre.pharmacien.fr/les-communications/focus-sur/les-actualites/alcool-maximum-2-verres-par-jour-et-pas-tous-les-jours","Ne pas consommer plus de 10 verres-standard par semaine ; ne pas consommer plus de 2 verres-standard par jour ; avoir des jours dans la semaine sans consommation"

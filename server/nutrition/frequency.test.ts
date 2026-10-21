@@ -10,7 +10,7 @@ const ref = (over: Partial<FrequencyReference>): FrequencyReference => ({
 });
 const line = (over: Partial<FrequencyLine>): FrequencyLine => ({
   mealId: 'm1', date: '2026-10-05', category: 'legumineuse', name: 'Lentille',
-  grams: 100, basis: 'plat', ...over,
+  grams: 100, basis: 'plat', alcoholPer100g: null, ...over,
 });
 const adult = (mealId: string, eaterId = 'a', share = 1): FrequencyParticipant =>
   ({ mealId, eaterId, share, adult: true });
@@ -80,5 +80,56 @@ describe('bilanFrequences', () => {
       participants: [adult('m1')], mealCount: 1,
     });
     assert.equal(s?.partial, true);
+  });
+
+  describe('alcool (max_drinks)', () => {
+    const alcool = ref({ kind: 'max_drinks', value: 10, categories: ['boisson_alcoolisee'] });
+    const vin = (over: Partial<FrequencyLine>): FrequencyLine =>
+      line({ category: 'boisson_alcoolisee', name: 'Vin rouge', grams: 100, alcoholPer100g: 10, ...over });
+
+    it('ne dit rien (null) sans boisson saisie, même avec des repas', () => {
+      const [s] = bilanFrequences({
+        references: [alcool], lines: [line({})], participants: [adult('m1')], mealCount: 1,
+      });
+      assert.equal(s?.current, null);
+      assert.equal(s?.met, null);
+    });
+
+    it('compte des verres standard de 10 g, par adulte, sans les mineurs', () => {
+      const [s] = bilanFrequences({
+        references: [alcool],
+        // 300 g de vin à 10 g/100 g = 30 g d'alcool = 3 verres, partagés à parts égales.
+        lines: [vin({ grams: 300 })],
+        participants: [adult('m1', 'a', 0.5), adult('m1', 'b', 0.5), child('m1')],
+        mealCount: 1,
+      });
+      assert.equal(s?.unit, 'verres');
+      assert.equal(s?.current, 1.5);
+      assert.equal(s?.met, true);
+    });
+
+    it('ignore le vin d’une recette Jow : un ingrédient de cuisson', () => {
+      const [s] = bilanFrequences({
+        references: [alcool], lines: [vin({ basis: 'portion' })],
+        participants: [adult('m1')], mealCount: 1,
+      });
+      assert.equal(s?.current, null);
+    });
+
+    it('rien pour un repas sans adulte', () => {
+      const [s] = bilanFrequences({
+        references: [alcool], lines: [vin({})], participants: [child('m1')], mealCount: 1,
+      });
+      assert.equal(s?.current, null);
+    });
+
+    it('une teneur inconnue rend le compte partiel, pas faux', () => {
+      const [s] = bilanFrequences({
+        references: [alcool], lines: [vin({}), vin({ alcoholPer100g: null })],
+        participants: [adult('m1')], mealCount: 1,
+      });
+      assert.equal(s?.current, 1);
+      assert.equal(s?.partial, true);
+    });
   });
 });

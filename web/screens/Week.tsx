@@ -111,10 +111,10 @@ function Frequencies({ items }: { items: WeekResponse['frequencies'] }): React.R
         Repères de Santé publique France pour les adultes, comptés pour le foyer.
       </p>
       {items.map((item) => {
-        const limit = item.kind === 'max_grams';
+        const limit = item.kind === 'max_grams' || item.kind === 'max_drinks';
         const current = item.current === null
           ? 'rien de saisi'
-          : `${item.partial ? 'au moins ' : ''}${item.current}\u00a0${item.unit}`;
+          : `${item.partial ? 'au moins ' : ''}${item.current.toLocaleString('fr-FR')}\u00a0${item.unit}`;
         return (
           <div key={item.code} className="card" style={{ padding: '12px 15px' }}>
             <p style={{ fontSize: 14 }}>{item.label}</p>

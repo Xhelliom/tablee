@@ -10,9 +10,14 @@
  * Tout se lit au niveau du **foyer** (I5) : cette fonction ne rend rien par
  * personne, et un plafond ne se calcule que sur les grammes des adultes — un
  * enfant n'a ni repère ni total ici. Elle ne touche à aucune base.
+ *
+ * L'alcool (`max_drinks`, 027) se compte en verres standard — 10 g d'alcool
+ * pur — depuis la teneur Ciqual, et sur les seuls plats saisis : le vin d'une
+ * recette Jow est un ingrédient de cuisson, pas un verre. Sans aucune boisson
+ * saisie, il vaut `null`, jamais 0 : personne ne saisissait ses verres avant.
  */
 
-export type FrequencyKind = 'min_times' | 'min_days' | 'max_grams';
+export type FrequencyKind = 'min_times' | 'min_days' | 'max_grams' | 'max_drinks';
 
 export interface FrequencyReference {
   code: string;
@@ -38,6 +43,8 @@ export interface FrequencyLine {
    * `plat` : grammes du plat entier, que `share` répartit.
    */
   basis: 'portion' | 'plat';
+  /** Alcool en g/100 g (Ciqual 60000). `null` : inconnu. */
+  alcoholPer100g: number | null;
 }
 
 export interface FrequencyParticipant {
@@ -52,7 +59,7 @@ export interface FrequencyStatus {
   label: string;
   kind: FrequencyKind;
   target: number;
-  unit: 'fois' | 'jours' | 'g';
+  unit: 'fois' | 'jours' | 'g' | 'verres';
   /** `null` : rien de saisi sur la fenêtre, ou aucun adulte à table. */
   current: number | null;
   /** `null` quand `current` l'est. Un plafond tenu est « atteint » pour de bon. */
@@ -85,6 +92,22 @@ export function bilanFrequences(input: {
       code: ref.code, label: ref.label, kind: ref.kind, target: ref.value,
       source: ref.source, citation: ref.citation,
     };
+
+    if (ref.kind === 'max_drinks') {
+      const drinks = matching.filter((l) => l.basis === 'plat');
+      if (adults.size === 0 || drinks.length === 0) {
+        return { ...base, unit: 'verres' as const, current: null, met: null, partial: false };
+      }
+      let total = 0;
+      let partial = false;
+      for (const line of drinks) {
+        if (line.grams === null || line.alcoholPer100g === null) { partial = true; continue; }
+        const glasses = (line.grams * line.alcoholPer100g) / 100 / 10;
+        for (const p of byMeal.get(line.mealId) ?? []) if (p.adult) total += glasses * p.share;
+      }
+      const current = Math.round((total / adults.size) * 10) / 10;
+      return { ...base, unit: 'verres' as const, current, met: current <= ref.value, partial };
+    }
 
     if (ref.kind === 'max_grams') {
       if (adults.size === 0) {

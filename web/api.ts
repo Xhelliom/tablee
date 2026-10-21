@@ -476,9 +476,9 @@ export interface WeekResponse {
   frequencies: {
     code: string;
     label: string;
-    kind: 'min_times' | 'min_days' | 'max_grams';
+    kind: 'min_times' | 'min_days' | 'max_grams' | 'max_drinks';
     target: number;
-    unit: 'fois' | 'jours' | 'g';
+    unit: 'fois' | 'jours' | 'g' | 'verres';
     current: number | null;
     met: boolean | null;
     partial: boolean;

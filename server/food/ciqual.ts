@@ -53,6 +53,8 @@ export const CIQUAL_NUTRIENTS = {
   '31000': 'carb_100g',
   '40000': 'fat_100g',
   '34100': 'fiber_100g',
+  // Alcool (g/100 g) : de quoi compter des verres standard (027).
+  '60000': 'alcohol_100g',
 } as const;
 
 export type NutrientColumn = (typeof CIQUAL_NUTRIENTS)[keyof typeof CIQUAL_NUTRIENTS];

@@ -138,7 +138,9 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       nutrients,
       // Repères de fréquence (SPF, adultes) : au niveau du foyer seulement, et
       // aucun par convive — un plafond n'a rien à faire sur la fiche d'un enfant.
-      frequencies: bilanFrequences({ references: shownFrequencies, ...frequency }),
+      // L'alcool n'est pas mentionné tant qu'aucun verre n'est saisi (027).
+      frequencies: bilanFrequences({ references: shownFrequencies, ...frequency })
+        .filter((f) => f.kind !== 'max_drinks' || f.current !== null),
       diversity: { ...diversityByEater(diversity), families: familyDays(diversity) },
     };
   });
