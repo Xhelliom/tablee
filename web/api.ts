@@ -225,6 +225,8 @@ export interface EnergyAverage {
   days: number;
   reference: NutrientReference | null;
   percent: number | null;
+  /** Part de l'énergie des 7 jours par créneau, 0-100 ; une répartition, sans repère. */
+  bySlot: Partial<Record<Slot, number>>;
 }
 
 export interface DailyBalance {

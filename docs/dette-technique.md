@@ -753,6 +753,14 @@ Ciqual, **les polyols sont déjà comptés dans les glucides**.
 passé de 887 aliments à 145 entre 2020 et 2025 sans qu'on écrive une ligne de
 calcul ; c'est le bon rythme pour un référentiel public.
 
+**Répartition par moment de la journée (21/10/2026).** Sous la moyenne sur 7
+jours, la part de l'énergie par créneau (`meal.slot`, `energyBySlot` dans
+`daily.ts`) : une répartition, sans repère ni statut — aucune source n'en
+publie, et aucun n'est écrit. Mêmes trois filets, puisqu'elle vit dans
+`energyAverage7d`. Deux approximations : elle se calcule sur la borne basse
+de chaque repas, comme la moyenne ; et **les collations sont ce qu'on oublie
+de saisir**, leur part est donc un minorant — l'écran le dit à chaque fois.
+
 ---
 
 ## 25. Un export Ciqual posé à la main l'emporte, même s'il est plus vieux

@@ -21,6 +21,7 @@
  */
 import { isMinorAge } from './age.ts';
 import { NUTRIENTS, type Macros, type Nutrient } from './compute.ts';
+import type { Slot } from '../repo/meals.ts';
 import {
   findCeiling, findEnergyShareRange, findReference,
   type NutrientReference, type ReferenceTable,
@@ -94,6 +95,8 @@ export interface DailyMeal extends Macros {
   gramsTotal: number | null;
   gramsPlant: number | null;
   gramsClassified: number | null;
+  /** Le créneau du repas ; seule la répartition de l'énergie sur 7 jours s'en sert. */
+  slot?: Slot | undefined;
 }
 
 /**
@@ -112,6 +115,14 @@ export interface EnergyAverage {
   days: number;
   reference: NutrientReference | null;
   percent: number | null;
+  /**
+   * Part de l'énergie des 7 jours par créneau, 0-100.
+   * Une répartition, pas une cible : aucun repère n'existe, aucun n'est
+   * inventé. Vide si aucune énergie n'est connue ; un créneau sans énergie n'a
+   * pas de clé. Les collations sont ce qu'on oublie de saisir : leur part
+   * est un minorant, et l'écran le dit.
+   */
+  bySlot: Partial<Record<Slot, number>>;
 }
 
 export interface DailyBalance {
@@ -157,7 +168,23 @@ function energyAverage(input: BalanceInput, week: DailyMeal[][]): EnergyAverage 
     .filter((kcal): kcal is number => kcal !== null);
   const average = totals.length === 0 ? null : round(totals.reduce((a, b) => a + b, 0) / totals.length);
   const reference = findReference(input.references, input.sex, input.age, 'kcal');
-  return { average, days: totals.length, reference, percent: percentOf(average, reference) };
+  return {
+    average, days: totals.length, reference, percent: percentOf(average, reference),
+    bySlot: energyBySlot(week.flat()),
+  };
+}
+
+// Borne basse, comme la moyenne : un repas encadré compte pour son minimum.
+function energyBySlot(meals: DailyMeal[]): Partial<Record<Slot, number>> {
+  const totals = new Map<Slot, number>();
+  for (const meal of meals) {
+    if (meal.slot === undefined || meal.kcal === null) continue;
+    totals.set(meal.slot, (totals.get(meal.slot) ?? 0) + meal.kcal * meal.share);
+  }
+  const sum = [...totals.values()].reduce((a, b) => a + b, 0);
+  return Object.fromEntries([...totals]
+    .filter(([, kcal]) => kcal > 0)
+    .map(([slot, kcal]) => [slot, Math.round((kcal / sum) * 100)]));
 }
 
 function bar(nutrient: Nutrient, input: BalanceInput): NutrientBar {
