@@ -361,7 +361,7 @@ async function loadFrequencies(db: pg.Pool): Promise<void> {
   for (const row of rows) {
     const source = requireSource(file, row);
     const kind = requiredText(file, row, 'kind');
-    if (!['min_times', 'min_days', 'max_grams'].includes(kind)) {
+    if (!['min_times', 'min_days', 'max_grams', 'max_drinks'].includes(kind)) {
       throw new SeedError(file, row.line, `kind inconnu : ${kind}`);
     }
     const citation = requiredText(file, row, 'citation');

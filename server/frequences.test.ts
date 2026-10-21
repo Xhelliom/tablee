@@ -49,7 +49,8 @@ describe('repères de fréquence', { skip: enabled ? false : SKIP_MESSAGE }, () 
       `insert into frequency_reference (code, label, kind, value, categories, name_pattern, source, citation)
        values ('legumes_secs', 'Légumes secs', 'min_times', 2, '{legumineuse}', null, 'test', 'test'),
               ('poisson', 'Poisson', 'min_times', 2, '{poisson}', null, 'test', 'test'),
-              ('charcuterie', 'Charcuterie', 'max_grams', 150, '{charcuterie}', null, 'test', 'test')`,
+              ('charcuterie', 'Charcuterie', 'max_grams', 150, '{charcuterie}', null, 'test', 'test'),
+              ('alcool', 'Boissons alcoolisées', 'max_drinks', 10, '{boisson_alcoolisee}', null, 'test', 'test')`,
     );
   });
 
@@ -135,5 +136,21 @@ describe('repères de fréquence', { skip: enabled ? false : SKIP_MESSAGE }, () 
     body = await week();
     assert.ok(status(body, 'poisson'), 'un adulte qui en mange suffit à garder le repère');
     assert.ok(status(body, 'charcuterie'));
+  });
+
+  it('l’alcool n’est pas mentionné sans verre saisi, et compte en verres sinon', async () => {
+    const lentille = await food('Lentille', 'legumineuse');
+    const a = await eater('1985-01-01');
+    await meal('2026-10-05', a, [{ foodId: lentille, g: 100 }]);
+    assert.equal(status(await week(), 'alcool'), undefined, 'ni 0, ni « rien de saisi »');
+
+    const vin = (await pool.query<{ id: string }>(
+      `insert into food (source, name, category, alcohol_100g)
+       values ('manuel', 'Vin rouge', 'boisson_alcoolisee', 10) returning id`,
+    )).rows[0]!.id;
+    await meal('2026-10-06', a, [{ foodId: vin, g: 200 }]);
+    const s = status(await week(), 'alcool');
+    assert.equal(s.current, 2);
+    assert.equal(s.unit, 'verres');
   });
 });

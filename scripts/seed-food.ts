@@ -298,7 +298,7 @@ function blankHoles(): Record<NutrientColumn, Record<TeneurKind, number>> {
   });
   return {
     kcal_100g: kinds(), protein_100g: kinds(), carb_100g: kinds(),
-    fat_100g: kinds(), fiber_100g: kinds(),
+    fat_100g: kinds(), fiber_100g: kinds(), alcohol_100g: kinds(),
   };
 }
 

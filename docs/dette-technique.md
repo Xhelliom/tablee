@@ -919,6 +919,48 @@ pour le **foyer** (`/api/week`, `frequencies`), jamais par convive.
 `food` ; la volaille n'a pas de chiffre dans le document et n'est pas affichée.
 ---
 
+## 29. L'alcool de la semaine : une citation de seconde main, et deux dimensions sur trois non comptées
+
+**Décidé par le propriétaire le 21/10/2026** : le foyer saisira ses verres. Sans
+cette décision, rien n'aurait été construit — un compte à 0 faute de saisie
+aurait été faux, comme l'eau (`docs/indicateurs-possibles.md` §2). Migration
+027 ; la ligne `alcool` de `db/seeds/frequency-reference.csv` ; le compte dans
+`bilanFrequences` (`max_drinks`). **Sans boisson alcoolisée saisie sur la
+semaine, le repère n'est pas mentionné du tout** — ni 0, ni « rien de saisi » —,
+à la demande du propriétaire.
+
+**Ce qui est approximatif, et ce que ça coûte.**
+
+- **La citation vient d'un relais.** Le PDF de Santé publique France était
+  injoignable le 21/10/2026 (site en maintenance, 503 ; archive hors ligne).
+  Le texte est recopié de la page de l'Ordre national des pharmaciens du
+  17/03/2022, qui relaie la campagne SPF/INCa, et recoupé par plusieurs
+  articles. Les chiffres (10 par semaine, 2 par jour) ne font pas débat ; la
+  phrase exacte de SPF, si. À relire dans le document SPF et à corriger la
+  colonne `source` en conséquence.
+- **Seule la dimension hebdomadaire est comptée** (10 verres standard). « Pas
+  plus de 2 par jour » et « des jours sans consommation » restent dans la
+  citation, sous la ligne : la seconde ne donne aucun nombre, et la première
+  demanderait un compte par jour qu'une moyenne du foyer rend trompeur.
+- **C'est une moyenne des adultes à table**, comme la charcuterie : un adulte à
+  14 verres et un autre à 0 font 7, « tenu ». Le compte par personne est
+  exclu (I5 : ni score ni série par personne).
+- **Un verre standard = 10 g d'alcool pur**, calculé depuis la teneur Ciqual
+  (constituant 60000, g/100 g) et les grammes saisis. Une teneur inconnue rend
+  le total « au moins ».
+- **Le vin d'une recette Jow ne compte pas** : c'est un ingrédient de cuisson,
+  et l'alcool s'évapore en partie. Seuls les plats saisis comptent — y compris
+  un plat fait maison décrit avec du vin, qui sera compté comme bu.
+- **Ciqual 2025 n'a pas été relu pour la constante 60000** : vérifiée sur
+  l'export 2020 local (vin rouge 10,2 g/100 g, 3 178 teneurs exactes). `etl`
+  passe à 3 pour réimporter au déploiement ; le rapport du seed dira la
+  couverture réelle.
+
+**Ce qui le lèverait.** Le document SPF lu dans le texte ; un compte par jour
+si le propriétaire veut la deuxième dimension.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

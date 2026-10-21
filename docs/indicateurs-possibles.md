@@ -399,6 +399,16 @@ couple calcium/fer n'a pas fait la preuve qu'on regarde ce genre de barre.
   pas — personne ne saisit ses boissons. Un indicateur d'hydratation serait
   faux par construction, et faux vers le bas, ce qui est le pire sens.
 
+### Alcool — `60000`
+
+- **Ciqual** : 3 178 teneurs exactes sur 3 185 (export 2020). Repère : Santé
+  publique France et INCa, adultes, en verres standard.
+- **Le même piège que l'eau** : personne ne saisissait ses verres, et un compte
+  à 0 serait faux.
+- **Verdict** : oui, **parce que le propriétaire l'a décidé le 21/10/2026** —
+  le foyer saisira ses boissons. Compté pour le foyer, majeurs seulement, et
+  absent de l'écran tant qu'aucun verre n'est saisi (dette n° 29).
+
 ### Diversité alimentaire
 
 - **Source** : aucune. Se calcule sur `food.category` — **49 catégories** déjà
