@@ -880,6 +880,21 @@ seulement sous QEMU. Rien ici n'exécute de l'arm64 pour le dire.
 nettement plus court, et l'épinglage peut sauter — ou se tenir à jour par
 Dependabot, puisqu'une empreinte qui bouge se relit alors en diff.
 
+> **⚠️ Levée en partie le 28/10/2026.** L'arm64 se construit sur
+> `ubuntu-24.04-arm`, l'amd64 sur `ubuntu-latest`, et un job `manifeste` les
+> réunit sous les mêmes tags (`.github/workflows/image.yml`) : plus de QEMU.
+> L'épinglage est **gardé**, mais tenu à jour par Dependabot
+> (`.github/dependabot.yml`, une PR par semaine au plus, majeures exclues).
+>
+> Pourquoi ne pas l'avoir retiré : un runner arm64 natif prouve que l'image se
+> **construit** sur de l'arm64 récent (Neoverse), pas qu'elle **tourne** sur
+> le Pi — un `rpi-v8`, donc probablement un Cortex-A72, ARMv8.0. Si le SIGILL
+> du 17/09 venait d'une instruction que QEMU n'émule pas mais que le Pi n'a pas
+> non plus, le build natif passerait et le pod planterait. Ce qui reste : une
+> PR Dependabot ne se fusionne qu'après avoir vu le pod `tablee` démarrer sur
+> `raspberrypi-*`. Le jour où une montée y a tourné, la question « QEMU ou
+> vrai Pi ? » est tranchée et cette entrée peut se refermer.
+
 ---
 
 ## 27. Les rappels push : horaires fixes, un seul processus, et la fiabilité de chaque plateforme

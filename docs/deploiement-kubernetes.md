@@ -69,11 +69,12 @@ moment où l'on découvre le problème, ça ne l'évite pas.
 | `<branche>` | dernier commit d'une branche |
 | `v1.2.3`, `1.2` | sur un tag git `v*` |
 
-Elle est construite pour `linux/amd64` et `linux/arm64`. Plus aucun module
-natif dans l'arbre de dépendances depuis que `@node-rs/argon2` en est sorti,
-donc les deux architectures sont équivalentes — si votre cluster est en x86
-seulement, retirer `linux/arm64` du workflow divise le temps de build par
-trois.
+Elle est construite pour `linux/amd64` et `linux/arm64`, chacune sur un runner
+de son architecture — sans émulation depuis le 28/10/2026 —, puis réunies en
+un seul manifeste multi-architecture sous les tags ci-dessus. Plus aucun module
+natif dans l'arbre de dépendances depuis que `@node-rs/argon2` en est sorti ;
+l'image de base est épinglée par empreinte et suivie par Dependabot (dette
+n° 26).
 
 ### Rendre le paquet visible
 
@@ -336,8 +337,8 @@ Pour que vous sachiez où porter votre attention — et où ne pas la porter.
   `storageClassName`) dépendent du vôtre.
 - **Le workflow GitHub Actions n'a jamais été exécuté.** Il le sera à la
   première poussée ; s'il échoue, ce sera visiblement et sans rien casser.
-- **Le build multi-architecture n'a pas été essayé** — seul `amd64` a été
-  construit localement.
+- ~~**Le build multi-architecture n'a pas été essayé**~~ — il tourne en CI
+  depuis, et la prod tire l'arm64 sur un Raspberry Pi.
 
 ---
 

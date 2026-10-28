@@ -1,0 +1,14 @@
+# L'image de base du `Dockerfile` est épinglée par empreinte (dette n° 26) :
+# sans ceci, elle ne recevrait plus aucun correctif d'Alpine ni de Node. Une
+# montée arrive en PR, se construit en arm64 natif, et ne se fusionne qu'après
+# avoir tourné sur le Pi.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    # Node 22 est un choix, pas un retard : une majeure se change à la main.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
