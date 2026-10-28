@@ -78,6 +78,8 @@ export interface HouseholdFacts {
    * **précédents** : la journée en cours, pas finie, tirerait tout vers le bas.
    */
   percents: Record<AdviceNutrient, number[]>;
+  /** `percents` ne porte que sur des journées marquées complètes (dette n° 20). */
+  completeOnly: boolean;
   plant7d: number | null;
   plant28d: number | null;
 }
@@ -115,7 +117,7 @@ export function describeHousehold(facts: HouseholdFacts): string {
     if (valeurs.length === 0) continue;
     const moyenne = Math.round(valeurs.reduce((a, b) => a + b, 0) / valeurs.length);
     lines.push(
-      `- ${NUTRIENT_WORDS[nutrient]} : ${moyenne} % du repère du jour, en moyenne sur ${pluriel(valeurs.length, 'journée')} de convives`,
+      `- ${NUTRIENT_WORDS[nutrient]} : ${moyenne} % du repère du jour, en moyenne sur ${pluriel(valeurs.length, 'journée')}${facts.completeOnly ? ` complète${valeurs.length > 1 ? 's' : ''}` : ''} de convives`,
     );
   }
   if (facts.dishes.length > 0) lines.push(`Plats et aliments : ${facts.dishes.join(' ; ')}.`);

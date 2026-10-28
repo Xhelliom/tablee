@@ -11,6 +11,7 @@ const FOYER: HouseholdFacts = {
   mealCount: 9,
   dishes: ['Galette complète', 'Oeuf, cru'],
   percents: { proteinG: [110, 90], carbG: [], fatG: [], fiberG: [60, 70, 80] },
+  completeOnly: false,
   plant7d: 41.2,
   plant28d: 38,
 };
@@ -34,6 +35,11 @@ describe('assistant — ce que le modèle sait du foyer (§14)', () => {
       percents: { proteinG: [], carbG: [], fatG: [], fiberG: [] },
     });
     assert.equal(vide, 'Foyer : 2 adultes, 1 enfant de 6-9 ans.\nRégimes : 1 végétarien.\nAucun repas saisi depuis une semaine.');
+  });
+
+  it('dit quand les moyennes ne portent que sur des journées complètes', () => {
+    const texte = describeHousehold({ ...FOYER, completeOnly: true });
+    assert.match(texte, /en moyenne sur 2 journées complètes de convives/);
   });
 
   it('accorde un repas unique au singulier', () => {
