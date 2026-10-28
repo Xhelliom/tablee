@@ -677,6 +677,30 @@ jamais une valeur fausse. Quelques centaines de Ko par plat distinct en base.
 rafraîchir l'accueil quand l'image arrive ; réduire l'image avant de la garder
 (une dépendance de plus, `sharp`, pour quelques Ko).
 
+> **Tranché le 28/10/2026, point par point.**
+> - *Reprise à ingrédients égaux* — **accepté** : l'étiquette est la
+>   signature d'un repas habituel (`suggestTemplates`), et une image qui ne
+>   ressemble pas au plat ne coûte qu'une vignette. Rapprocher des ensembles
+>   voisins attend que les images se répètent trop peu (commentaire sur
+>   `dishTag`).
+> - *Un second tiers voit la description* — **accepté** : Gemini ne reçoit
+>   rien de plus qu'Anthropic, par le même `anonymize` ; les trous du filtre
+>   sont ceux de la dette n° 17 et se règlent là. La limite de dépense de la
+>   clé Google est un geste d'exploitation, déjà demandé dans
+>   `docs/mise-en-service.md`.
+> - *L'image arrive après l'accueil* — **levé en partie le 06/10/2026**
+>   (`web/mealImage.ts`, 5593f08) : l'accueil reçoit l'image à son annonce,
+>   sans recharger. **Accepté** pour le reste : une demande perdue laisse le
+>   bol, et la rejouer demanderait une file côté serveur pour une vignette.
+> - *Ni réduite* — **accepté** : depuis le hero du 22/09/2026 (86cbc16),
+>   l'image s'affiche pleine largeur sur la fiche d'un repas ; le 1K n'y est
+>   plus du luxe, et `sharp` ne gagnerait que sur les vignettes.
+> - *Ni vérifiée* — **repris** : un format mal lu rend `null` et laisse le
+>   bol partout, sans bruit. Carte « Vérifier l'image d'un plat contre un
+>   vrai appel Gemini » (board, `681cb28f`).
+
+---
+
 ## 22. Le titre d'un repas décrit avec l'IA n'est ni relu ni modifiable
 
 **Où** — `server/llm/decoupage.ts` (`title`), `POST /api/meals` (`title`),
