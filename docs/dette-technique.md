@@ -128,6 +128,16 @@ ligne, l'app s'ouvre sur une page blanche jusqu'au prochain passage en ligne.
 plutôt que d'une constante écrite à la main. À faire quand ça gênera vraiment :
 aujourd'hui l'usage hors ligne est un confort, pas le chemin critique.
 
+> **⚠️ Levée le 28/10/2026.** `sw.js` porte `tablee-__BUILD__`, qu'un plugin de
+> `vite.config.ts` (`stampServiceWorker`) remplace à chaque `build:web` par une
+> empreinte de `web/dist` (chemins et contenus, `sw.js` exclu). Un front qui
+> change donne un `sw.js` qui change, donc un nouveau worker, dont `activate`
+> efface l'ancien cache. Deux builds identiques gardent le même nom : un
+> redéploiement à l'identique ne vide pas le cache des téléphones.
+> `server/sw-version.test.ts` échoue si le nom redevient une constante. Ce qui
+> reste : en `dev:web`, le worker garde le marqueur brut — sans conséquence,
+> Vite ne sert pas de bundle haché.
+
 ---
 
 
