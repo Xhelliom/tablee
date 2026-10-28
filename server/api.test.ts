@@ -1177,6 +1177,34 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(apres.meal.nutrition.proteinG, 36);
     });
 
+    it('corriger un rattachement erroné se propage aux recettes et aux repas déjà calculés', async () => {
+      const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+      const { a, b, ingredientA } = await deuxRecettes();
+      const poulet = await insertFood(pool, 'Poulet, cuit', { kcal: 170 }, false);
+      const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);
+      await call('POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: poulet });
+      const { body: repas } = await call('POST', '/api/meals', {
+        eaten_at: '2026-09-13T19:30:00+02:00', slot: 'diner', source: 'jow',
+        recipe_id: a, servings: 2, participants: [{ eaterId: adulte }],
+      });
+      assert.equal(repas.meal.nutrition.plantRatio, 0);
+
+      // Un autre membre du foyer reprend le rattachement déjà posé.
+      const { body: lien } = await call(
+        'POST', `/api/recipes/ingredients/${ingredientA}/food`, { foodId: carotte },
+      );
+      assert.equal(lien.propagated, 2);
+      assert.equal(lien.recomputed, 1);
+
+      const { body: autre } = await call('GET', `/api/recipes/${b}`);
+      assert.equal(autre.recipe.ingredients[0].foodId, carotte);
+      const { body: apres } = await call('GET', `/api/meals/${repas.meal.id}`);
+      assert.equal(apres.meal.nutrition.plantRatio, 100);
+      const { body: liens } = await call('GET', '/api/recipes/links');
+      assert.equal(liens.links.length, 1);
+      assert.equal(liens.links[0].foodId, carotte);
+    });
+
     it('détacher oublie la correspondance au lieu de la réappliquer', async () => {
       const { b, ingredientA } = await deuxRecettes();
       const carotte = await insertFood(pool, 'Carotte, cuite', { kcal: 33 }, true);

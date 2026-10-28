@@ -301,6 +301,30 @@ create table unit_default (
 -- ou laisser la ligne absente (déclenche alors la demande utilisateur).
 ```
 
+> **Corriger un rattachement d'aliment — décidé le 28/10/2026.** Le lien
+> `jow_food_link` est commun à toutes les instances de foyer ; une erreur y est
+> figée pour tous. Règle retenue :
+>
+> - **Qui corrige** : tout membre authentifié du foyer, `parent` comme `adulte`,
+>   par le même geste que le rattachement (« Corriger le rattachement » sous
+>   l'ingrédient, fiche d'un repas). Pas de rôle dédié : le rattachement initial
+>   n'en demande pas, et le réserver aux parents laisserait l'erreur d'un
+>   `adulte` sans recours.
+> - **Garde-fou** : le super-admin peut **verrouiller** un lien (020) ; un lien
+>   verrouillé refuse la correction (403 `lien_verrouille`, affiché à l'écran).
+> - **Données déjà calculées** : les recettes Jow sont globales et
+>   `recipe_ingredient` n'est pas sous RLS : la correction réécrit `food_id`
+>   sur les lignes de **toutes** les recettes qui partagent l'ObjectId Jow, pour
+>   tous les foyers. Le recalcul de `meal_nutrition`
+>   (`recomputeMealsUsingIngredient`) ne porte en revanche que sur les repas
+>   **du foyer qui corrige** (`m.household_id = $1`). Les repas déjà enregistrés
+>   des autres foyers gardent la valeur calculée avec l'ancien aliment (la part
+>   végétale notamment) jusqu'à leur prochain recalcul. **Limite connue, choisie
+>   exprès** : recalculer hors du foyer courant sortirait de la RLS pour un
+>   gain faible. `meal_participant.share` n'est jamais touché.
+> - **Pas d'historique** des anciens rattachements : `confirmed_by` et
+>   `created_at` désignent la dernière correction seulement.
+
 ---
 
 ## 6bis. Restes, invités, périmètre des repas — **décidé**
