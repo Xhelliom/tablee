@@ -14,7 +14,10 @@
  * Les appels `/api` ne sont jamais mis en cache : un bilan nutritionnel périmé
  * servi comme s'il était à jour serait pire qu'un écran d'erreur.
  */
-const CACHE = 'tablee-v1';
+// Remplacé au build par une empreinte de `web/dist` (`vite.config.ts`) : un
+// front redéployé change donc ce fichier, le navigateur installe un nouveau
+// worker, et `activate` efface l'ancienne coquille. Dette n° 4bis, levée.
+const CACHE = 'tablee-__BUILD__';
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest', '/icon.svg',
   // Les polices font partie de la coquille : sans elles l'app s'ouvre hors
