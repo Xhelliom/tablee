@@ -20,18 +20,20 @@
 # Dehors aussi, et ça ne se négocie pas : aucun secret. `TABLEE_SECRET` et
 # `DATABASE_URL` viennent de l'environnement, jamais d'un `ENV` de ce fichier.
 
-# ⚠️ **L'image de base est épinglée par empreinte depuis le 18/09/2026**, et pas
-# par confort. `node:22-alpine` a été republiée le 17/09 à 22 h 19 — même Node
-# 22.23.2, reconstruit — et son binaire arm64 meurt sur une instruction
-# illégale sous QEMU dès `npm ci`. Or l'arm64 n'est pas une option : la prod
-# tourne sur un Raspberry Pi. Celle-ci est l'image du 29/07, celle que la prod
-# fait tourner. Avant de la « mettre à jour » : dette n° 26.
-ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+# ⚠️ **L'image de base est épinglée par empreinte depuis le 18/09/2026.**
+# `node:22-alpine` republiée le 17/09 mourait d'une instruction illégale sous
+# QEMU dès `npm ci`, et la prod tourne sur un Raspberry Pi. Depuis le
+# 28/10/2026, l'arm64 se construit sur un runner arm64 natif, et l'empreinte
+# est **tenue à jour par Dependabot** (`.github/dependabot.yml`) : elle bouge
+# par une PR, en diff, et chaque montée se vérifie sur le Pi. Un seul `FROM`
+# épinglé, et pas un `ARG` : Dependabot ne réécrit que les lignes `FROM`.
+# Dette n° 26.
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS node
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Construction du front
 # ─────────────────────────────────────────────────────────────────────────────
-FROM ${NODE_IMAGE} AS build
+FROM node AS build
 
 WORKDIR /app
 
@@ -50,7 +52,7 @@ RUN npm run build:web
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Dépendances de service
 # ─────────────────────────────────────────────────────────────────────────────
-FROM ${NODE_IMAGE} AS deps
+FROM node AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -62,7 +64,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. L'image de service
 # ─────────────────────────────────────────────────────────────────────────────
-FROM ${NODE_IMAGE} AS runtime
+FROM node AS runtime
 
 ENV NODE_ENV=production \
     PORT=3000 \

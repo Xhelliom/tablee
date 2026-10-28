@@ -23,8 +23,7 @@ on:
   workflow_dispatch:
 
 # Une poussée en annule la précédente sur la même référence : pousser trois
-# fois d'affilée ne doit pas occuper trois runners à construire de l'arm64 par
-# émulation. Sauf sur la branche par défaut et sur un tag, où la construction
+# fois d'affilée ne doit pas occuper trois fois les runners. Sauf sur la branche par défaut et sur un tag, où la construction
 # publie — l'annuler laisserait un tag sans image.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,9 +31,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  # `github.repository` est « Xhelliom/tablee » ; les noms d'images doivent
-  # être en minuscules, et `metadata-action` s'en charge plus bas.
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
@@ -97,10 +93,25 @@ jobs:
       - run: npm run build:web
 
   # ───────────────────────────────────────────────────────────────────────────
+  # Chaque architecture se construit sur un runner de la sienne, et rien n'est
+  # émulé. ⚠️ Changé le 28/10/2026 : l'arm64 se construisait sous QEMU, et
+  # `node:22-alpine` republiée le 17/09 y mourait d'une instruction illégale dès
+  # `npm ci` (dette n° 26). `ubuntu-24.04-arm` est gratuit pour un dépôt public.
+  #
+  # Chaque job pousse son image **par empreinte seulement**, sans tag : c'est
+  # `manifeste` qui les réunit sous les tags, en une seule liste multi-arch.
+  # Flux suit `latest` par empreinte, il ne voit pas la différence.
   image:
-    name: Image
+    name: Image (${{ matrix.arch }})
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
 
     permissions:
       contents: read
@@ -109,15 +120,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # `linux/arm64` est émulé par QEMU, donc lent. Il est là parce qu'un
-      # cluster domestique tourne souvent sur des machines ARM ; si le vôtre
-      # est en x86 uniquement, retirer la plateforme divise le temps de build
-      # par trois. Plus aucun module natif dans l'arbre de dépendances depuis
-      # que `@node-rs/argon2` en est sorti, donc les deux architectures sont
-      # équivalentes à construire.
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
+      # `github.repository` est « Xhelliom/tablee » et un nom d'image doit être
+      # en minuscules. `metadata-action` s'en charge pour les tags, pas ici.
+      - run: echo "IMAGE=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -134,14 +139,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
+          images: ${{ env.IMAGE }}
           # `metadata-action` remplit `description` depuis celle du dépôt, qui
           # est vide : le label sortait donc vide sur toutes les images. Écrit
           # ici, il reste avec l'image partout où elle va — `docker inspect`,
@@ -150,20 +148,91 @@ jobs:
             org.opencontainers.image.description=Tablée — suivi alimentaire familial : un repas partagé, un bilan par convive
             org.opencontainers.image.licenses=AGPL-3.0-only
 
-      - uses: docker/build-push-action@v6
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           # Le cache de build est porté par GitHub Actions : sans lui, chaque
-          # commit réinstalle tout l'arbre npm pour les deux architectures.
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # commit réinstalle tout l'arbre npm. Une portée par architecture,
+          # sinon les deux jobs s'écrasent le cache l'un l'autre.
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+      - name: Empreinte, pour le manifeste
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ───────────────────────────────────────────────────────────────────────────
+  manifeste:
+    name: Manifeste multi-architecture
+    needs: image
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - run: echo "IMAGE=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Réunir amd64 et arm64 sous les tags
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      # Un manifeste à qui manquerait une architecture se verrait ici, pas sur
+      # le Pi au prochain déploiement.
+      - name: Vérifier les deux architectures
+        run: |
+          docker buildx imagetools inspect "${IMAGE}:sha-${GITHUB_SHA}" | tee /tmp/inspect
+          grep -q 'linux/amd64' /tmp/inspect
+          grep -q 'linux/arm64' /tmp/inspect
 
       - name: Où l'image est publiée
-        if: github.event_name != 'pull_request'
         run: |
           echo "### Image publiée" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
