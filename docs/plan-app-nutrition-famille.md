@@ -312,11 +312,16 @@ create table unit_default (
 >   `adulte` sans recours.
 > - **Garde-fou** : le super-admin peut **verrouiller** un lien (020) ; un lien
 >   verrouillé refuse la correction (403 `lien_verrouille`, affiché à l'écran).
-> - **Données déjà calculées** : la correction se propage aux lignes de toutes
->   les recettes qui partagent l'ObjectId Jow, et la nutrition des repas
->   concernés est recalculée dans la foulée (`recomputeMealsUsingIngredient`).
->   Un repas passé reflète donc le bon aliment ; `meal_participant.share`, lui,
->   n'est pas touché.
+> - **Données déjà calculées** : les recettes Jow sont globales et
+>   `recipe_ingredient` n'est pas sous RLS : la correction réécrit `food_id`
+>   sur les lignes de **toutes** les recettes qui partagent l'ObjectId Jow, pour
+>   tous les foyers. Le recalcul de `meal_nutrition`
+>   (`recomputeMealsUsingIngredient`) ne porte en revanche que sur les repas
+>   **du foyer qui corrige** (`m.household_id = $1`). Les repas déjà enregistrés
+>   des autres foyers gardent la valeur calculée avec l'ancien aliment (la part
+>   végétale notamment) jusqu'à leur prochain recalcul. **Limite connue, choisie
+>   exprès** : recalculer hors du foyer courant sortirait de la RLS pour un
+>   gain faible. `meal_participant.share` n'est jamais touché.
 > - **Pas d'historique** des anciens rattachements : `confirmed_by` et
 >   `created_at` désignent la dernière correction seulement.
 
