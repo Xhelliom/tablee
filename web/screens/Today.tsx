@@ -37,7 +37,7 @@ import {
 type Entry = DashboardResponse['dashboard'][number];
 
 export function TodayScreen(): React.ReactElement {
-  const { eaters, day, setDay } = useSession();
+  const { eaters, day, setDay, role } = useSession();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** La personne choisie. `null` : sa propre assiette, sinon la première. */
@@ -124,6 +124,7 @@ export function TodayScreen(): React.ReactElement {
             balance={shown.balance}
             referencesLoaded={data.referencesLoaded}
             when={day === null ? 'aujourd’hui' : 'ce jour-là'}
+            canSeeWeight={role === 'parent' || eaters.some((e) => e.id === shown.eater.id && e.isMe)}
           />
           {shown.balance.mealCount > 0 ? (
             <DayComplete

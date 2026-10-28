@@ -25,7 +25,8 @@ const ilYA = (années: number): string => {
 };
 const MAJEUR = ilYA(38);
 const MINEUR = ilYA(9);
-const HIER = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+const ilYAJours = (jours: number): string => new Date(Date.now() - jours * 86_400_000).toISOString().slice(0, 10);
+const HIER = ilYAJours(1);
 
 describe('tendance — moyenne exponentielle', () => {
   it('part de la première pesée et n’en suit une autre que d’un dixième par jour', () => {
@@ -51,7 +52,7 @@ describe('le poids ne part jamais au LLM (I3)', () => {
     const dossier = new URL('./llm/', import.meta.url);
     for (const nom of await readdir(dossier)) {
       const source = await readFile(new URL(nom, dossier), 'utf8');
-      assert.doesNotMatch(source, /weight_measure|repo\/weights|routes\/weights|weightKg/, nom);
+      assert.doesNotMatch(source, /weight_measure|repo\/weights|routes\/weights|weightKg|nutrition\/besoin|energy-need/, nom);
     }
   });
 });
@@ -173,5 +174,47 @@ describe('pesées (029)', { skip: testDatabaseUrl() !== null ? false : SKIP_MESS
     const voisin = await signUpWithHousehold(auth, pool, 'voisin@exemple.test');
     assert.equal((await call('GET', `/api/eaters/${id}/weights`, voisin.cookie)).status, 404);
     assert.equal((await call('PUT', `/api/eaters/${id}/weights/${HIER}`, voisin.cookie, { weightKg: 1 })).status, 404);
+  });
+
+  describe('besoin estimé', () => {
+    const besoin = async (id: string, cookie = parent.cookie): Promise<{ status: number; body: any }> =>
+      call('GET', `/api/eaters/${id}/energy-need`, cookie);
+
+    it('se tait sans journée complète, et dit ce qui manque', async () => {
+      const id = await fiche(MAJEUR);
+      for (const jours of [1, 8, 15, 22]) {
+        await call('PUT', `/api/eaters/${id}/weights/${ilYAJours(jours)}`, parent.cookie, { weightKg: 70 });
+      }
+      const { status, body } = await besoin(id);
+      assert.equal(status, 200);
+      assert.equal(body.kcal, null);
+      assert.equal(body.confidence, null);
+      assert.equal(body.weighings, 4);
+      assert.equal(body.completeDays, 0);
+      assert.deepEqual(body.seuils, { windowDays: 28, completeDays: 14, weighings: 4, spanDays: 14 });
+    });
+
+    it('filet 2 — sur un mineur, rien ne se calcule, pas même un compte', async () => {
+      const id = await fiche(MINEUR);
+      await pesageDirect(id);
+      const { body } = await besoin(id);
+      assert.equal(body.kcal, null);
+      assert.equal(body.weighings, 0);
+    });
+
+    it('filet 3 — une date corrigée qui rend mineur n’en laisse rien', async () => {
+      const id = await fiche(MAJEUR);
+      await call('PUT', `/api/eaters/${id}/weights/${HIER}`, parent.cookie, { weightKg: 60 });
+      await call('PATCH', `/api/eaters/${id}`, parent.cookie, { birthDate: MINEUR });
+      await call('PATCH', `/api/eaters/${id}`, parent.cookie, { birthDate: MAJEUR });
+      assert.equal((await besoin(id)).body.weighings, 0);
+    });
+
+    it('fermé à un adulte pour un autre, comme la courbe', async () => {
+      const autre = await fiche(MAJEUR);
+      const conjoint = await signUp(auth, 'maman@exemple.test', 'Maman');
+      await inviteAndAccept(auth, parent, conjoint, 'adulte');
+      assert.equal((await besoin(autre, conjoint.cookie)).status, 403);
+    });
   });
 });

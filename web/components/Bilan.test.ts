@@ -10,9 +10,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { BilanCard } from './Bilan.tsx';
 import type { DailyBalance } from '../api.ts';
 
-const rendu = (balance: DailyBalance): string =>
+const rendu = (balance: DailyBalance, canSeeWeight = false): string =>
   renderToStaticMarkup(createElement(BilanCard, {
-    eaterId: 'e1', firstName: 'Test', balance, referencesLoaded: true, when: 'aujourd’hui',
+    eaterId: 'e1', firstName: 'Test', balance, referencesLoaded: true, when: 'aujourd’hui', canSeeWeight,
   }));
 
 const base: DailyBalance = { bars: [], mealCount: 0, plant: {
@@ -39,6 +39,10 @@ describe('BilanCard — moyenne d’énergie', () => {
     assert.doesNotMatch(html, /Énergie/);
     assert.doesNotMatch(html, /minimum/);
     assert.doesNotMatch(html, /Répartition/);
+  });
+
+  it('pas de besoin estimé sur un mineur, même pour qui verrait le poids', () => {
+    assert.doesNotMatch(rendu(base, true), /Besoin|pesées/);
   });
 
   it('répartit par moment de la journée et dit que les collations peuvent manquer', () => {

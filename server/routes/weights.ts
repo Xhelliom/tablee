@@ -13,12 +13,15 @@
  *     IMC. La courbe tracée est la tendance, pas les pesées.
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { isMinor } from '../nutrition/age.ts';
+import { ageAt, isMinor } from '../nutrition/age.ts';
+import { besoinEstime, SEUILS } from '../nutrition/besoin.ts';
+import { bilanJournalier } from '../nutrition/daily.ts';
 import { ApiError } from '../http/errors.ts';
 import { body, isoDate, num, uuid } from '../http/validate.ts';
 import { shiftDay, todayIn } from '../http/tz.ts';
 import { findMembers, type Eater } from '../repo/eaters.ts';
-import { householdTimezone } from '../repo/dashboard.ts';
+import { householdTimezone, mealsForRange } from '../repo/dashboard.ts';
+import { completeDays } from '../repo/days.ts';
 import { deleteWeight, listWeights, recordWeight, type WeightMeasure } from '../repo/weights.ts';
 import type { AppContext } from '../app.ts';
 
@@ -66,6 +69,39 @@ export function weightRoutes(app: FastifyInstance, _ctx: AppContext): void {
       // Pour corriger une saisie, pas pour tracer.
       pesees: pesées.filter((p) => p.day >= depuis),
     };
+  });
+
+  /**
+   * Le besoin estimé depuis les pesées et les journées complètes
+   * (`nutrition/besoin.ts`). Même garde que la courbe : il se déduit du poids.
+   */
+  app.get<{ Params: { id: string } }>('/api/eaters/:id/energy-need', async (request) => {
+    const eater = await ficheVisible(request);
+    // Second filet : rien ne se calcule sur un profil mineur, pas même un compte.
+    if (isMinor(eater.birthDate)) return besoinEstime({ intake: null, completeDays: 0, pesées: [] });
+
+    const householdId = request.householdId();
+    const timezone = await householdTimezone(request.db, householdId);
+    const today = todayIn(timezone);
+    const from = shiftDay(today, 1 - SEUILS.windowDays);
+    const [pesées, meals, complete] = await Promise.all([
+      listWeights(request.db, householdId, eater.id),
+      mealsForRange(request.db, householdId, from, SEUILS.windowDays, timezone),
+      completeDays(request.db, householdId, from, today),
+    ]);
+    const days = Array.from({ length: SEUILS.windowDays }, (_, i) => shiftDay(from, i));
+    // La moyenne de l'énergie sur les seules journées complètes, celle du bilan.
+    const energy = bilanJournalier({
+      sex: eater.sex, age: ageAt(eater.birthDate), meals: [], references: [],
+      energyWeek: days.map((day) => meals.filter((m) => m.eaterId === eater.id && m.date === day)),
+      completeWeek: days.map((day) => complete.has(`${day} ${eater.id}`)),
+    }).energyAverage7d;
+    const trend = tendance(pesées);
+    return besoinEstime({
+      intake: energy?.completeOnly === true ? energy.average : null,
+      completeDays: energy?.completeOnly === true ? energy.days : 0,
+      pesées: pesées.flatMap((p, i) => p.day >= from ? [{ day: p.day, trendKg: trend[i]!.kg }] : []),
+    });
   });
 
   app.put<{ Params: { id: string; day: string } }>('/api/eaters/:id/weights/:day', async (request) => {
