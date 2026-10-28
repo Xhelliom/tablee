@@ -14,7 +14,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { assertSuperAdmin } from '../auth/identity.ts';
 import { ApiError } from '../http/errors.ts';
-import { body, email as emailField, str, uuid } from '../http/validate.ts';
+import { body, email as emailField, foodChoices, str, uuid } from '../http/validate.ts';
 import {
   adminSetEaterLink, adminSetFoodLink, adminSetFoodLock, compterApercu, consignerAction, impacterLiens, isSuperAdmin,
   listAllHouseholds, listAllUsers, listEaterLinks, listFoodLinks, listJournal,
@@ -259,10 +259,14 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext): void {
     exiger(request);
     const jowFoodId = str(request.params.id, 'id', { max: 100 });
     const input = body(request.body);
-    const foodId = input['foodId'] === null || input['foodId'] === undefined
-      ? null
-      : str(input['foodId'], 'foodId', { max: 100 });
-    if (foodId !== null) {
+    // `foods` pose l'ensemble ; `foodId` (un seul, ou null pour détacher) reste
+    // la voie de la correction simple.
+    const choices = input['foods'] !== undefined
+      ? foodChoices(input['foods'], 'foods')
+      : input['foodId'] === null || input['foodId'] === undefined
+        ? []
+        : [{ foodId: str(input['foodId'], 'foodId', { max: 100 }), grams: null }];
+    for (const { foodId } of choices) {
       const existe = await ctx.pool.query('select 1 from food where id = $1', [foodId]);
       if ((existe.rowCount ?? 0) === 0) throw ApiError.notFound('aliment introuvable');
     }
@@ -273,11 +277,11 @@ export function adminRoutes(app: FastifyInstance, ctx: AppContext): void {
     if ((connu.rowCount ?? 0) === 0 && (vu.rowCount ?? 0) === 0) {
       throw ApiError.notFound('ingrédient Jow introuvable');
     }
-    const propagated = await adminSetFoodLink(ctx.pool, jowFoodId, foodId);
+    const propagated = await adminSetFoodLink(ctx.pool, jowFoodId, choices);
     await consignerAction(
       ctx.pool, request.identity().userId,
-      foodId === null ? 'aliment.detacher' : 'aliment.corriger', jowFoodId,
-      { ...(foodId === null ? {} : { aliment: foodId }), lignes: propagated },
+      choices.length === 0 ? 'aliment.detacher' : 'aliment.corriger', jowFoodId,
+      { ...(choices.length === 0 ? {} : { aliments: choices.map((c) => c.foodId) }), lignes: propagated },
     );
     return { ok: true, propagated };
   });

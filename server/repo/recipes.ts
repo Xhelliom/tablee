@@ -5,7 +5,7 @@
  * un instantané, pas une vue. Une recette modifiée chez Jow après qu'un repas
  * l'a utilisée ne doit pas réécrire ce repas.
  */
-import type { HouseholdDb } from '../db.ts';
+import type { HouseholdDb, UnscopedDb } from '../db.ts';
 import type { ParsedRecipe } from '../jow/types.ts';
 import type { NutritionItem, RecipeSnapshot } from '../nutrition/compute.ts';
 import type { Confidence } from '../jow/types.ts';
@@ -13,10 +13,25 @@ import { resolveUnit, type UnitSource } from '../nutrition/units.ts';
 import { loadFoodValues } from './foods.ts';
 import { loadUnitDefaults } from './refs.ts';
 
+/** Un aliment rattaché à un ingrédient ; `grams` nul = non réparti, jamais 0. */
+export interface FoodChoice {
+  foodId: string;
+  /** Grammes par convive de cet aliment dans l'ingrédient (030). */
+  grams: number | null;
+}
+
+/** Ce que la lecture ajoute pour l'écran : le nom, pour ne pas le redemander. */
+export interface IngredientFood extends FoodChoice {
+  foodName: string;
+}
+
 export interface RecipeIngredient {
   id: string;
   label: string;
+  /** L'aliment principal — le premier de `foods`. */
   foodId: string | null;
+  /** Tous les aliments rattachés : le zeste **et** la pulpe d'un même citron. */
+  foods: IngredientFood[];
   jowFoodId: string | null;
   quantity: number | null;
   unit: string | null;
@@ -212,14 +227,23 @@ export async function loadIngredients(db: HouseholdDb, recipeId: string): Promis
   const { rows } = await db.query<{
     id: string; label: string; food_id: string | null; jow_food_id: string | null;
     quantity: number | null; unit: string | null; quantity_g: number | null;
-    optional: boolean; position: number;
+    optional: boolean; position: number; foods: IngredientFood[]; food_name: string | null;
   }>(
-    `select id, label, food_id, jow_food_id, quantity, unit, quantity_g, optional, position
-     from recipe_ingredient where recipe_id = $1 order by position`,
+    `select ri.id, ri.label, ri.food_id, ri.jow_food_id, ri.quantity, ri.unit, ri.quantity_g,
+            ri.optional, ri.position,
+            (select name from food where id = ri.food_id) as food_name,
+            coalesce((select json_agg(json_build_object('foodId', i.food_id, 'grams', i.grams,
+                                                        'foodName', f.name)
+                                      order by i.position, i.food_id)
+                      from jow_food_link_item i join food f on f.id = i.food_id
+                      where i.jow_food_id = ri.jow_food_id), '[]') as foods
+     from recipe_ingredient ri where ri.recipe_id = $1 order by ri.position`,
     [recipeId],
   );
   return rows.map((r) => ({
     id: r.id, label: r.label, foodId: r.food_id, jowFoodId: r.jow_food_id,
+    // Sans lien Jow (recette manuelle), l'aliment unique de la ligne tient lieu de liste.
+    foods: r.foods.length > 0 ? r.foods : r.food_id === null ? [] : [{ foodId: r.food_id, grams: null, foodName: r.food_name ?? '' }],
     quantity: r.quantity, unit: r.unit, quantityG: r.quantity_g, estimate: null,
     optional: r.optional, position: r.position,
   }));
@@ -367,8 +391,52 @@ export interface LinkResult {
 }
 
 /**
- * Rattache un ingrédient de recette à un aliment du référentiel (§6, étape 2)
- * — **et à travers lui, l'ingrédient Jow lui-même**.
+ * Pose, pour un ingrédient Jow, l'ensemble de ses aliments : le lien
+ * (libellé, auteur) puis un `jow_food_link_item` par aliment, dans l'ordre —
+ * le premier est l'aliment principal. Sert au parent (via `setIngredientFoods`)
+ * comme au super-admin, qui n'ont pas les mêmes garde-fous mais le même effet.
+ *
+ * Ne touche pas à `recipe_ingredient` : la propagation est à l'appelant.
+ */
+export async function writeLinkItems(
+  db: UnscopedDb, jowFoodId: string, label: string,
+  choices: FoodChoice[], confirmedBy: string | null,
+): Promise<void> {
+  await db.query(
+    `insert into jow_food_link (jow_food_id, label, confirmed_by)
+     values ($1, $2, $3)
+     on conflict (jow_food_id) do update set
+       label = excluded.label, confirmed_by = excluded.confirmed_by, created_at = now()`,
+    [jowFoodId, label, confirmedBy],
+  );
+  await db.query(
+    'delete from jow_food_link_item where jow_food_id = $1 and not (food_id = any($2::uuid[]))',
+    [jowFoodId, choices.map((c) => c.foodId)],
+  );
+  for (const [position, choice] of choices.entries()) {
+    await db.query(
+      `insert into jow_food_link_item (jow_food_id, food_id, grams, position)
+       values ($1, $2, $3, $4)
+       on conflict (jow_food_id, food_id) do update set grams = excluded.grams, position = excluded.position`,
+      [jowFoodId, choice.foodId, choice.grams, position],
+    );
+  }
+}
+
+/** Le cache `recipe_ingredient.food_id` : l'aliment principal, ou rien. */
+export async function propagateFirstFood(db: UnscopedDb, jowFoodId: string): Promise<number> {
+  const { rowCount } = await db.query(
+    `update recipe_ingredient set food_id = (
+       select food_id from jow_food_link_item where jow_food_id = $1 order by position, food_id limit 1
+     ) where jow_food_id = $1`,
+    [jowFoodId],
+  );
+  return rowCount ?? 0;
+}
+
+/**
+ * Rattache un ingrédient de recette à **un ou plusieurs** aliments du
+ * référentiel (§6, étape 2) — **et à travers lui, l'ingrédient Jow lui-même**.
  *
  * L'ObjectId de Jow est stable : « Purée de carotte (surgelée) » porte le même
  * identifiant dans toutes les recettes. Le rattachement est donc mémorisé dans
@@ -377,6 +445,10 @@ export interface LinkResult {
  * qu'une fois dans sa vie, et c'est ce qui rend la part végétale des repas Jow
  * atteignable sans y passer ses soirées.
  *
+ * `choices` **remplace** l'ensemble : vide, c'est détacher. Plusieurs aliments
+ * (le zeste et la pulpe d'un citron) exigent un ingrédient Jow — la liste est
+ * portée par le lien, et une recette manuelle n'en a pas (422).
+ *
  * Un ingrédient sans `jow_food_id` (recette manuelle, payload inattendu) ne
  * met à jour que sa propre ligne : rien à propager sans clé stable.
  *
@@ -384,10 +456,10 @@ export interface LinkResult {
  * super-admin passe outre, par `force: true` (voie `/api/admin/*`). Sans lui,
  * même un `parent` reçoit un 403 plutôt qu'un écrasement silencieux.
  */
-export async function linkIngredientToFood(
+export async function setIngredientFoods(
   db: HouseholdDb,
   ingredientId: string,
-  foodId: string | null,
+  choices: FoodChoice[],
   confirmedBy: string | null = null,
   options: { force?: boolean } = {},
 ): Promise<LinkResult> {
@@ -400,9 +472,16 @@ export async function linkIngredientToFood(
 
   const jowFoodId = ingredient.jow_food_id;
   if (jowFoodId === null) {
+    if (choices.length > 1) {
+      const { ApiError } = await import('../http/errors.ts');
+      throw new ApiError(
+        422, 'plusieurs_aliments',
+        'plusieurs aliments ne se rattachent qu’à un ingrédient Jow',
+      );
+    }
     const { rowCount } = await db.query(
       'update recipe_ingredient set food_id = $2 where id = $1',
-      [ingredientId, foodId],
+      [ingredientId, choices[0]?.foodId ?? null],
     );
     return { propagated: rowCount ?? 0, jowFoodId: null };
   }
@@ -420,28 +499,24 @@ export async function linkIngredientToFood(
     }
   }
 
-  if (foodId === null) {
+  if (choices.length === 0) {
     // Détacher, c'est aussi oublier la correspondance : sinon la prochaine
-    // recette la réappliquerait aussitôt.
+    // recette la réappliquerait aussitôt. Les aliments partent avec (cascade).
     await db.query('delete from jow_food_link where jow_food_id = $1', [jowFoodId]);
   } else {
-    await db.query(
-      `insert into jow_food_link (jow_food_id, food_id, label, confirmed_by)
-       values ($1, $2, $3, $4)
-       on conflict (jow_food_id) do update set
-         food_id = excluded.food_id,
-         label = excluded.label,
-         confirmed_by = excluded.confirmed_by,
-         created_at = now()`,
-      [jowFoodId, foodId, ingredient.label, confirmedBy],
-    );
+    await writeLinkItems(db, jowFoodId, ingredient.label, choices, confirmedBy);
   }
+  return { propagated: await propagateFirstFood(db, jowFoodId), jowFoodId };
+}
 
-  const { rowCount } = await db.query(
-    'update recipe_ingredient set food_id = $2 where jow_food_id = $1',
-    [jowFoodId, foodId],
+/** Un seul aliment, qui remplace tout : la correction d'un rattachement erroné. */
+export function linkIngredientToFood(
+  db: HouseholdDb, ingredientId: string, foodId: string | null,
+  confirmedBy: string | null = null, options: { force?: boolean } = {},
+): Promise<LinkResult> {
+  return setIngredientFoods(
+    db, ingredientId, foodId === null ? [] : [{ foodId, grams: null }], confirmedBy, options,
   );
-  return { propagated: rowCount ?? 0, jowFoodId };
 }
 
 /**
@@ -454,11 +529,12 @@ export async function linkIngredientToFood(
 export async function applyKnownLinks(db: HouseholdDb, recipeId: string): Promise<number> {
   const { rowCount } = await db.query(
     `update recipe_ingredient ri
-     set food_id = l.food_id
-     from jow_food_link l
+     set food_id = p.food_id
+     from (select distinct on (jow_food_id) jow_food_id, food_id
+           from jow_food_link_item order by jow_food_id, position, food_id) p
      where ri.recipe_id = $1
-       and ri.jow_food_id = l.jow_food_id
-       and ri.food_id is distinct from l.food_id`,
+       and ri.jow_food_id = p.jow_food_id
+       and ri.food_id is distinct from p.food_id`,
     [recipeId],
   );
   return rowCount ?? 0;
@@ -466,28 +542,30 @@ export async function applyKnownLinks(db: HouseholdDb, recipeId: string): Promis
 
 export interface KnownLink {
   jowFoodId: string;
-  foodId: string;
   label: string;
-  foodName: string;
-  plantBased: boolean | null;
+  foods: { foodId: string; foodName: string; plantBased: boolean | null; grams: number | null }[];
 }
 
 /** Les correspondances déjà posées — pour les relire et les corriger. */
 export async function listLinks(db: HouseholdDb): Promise<KnownLink[]> {
   const { rows } = await db.query<{
-    jow_food_id: string; food_id: string; label: string;
-    food_name: string; plant_based: boolean | null;
+    jow_food_id: string; label: string; food_id: string;
+    food_name: string; plant_based: boolean | null; grams: number | null;
   }>(
-    `select l.jow_food_id, l.food_id, l.label,
-            f.name as food_name, f.plant_based
+    `select l.jow_food_id, l.label, i.food_id, f.name as food_name, f.plant_based, i.grams
      from jow_food_link l
-     join food f on f.id = l.food_id
-     order by l.label`,
+     join jow_food_link_item i on i.jow_food_id = l.jow_food_id
+     join food f on f.id = i.food_id
+     order by l.label, l.jow_food_id, i.position, i.food_id`,
   );
-  return rows.map((r) => ({
-    jowFoodId: r.jow_food_id, foodId: r.food_id, label: r.label,
-    foodName: r.food_name, plantBased: r.plant_based,
-  }));
+  const byId = new Map<string, KnownLink>();
+  for (const r of rows) {
+    const link = byId.get(r.jow_food_id)
+      ?? { jowFoodId: r.jow_food_id, label: r.label, foods: [] };
+    link.foods.push({ foodId: r.food_id, foodName: r.food_name, plantBased: r.plant_based, grams: r.grams });
+    byId.set(r.jow_food_id, link);
+  }
+  return [...byId.values()];
 }
 
 /** Les ingrédients, vus par le calcul nutritionnel — quantités **par convive**. */
@@ -495,26 +573,41 @@ export function ingredientsAsItems(
   ingredients: RecipeIngredient[],
   foods: Map<string, { name: string; plantBased: boolean | null } & UnitSource>,
 ): NutritionItem[] {
-  return ingredients.map((ingredient) => {
-    const food = ingredient.foodId === null ? undefined : foods.get(ingredient.foodId);
-    return {
-      label: ingredient.label,
-      food:
-        food === undefined
-          ? null
-          : {
-              name: food.name,
-              plantBased: food.plantBased,
-              per100g: { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null },
-              // Les conversions de l'aliment suivent : sans elles, une cuillère
-              // d'huile ne pesait rien dans la part végétale.
-              unitWeights: food.unitWeights ?? null,
-              category: food.category ?? null,
-            },
-      quantity: ingredient.quantity,
-      unit: ingredient.unit,
+  const foodOf = (id: string): NutritionItem['food'] => {
+    const food = foods.get(id);
+    return food === undefined
+      ? null
+      : {
+          name: food.name,
+          plantBased: food.plantBased,
+          per100g: { kcal: null, proteinG: null, carbG: null, fatG: null, fiberG: null },
+          // Les conversions de l'aliment suivent : sans elles, une cuillère
+          // d'huile ne pesait rien dans la part végétale.
+          unitWeights: food.unitWeights ?? null,
+          category: food.category ?? null,
+        };
+  };
+  return ingredients.flatMap((ingredient): NutritionItem[] => {
+    const known = ingredient.foods.map((f) => ({ ...f, food: foodOf(f.foodId) }));
+    const base = {
+      label: ingredient.label, quantity: ingredient.quantity, unit: ingredient.unit,
       quantityG: ingredient.quantityG,
     };
+    const first = known[0];
+    if (first === undefined) return [{ ...base, food: null }];
+    if (known.length === 1) return [{ ...base, food: first.food }];
+    // Zeste + pulpe, grammes répartis : chaque aliment pèse ce qu'on a dit.
+    if (known.every((f) => f.grams !== null)) {
+      return known.map((f) => ({
+        label: ingredient.label, food: f.food, quantity: null, unit: null, quantityG: f.grams,
+      }));
+    }
+    // Non réparti : rien n'autorise à couper la quantité en deux. La ligne
+    // garde sa masse entière ; elle n'est « végétale » ou non que si tous les
+    // aliments s'accordent, sinon elle reste non classée — jamais devinée.
+    const origins = new Set(known.map((f) => f.food?.plantBased ?? null));
+    const plantBased = origins.size === 1 ? [...origins][0]! : null;
+    return [{ ...base, food: first.food === null ? null : { ...first.food, plantBased } }];
   });
 }
 
@@ -531,7 +624,7 @@ export async function resolveIngredients(
   db: HouseholdDb,
   ingredients: RecipeIngredient[],
 ): Promise<RecipeIngredient[]> {
-  const ids = [...new Set(ingredients.map((i) => i.foodId).filter((id): id is string => id !== null))];
+  const ids = [...new Set(ingredients.flatMap((i) => i.foods.map((f) => f.foodId)))];
   const [foods, defaults] = await Promise.all([loadFoodValues(db, ids), loadUnitDefaults(db)]);
   return ingredients.map((ingredient) => {
     if (ingredient.quantityG !== null) return ingredient;
@@ -590,7 +683,7 @@ export function recipeGaps(recipe: Recipe): string[] {
 export async function seasonalCount(db: HouseholdDb, recipeId: string, month: number): Promise<number> {
   const { rows } = await db.query<{ count: number }>(
     `select count(distinct sp.id)::int as count
-     from recipe_ingredient ri
+     from recipe_ingredient_food ri
      join seasonal_produce sp on sp.food_id = ri.food_id
      where ri.recipe_id = $1 and $2 = any(sp.months)`,
     [recipeId, month],

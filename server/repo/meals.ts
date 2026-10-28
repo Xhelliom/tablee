@@ -541,7 +541,7 @@ export async function recomputeNutrition(
 
   const foodIds = [
     ...itemRows.map((r) => r.food_id),
-    ...ingredients.map((i) => i.foodId),
+    ...ingredients.flatMap((i) => i.foods.map((f) => f.foodId)),
   ].filter((id): id is string => id !== null);
   const foods = await loadFoodValues(client, [...new Set(foodIds)]);
   const defaults = await loadUnitDefaults(client);
@@ -784,7 +784,7 @@ async function hydrate(db: HouseholdDb, rows: MealRow[]): Promise<Meal[]> {
     `select m.id as meal_id, count(distinct sp.id)::int as count
      from meal m
      join household h on h.id = m.household_id
-     join recipe_ingredient ri on ri.recipe_id = m.recipe_id
+     join recipe_ingredient_food ri on ri.recipe_id = m.recipe_id
      join seasonal_produce sp on sp.food_id = ri.food_id
      where m.id = any($1::uuid[])
        and extract(month from (m.eaten_at at time zone h.timezone)) = any(sp.months)

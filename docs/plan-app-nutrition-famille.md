@@ -324,6 +324,33 @@ create table unit_default (
 >   gain faible. `meal_participant.share` n'est jamais touché.
 > - **Pas d'historique** des anciens rattachements : `confirmed_by` et
 >   `created_at` désignent la dernière correction seulement.
+>
+> **Plusieurs aliments sur un ingrédient — décidé le 28/10/2026 (migration
+> 030).** Le cas qui l'a imposé : un citron dont la recette emploie le zeste
+> **et** la pulpe — on devait choisir l'un des deux. Un ingrédient Jow porte
+> désormais une **liste** d'aliments (`jow_food_link_item`, un par ligne, le
+> premier est le principal) ; `jow_food_link` garde le libellé, l'auteur et le
+> verrou, qui reste **un seul** pour tout l'ensemble.
+>
+> - **`grams` est facultatif, et `NULL` veut dire « non réparti »** — jamais 0,
+>   jamais une moitié devinée. Ce sont des grammes **par convive**, propres à
+>   l'ingrédient Jow et non à une recette. Aucune valeur nutritionnelle n'est
+>   inventée : seuls des grammes saisis par un humain entrent.
+> - **Calcul** (`ingredientsAsItems`) : tous les aliments répartis → un item par
+>   aliment, pesé de ses grammes. Sinon la ligne **garde sa masse entière** et
+>   n'est « végétale » ou non que si tous ses aliments s'accordent ; en
+>   désaccord elle reste non classée. La quantité n'est jamais coupée en deux
+>   sans qu'on l'ait dit.
+> - **Cache** : `recipe_ingredient.food_id` reste l'aliment principal. Variété,
+>   saison et alcool lisent la vue `recipe_ingredient_food`, qui liste tous les
+>   aliments d'une ligne ; une ligne à plusieurs aliments non répartis ne pèse
+>   rien dans l'alcool (grammes inconnus), mais compte pour la variété.
+> - **Geste** : sous l'ingrédient, « Ajouter un aliment » et le retrait (×) ; les
+>   grammes se saisissent dès qu'il y a deux aliments. Même garde-fou que la
+>   correction : verrou 403, tout membre du foyer. Une ligne **sans** identifiant
+>   Jow (recette manuelle) reste à un seul aliment (422), faute de lien qui porte
+>   la liste.
+> - Limite consignée : dette n° 31.
 
 ---
 
@@ -911,6 +938,7 @@ La table `nutrient_reference` est **livrée vide**.
 > |---|---|
 > | `002` | `meal_nutrition.grams_total / grams_plant / grams_classified`. Agréger une part végétale sur une journée demande les deux termes du rapport ; la moyenne de deux pourcentages de repas ne mesure rien. |
 > | `003` | `food.*_100g_max` et `meal_nutrition.*_max`. Ciqual publie des majorants (« < 0,5 ») que la doc de la table appelle « une valeur maximale » : un nutriment devient un intervalle plutôt qu'un point. |
+> | `030` | `jow_food_link_item` : plusieurs aliments par ingrédient Jow (le zeste et la pulpe d'un citron), `grams` facultatif ; `jow_food_link` perd `food_id`. |
 > | `004` | `jow_food_link`. L'ObjectId d'un ingrédient Jow est stable : on le rattache une fois, pas une fois par recette. |
 > | `005` | `nutrient_reference.kind` et `.basis` — voir l'encart du §9. |
 > | `006` | `nutrient_reference.derived` et la table `energy_reference` — voir l'encart du §9. |
@@ -1358,6 +1386,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 > | `GET` | `/api/recipes/:id` | Une recette et ses ingrédients, pour proposer de les rattacher au référentiel. |
 > | `POST` | `/api/recipes/peek` | Ce qu'on tire d'un texte partagé **sans accès réseau**, pour afficher quelque chose tout de suite. |
 > | `POST` | `/api/recipes/ingredients/:id/food` | Rattache un ingrédient Jow au référentiel, et propage à toutes les recettes qui l'emploient. |
+> | `PUT` | `/api/recipes/ingredients/:id/foods` | Pose **tous** les aliments d'un ingrédient Jow (`{ foods: [{ foodId, grams? }] }`) ; remplace l'ensemble, vide = détacher (030). |
 > | `GET` | `/api/recipes/links` | Les correspondances déjà posées, pour les relire et les corriger. |
 > | `POST` | `/api/foods` | Créer un aliment saisi à la main, sans aucune valeur déduite. |
 > | `DELETE` | `/api/templates/:id` | |

@@ -85,9 +85,7 @@ interface Impact {
 interface FoodLink {
   jowFoodId: string;
   label: string;
-  foodId: string;
-  foodName: string;
-  plantBased: boolean | null;
+  foods: { foodId: string; foodName: string; plantBased: boolean | null; grams: number | null }[];
   locked: boolean;
   usageCount: number;
 }
@@ -893,7 +891,7 @@ function OngletAliments({ onError, vueInitiale }: {
                     aria-label={`Sélectionner ${lien.label}`}
                   />
                   <span>
-                    <span style={{ fontSize: 15 }}>« {lien.label} » → {lien.foodName}</span>
+                    <span style={{ fontSize: 15 }}>« {lien.label} » → {lien.foods.map((f) => f.foodName).join(' + ')}</span>
                     <span className="meta" style={{ display: 'block', marginTop: 2 }}>
                       {lien.usageCount} ligne(s)
                     </span>

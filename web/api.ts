@@ -345,10 +345,19 @@ export interface DashboardResponse {
   referencesLoaded: boolean;
 }
 
+/** Un aliment rattaché à un ingrédient ; `grams` nul = non réparti. */
+export interface FoodChoice {
+  foodId: string;
+  grams: number | null;
+}
+
 export interface RecipeIngredient {
   id: string;
   label: string;
+  /** L'aliment principal — le premier de `foods`. */
   foodId: string | null;
+  /** Tous les aliments : le zeste et la pulpe d'un même citron. */
+  foods: (FoodChoice & { foodName: string })[];
   jowFoodId: string | null;
   quantity: number | null;
   unit: string | null;

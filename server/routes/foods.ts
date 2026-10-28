@@ -3,9 +3,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { transaction } from '../db.ts';
-import { body, optionalUuid, str, uuid } from '../http/validate.ts';
+import { body, foodChoices, optionalUuid, str, uuid } from '../http/validate.ts';
 import { createManualFood, hasFoodReferential, searchFoods } from '../repo/foods.ts';
-import { linkIngredientToFood, listLinks } from '../repo/recipes.ts';
+import { linkIngredientToFood, listLinks, setIngredientFoods } from '../repo/recipes.ts';
 import { recomputeMealsUsingIngredient } from '../repo/meals.ts';
 import type { AppContext } from '../app.ts';
 
@@ -63,6 +63,30 @@ export function foodRoutes(app: FastifyInstance, _ctx: AppContext): void {
 
       return transaction(request.db, async (client) => {
         const link = await linkIngredientToFood(client, ingredientId, foodId, confirmedBy);
+        const recomputed =
+          link.jowFoodId === null
+            ? 0
+            : await recomputeMealsUsingIngredient(client, householdId, link.jowFoodId);
+        return { ok: true, ...link, recomputed };
+      });
+    },
+  );
+
+  /**
+   * Pose **tous** les aliments d'un ingrédient d'un coup — le zeste et la
+   * pulpe d'un citron. La liste remplace l'ensemble ; vide, elle détache.
+   * Mêmes effets que la route ci-dessus : propagation et recalcul.
+   */
+  app.put<{ Params: { id: string } }>(
+    '/api/recipes/ingredients/:id/foods',
+    async (request) => {
+      const ingredientId = uuid(request.params.id, 'id');
+      const choices = foodChoices(body(request.body)['foods'], 'foods');
+      const confirmedBy = request.identity().userId;
+      const householdId = request.householdId();
+
+      return transaction(request.db, async (client) => {
+        const link = await setIngredientFoods(client, ingredientId, choices, confirmedBy);
         const recomputed =
           link.jowFoodId === null
             ? 0
