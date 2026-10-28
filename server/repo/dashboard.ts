@@ -263,10 +263,13 @@ export async function frequencyInputs(
      where ${window}
      union all
      select m.id, (m.eaten_at at time zone $4)::date::text,
-            f.category, f.name, 'portion', f.alcohol_100g, ri.quantity_g
+            f.category, f.name, 'portion', f.alcohol_100g,
+            -- Une ligne à plusieurs aliments ne pèse que ce qu'on a réparti.
+            case when rf.multiple then rf.grams else ri.quantity_g end
      from meal m
      join recipe_ingredient ri on ri.recipe_id = m.recipe_id
-     join food f on f.id = ri.food_id
+     join recipe_ingredient_food rf on rf.ingredient_id = ri.id
+     join food f on f.id = rf.food_id
      where ${window}`,
     params,
   );
@@ -321,7 +324,7 @@ export async function diversityRows(
      left join lateral (
        select food_id from meal_item where meal_id = m.id and food_id is not null
        union
-       select food_id from recipe_ingredient where recipe_id = m.recipe_id and food_id is not null
+       select food_id from recipe_ingredient_food where recipe_id = m.recipe_id
      ) x on true
      left join food f on f.id = x.food_id
      where m.household_id = $1

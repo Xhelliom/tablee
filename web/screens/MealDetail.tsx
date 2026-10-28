@@ -734,12 +734,17 @@ function IngredientRow({
     if (dernière.current === text) setResults(foods);
   };
 
-  const link = async (foodId: string): Promise<void> => {
+  // « remplacer » corrige un rattachement erroné ; « ajouter » complète (le zeste
+  // et la pulpe d'un même citron). Dans les deux cas la liste part en bloc.
+  const [mode, setMode] = useState<'remplacer' | 'ajouter'>('remplacer');
+  const jow = ingredient.jowFoodId !== null;
+  const actuels = ingredient.foods.map(({ foodId, grams }) => ({ foodId, grams }));
+
+  const save = async (foods: { foodId: string; grams: number | null }[], message: string): Promise<void> => {
     let result: { propagated: number; recomputed: number };
     try {
-      result = await api.post<{ propagated: number; recomputed: number }>(
-        `/api/recipes/ingredients/${ingredient.id}/food`,
-        { foodId },
+      result = await api.put<{ propagated: number; recomputed: number }>(
+        `/api/recipes/ingredients/${ingredient.id}/foods`, { foods },
       );
     } catch (e) {
       // Un lien verrouillé par le super-admin répond 403 : le dire plutôt que se taire.
@@ -752,10 +757,31 @@ function IngredientRow({
     // dire, sinon le geste paraît coûter un tap pour un seul plat.
     setDone(
       result.propagated > 1
-        ? `${ingredient.foodId === null ? 'Rattaché' : 'Corrigé'} — ${result.propagated} recettes câblées d’un coup`
-        : ingredient.foodId === null ? 'Rattaché, une fois pour toutes' : 'Corrigé, une fois pour toutes',
+        ? `${message} — ${result.propagated} recettes câblées d’un coup`
+        : `${message}, une fois pour toutes`,
     );
     onLinked();
+  };
+
+  const link = (foodId: string): Promise<void> => {
+    if (mode === 'ajouter') {
+      return save(
+        actuels.some((a) => a.foodId === foodId) ? actuels : [...actuels, { foodId, grams: null }],
+        'Aliment ajouté',
+      );
+    }
+    return save([{ foodId, grams: null }], ingredient.foodId === null ? 'Rattaché' : 'Corrigé');
+  };
+
+  const retirer = (foodId: string): Promise<void> =>
+    save(actuels.filter((a) => a.foodId !== foodId), 'Aliment retiré');
+
+  // Vide = non réparti, jamais 0 ; une valeur illisible n'est pas envoyée.
+  const répartir = (foodId: string, texte: string): Promise<void> | undefined => {
+    const grams = texte.trim() === '' ? null : Number(texte.replace(',', '.'));
+    if (grams !== null && !(grams > 0)) { setErreur('Des grammes, supérieurs à zéro'); return undefined; }
+    if (grams === (actuels.find((a) => a.foodId === foodId)?.grams ?? null)) return undefined;
+    return save(actuels.map((a) => (a.foodId === foodId ? { ...a, grams } : a)), 'Grammes enregistrés');
   };
 
   return (
@@ -782,7 +808,7 @@ function IngredientRow({
         <div className="apparait" style={puits}>
           <div className="spread">
             <span className="label" style={{ margin: 0 }}>
-              {ingredient.foodId === null ? 'Rattacher à un aliment' : 'Corriger l’aliment rattaché'}
+              {ingredient.foodId === null ? 'Rattacher à un aliment' : mode === 'ajouter' ? 'Ajouter un aliment' : 'Corriger l’aliment rattaché'}
             </span>
             <button type="button" className="appbar__action"
                     style={{ color: 'var(--text-muted)' }}
@@ -825,17 +851,52 @@ function IngredientRow({
       ) : ingredient.foodId === null ? (
         <button type="button" className="chip chip--warning"
                 style={{ marginTop: 5, cursor: 'pointer' }}
-                onClick={() => { void search(ingredient.label); }}>
+                onClick={() => { setMode('remplacer'); void search(ingredient.label); }}>
           Rattacher à un aliment
         </button>
       ) : (
         // Le lien est commun à tous les foyers : la première erreur y reste figée
         // pour tout le monde tant que personne ne peut la reprendre.
-        <button type="button" className="chip"
-                style={{ marginTop: 5, cursor: 'pointer' }}
-                onClick={() => { void search(ingredient.label); }}>
-          Corriger le rattachement
-        </button>
+        <div style={{ marginTop: 5 }}>
+          {ingredient.foods.map((food) => (
+            <div key={food.foodId} className="spread" style={{ gap: 8, marginTop: 3 }}>
+              <span className="meta" style={{ flex: 1, minWidth: 0 }}>{food.foodName}</span>
+              {ingredient.foods.length > 1 ? (
+                <input
+                  defaultValue={food.grams ?? ''}
+                  inputMode="decimal"
+                  placeholder="g / convive"
+                  aria-label={`Grammes de ${food.foodName} par convive`}
+                  onBlur={(e) => { void répartir(food.foodId, e.target.value); }}
+                  style={{ width: 92, fontSize: 13 }}
+                />
+              ) : null}
+              {jow ? (
+                <button type="button" className="appbar__action"
+                        style={{ color: 'var(--text-muted)' }}
+                        aria-label={`Retirer ${food.foodName}`}
+                        onClick={() => { void retirer(food.foodId); }}>
+                  <IconClose size={16} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+          {ingredient.foods.length > 1 ? (
+            <p className="meta" style={{ marginTop: 4 }}>
+              Les grammes sont facultatifs : sans eux, la quantité de la ligne n’est pas partagée.
+            </p>
+          ) : null}
+          <button type="button" className="chip" style={{ marginTop: 5, cursor: 'pointer' }}
+                  onClick={() => { setMode('remplacer'); void search(ingredient.label); }}>
+            Corriger le rattachement
+          </button>
+          {jow ? (
+            <button type="button" className="chip" style={{ marginTop: 5, marginLeft: 6, cursor: 'pointer' }}
+                    onClick={() => { setMode('ajouter'); void search(ingredient.label); }}>
+              Ajouter un aliment
+            </button>
+          ) : null}
+        </div>
       )}
     </div>
   );

@@ -1202,7 +1202,7 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
       assert.equal(apres.meal.nutrition.plantRatio, 100);
       const { body: liens } = await call('GET', '/api/recipes/links');
       assert.equal(liens.links.length, 1);
-      assert.equal(liens.links[0].foodId, carotte);
+      assert.equal(liens.links[0].foods[0].foodId, carotte);
     });
 
     it('détacher oublie la correspondance au lieu de la réappliquer', async () => {
@@ -1216,6 +1216,128 @@ describe('API', { skip: enabled ? false : SKIP_MESSAGE }, () => {
 
       const { body: liens } = await call('GET', '/api/recipes/links');
       assert.deepEqual(liens.links, []);
+    });
+
+    describe('plusieurs aliments sur un ingrédient (citron : zeste et pulpe)', () => {
+      const JOW = '63f4c8cc9b0e113c174f3ec1';
+      const citronRecette = async (): Promise<{ recipeId: string; ingredientId: string }> => {
+        const { rows } = await pool.query<{ id: string }>(
+          `insert into recipe (source, jow_recipe_id, title, base_servings,
+                               kcal_serving, protein_serving, carb_serving, fat_serving, fiber_serving)
+           values ('jow', '650b16ade7cc8d0013ce4a70', 'Poulet au citron', 1, 300, 20, 10, 15, 3)
+           returning id`,
+        );
+        const recipeId = rows[0]!.id;
+        const { rows: ing } = await pool.query<{ id: string }>(
+          `insert into recipe_ingredient (recipe_id, jow_food_id, label, quantity_g, position)
+           values ($1, $2, 'Citron jaune', 100, 0) returning id`,
+          [recipeId, JOW],
+        );
+        return { recipeId, ingredientId: ing[0]!.id };
+      };
+
+      it('rattache le zeste et la pulpe au même ingrédient, et les relit tous les deux', async () => {
+        const { recipeId, ingredientId } = await citronRecette();
+        const pulpe = await insertFood(pool, 'Citron jaune, pulpe', { kcal: 30 }, true);
+        const zeste = await insertFood(pool, 'Citron jaune, zeste', { kcal: 47 }, true);
+
+        const { body } = await call('PUT', `/api/recipes/ingredients/${ingredientId}/foods`, {
+          foods: [{ foodId: pulpe }, { foodId: zeste, grams: 5 }],
+        });
+        assert.equal(body.jowFoodId, JOW);
+
+        const { body: lue } = await call('GET', `/api/recipes/${recipeId}`);
+        const [ligne] = lue.recipe.ingredients;
+        assert.equal(ligne.foodId, pulpe, 'le premier reste l’aliment principal');
+        assert.deepEqual(
+          ligne.foods.map((f: { foodId: string; grams: number | null }) => [f.foodId, f.grams]),
+          [[pulpe, null], [zeste, 5]],
+        );
+        const { body: liens } = await call('GET', '/api/recipes/links');
+        assert.equal(liens.links[0].foods.length, 2);
+
+        // Retirer l'un laisse l'autre, et la ligne le sait.
+        await call('PUT', `/api/recipes/ingredients/${ingredientId}/foods`, { foods: [{ foodId: zeste }] });
+        const { body: après } = await call('GET', `/api/recipes/${recipeId}`);
+        assert.equal(après.recipe.ingredients[0].foodId, zeste);
+        assert.equal(après.recipe.ingredients[0].foods.length, 1);
+      });
+
+      it('compte les deux aliments dans la variété de la semaine', async () => {
+        const adulte = await addEater('Adulte', '1985-01-01', 1, 'M');
+        const { recipeId, ingredientId } = await citronRecette();
+        const pulpe = await insertFood(pool, 'Citron jaune, pulpe', { kcal: 30 }, true);
+        const zeste = await insertFood(pool, 'Citron jaune, zeste', { kcal: 47 }, true);
+        await call('PUT', `/api/recipes/ingredients/${ingredientId}/foods`, {
+          foods: [{ foodId: pulpe }, { foodId: zeste }],
+        });
+        await call('POST', '/api/meals', {
+          eaten_at: '2026-10-06T12:00:00+02:00', slot: 'dejeuner', source: 'jow',
+          recipe_id: recipeId, participants: [{ eaterId: adulte }],
+        });
+        const { body } = await call('GET', '/api/week?from=2026-10-05&days=7');
+        assert.equal(body.diversity.household.foods, 2);
+      });
+
+      it('ne devine pas le partage : sans grammes, la part végétale ne se classe que si les aliments s’accordent', async () => {
+        const { ingredientId } = await citronRecette();
+        const végétal = await insertFood(pool, 'Citron, pulpe', { kcal: 30 }, true);
+        const animal = await insertFood(pool, 'Zeste étrange', { kcal: 47 }, false);
+        const { ingredientsAsItems, loadIngredients } = await import('./repo/recipes.ts');
+        const { rows } = await pool.query<{ recipe_id: string }>(
+          'select recipe_id from recipe_ingredient where id = $1', [ingredientId],
+        );
+        const foodsOf = (ids: [string, boolean | null][]) => new Map(ids.map(([id, plantBased]) => [
+          id, { name: id, plantBased, unitWeights: null, category: null },
+        ]));
+        const lire = async () => (await withHousehold(pool, householdId, (c) =>
+          loadIngredients(c, rows[0]!.recipe_id)))[0]!;
+
+        await call('PUT', `/api/recipes/ingredients/${ingredientId}/foods`, {
+          foods: [{ foodId: végétal }, { foodId: animal }],
+        });
+        const désaccord = ingredientsAsItems([await lire()], foodsOf([[végétal, true], [animal, false]]));
+        assert.equal(désaccord.length, 1, 'la masse de la ligne n’est pas coupée en deux');
+        assert.equal(désaccord[0]!.quantityG, 100);
+        assert.equal(désaccord[0]!.food?.plantBased, null, 'désaccord : non classé, pas deviné');
+
+        // Les grammes répartis remplacent la masse : un item par aliment.
+        await call('PUT', `/api/recipes/ingredients/${ingredientId}/foods`, {
+          foods: [{ foodId: végétal, grams: 90 }, { foodId: animal, grams: 10 }],
+        });
+        const réparti = ingredientsAsItems([await lire()], foodsOf([[végétal, true], [animal, false]]));
+        assert.deepEqual(réparti.map((i) => i.quantityG), [90, 10]);
+      });
+
+      it('verrouille l’ensemble, refuse un doublon et les grammes à zéro', async () => {
+        const { ingredientId } = await citronRecette();
+        const pulpe = await insertFood(pool, 'Citron jaune, pulpe', { kcal: 30 }, true);
+        const zeste = await insertFood(pool, 'Citron jaune, zeste', { kcal: 47 }, true);
+        const url = `/api/recipes/ingredients/${ingredientId}/foods`;
+        assert.equal((await call('PUT', url, { foods: [{ foodId: pulpe }, { foodId: pulpe }] })).status, 400);
+        assert.equal((await call('PUT', url, { foods: [{ foodId: pulpe, grams: 0 }] })).status, 400);
+
+        await call('PUT', url, { foods: [{ foodId: pulpe }] });
+        await pool.query('update jow_food_link set locked = true where jow_food_id = $1', [JOW]);
+        assert.equal((await call('PUT', url, { foods: [{ foodId: pulpe }, { foodId: zeste }] })).status, 403);
+      });
+
+      it('refuse plusieurs aliments sur une ligne sans identifiant Jow', async () => {
+        const { rows } = await pool.query<{ id: string }>(
+          `insert into recipe (source, jow_recipe_id, title, base_servings)
+           values ('jow', '650b16ade7cc8d0013ce4a71', 'Sans clé Jow', 1) returning id`,
+        );
+        const { rows: ing } = await pool.query<{ id: string }>(
+          `insert into recipe_ingredient (recipe_id, label, quantity_g, position)
+           values ($1, 'Citron', 100, 0) returning id`, [rows[0]!.id],
+        );
+        const a = await insertFood(pool, 'A', { kcal: 1 }, true);
+        const b = await insertFood(pool, 'B', { kcal: 1 }, true);
+        const { status } = await call('PUT', `/api/recipes/ingredients/${ing[0]!.id}/foods`, {
+          foods: [{ foodId: a }, { foodId: b }],
+        });
+        assert.equal(status, 422);
+      });
     });
   });
 

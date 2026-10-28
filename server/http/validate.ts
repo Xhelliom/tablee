@@ -153,6 +153,27 @@ export function array(value: unknown, field: string): unknown[] {
   return value;
 }
 
+/**
+ * Les aliments d'un ingrédient : `{ foodId, grams? }`, sans doublon. `grams`
+ * absent ou `null` = non réparti ; 0 est refusé, ce n'est pas « inconnu ».
+ */
+export function foodChoices(value: unknown, field: string): { foodId: string; grams: number | null }[] {
+  const list = array(value, field);
+  if (list.length > 8) throw ApiError.badRequest(`« ${field} » : 8 aliments au plus`);
+  const choices = list.map((entry, i) => {
+    const item = body(entry);
+    const grams = item['grams'];
+    return {
+      foodId: uuid(item['foodId'], `${field}[${i}].foodId`),
+      grams: grams === undefined || grams === null ? null : num(grams, `${field}[${i}].grams`, { min: 0.01, max: 100000 }),
+    };
+  });
+  if (new Set(choices.map((c) => c.foodId)).size !== choices.length) {
+    throw ApiError.badRequest(`« ${field} » : un aliment ne peut figurer qu’une fois`);
+  }
+  return choices;
+}
+
 export function stringArray(value: unknown, field: string): string[] {
   return array(value, field).map((v, i) => str(v, `${field}[${i}]`, { max: 80 }));
 }

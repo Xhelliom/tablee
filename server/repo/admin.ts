@@ -24,6 +24,7 @@
  * route (`server/routes/admin.ts`), pas ici.
  */
 import { withHousehold, type UnscopedDb } from '../db.ts';
+import { propagateFirstFood, writeLinkItems, type FoodChoice } from './recipes.ts';
 
 /** Le premier compte connecté devient super-admin, une seule fois. */
 export async function ensureFirstSuperAdmin(db: UnscopedDb, userId: string): Promise<boolean> {
@@ -321,9 +322,8 @@ export async function listEaterLinks(
 export interface AdminFoodLink {
   jowFoodId: string;
   label: string;
-  foodId: string;
-  foodName: string;
-  plantBased: boolean | null;
+  /** Les aliments rattachés, le principal en premier (030). */
+  foods: { foodId: string; foodName: string; plantBased: boolean | null; grams: number | null }[];
   locked: boolean;
   usageCount: number;
 }
@@ -347,24 +347,29 @@ export async function listFoodLinks(
   const params: unknown[] = [];
   if (filtre !== null) {
     params.push(filtre);
-    conditions.push(`(${contient('l.label', params.length)} or ${contient('f.name', params.length)})`);
+    conditions.push(`(${contient('l.label', params.length)} or exists (
+      select 1 from jow_food_link_item i join food f on f.id = i.food_id
+      where i.jow_food_id = l.jow_food_id and ${contient('f.name', params.length)}))`);
   }
   if (verrou === 'verrouilles') conditions.push('l.locked = true');
   if (verrou === 'modifiables') conditions.push('l.locked = false');
   const where = conditions.length > 0 ? `where ${conditions.join(' and ')}` : '';
 
   const { rows: total } = await db.query<{ n: string }>(
-    `select count(*)::text as n from jow_food_link l join food f on f.id = l.food_id ${where}`,
+    `select count(*)::text as n from jow_food_link l ${where}`,
     params,
   );
   const { rows } = await db.query<{
-    jow_food_id: string; label: string; food_id: string;
-    food_name: string; plant_based: boolean | null; locked: boolean;
+    jow_food_id: string; label: string; locked: boolean;
+    foods: { foodId: string; foodName: string; plantBased: boolean | null; grams: number | null }[];
   }>(
-    `select l.jow_food_id, l.label, l.food_id, f.name as food_name,
-            f.plant_based, l.locked
+    `select l.jow_food_id, l.label, l.locked,
+            (select json_agg(json_build_object('foodId', i.food_id, 'foodName', f.name,
+                                               'plantBased', f.plant_based, 'grams', i.grams)
+                             order by i.position, i.food_id)
+             from jow_food_link_item i join food f on f.id = i.food_id
+             where i.jow_food_id = l.jow_food_id) as foods
      from jow_food_link l
-     join food f on f.id = l.food_id
      ${where}
      order by l.label
      limit ${limit} offset ${offset}`,
@@ -383,9 +388,7 @@ export async function listFoodLinks(
     items: rows.map((r) => ({
       jowFoodId: r.jow_food_id,
       label: r.label,
-      foodId: r.food_id,
-      foodName: r.food_name,
-      plantBased: r.plant_based,
+      foods: r.foods ?? [],
       locked: r.locked,
       usageCount: parId.get(r.jow_food_id) ?? 0,
     })),
@@ -520,9 +523,9 @@ export async function listUnlinkedIngredients(
  * son foyer, mais sans s'arrêter au verrou.
  */
 export async function adminSetFoodLink(
-  db: UnscopedDb, jowFoodId: string, foodId: string | null,
+  db: UnscopedDb, jowFoodId: string, choices: FoodChoice[],
 ): Promise<number> {
-  if (foodId === null) {
+  if (choices.length === 0) {
     await db.query('delete from jow_food_link where jow_food_id = $1', [jowFoodId]);
   } else {
     const label = (await db.query<{ label: string }>(
@@ -533,18 +536,9 @@ export async function adminSetFoodLink(
         'select label from jow_food_link where jow_food_id = $1', [jowFoodId],
       )).rows[0]?.label
       ?? jowFoodId;
-    await db.query(
-      `insert into jow_food_link (jow_food_id, food_id, label, confirmed_by)
-       values ($1, $2, $3, null)
-       on conflict (jow_food_id) do update set food_id = excluded.food_id,
-         label = excluded.label, created_at = now()`,
-      [jowFoodId, foodId, label],
-    );
+    await writeLinkItems(db, jowFoodId, label, choices, null);
   }
-  const propagated = await db.query(
-    'update recipe_ingredient set food_id = $2 where jow_food_id = $1', [jowFoodId, foodId],
-  );
-  return propagated.rowCount ?? 0;
+  return propagateFirstFood(db, jowFoodId);
 }
 
 export async function adminSetFoodLock(db: UnscopedDb, jowFoodId: string, locked: boolean): Promise<void> {

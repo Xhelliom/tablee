@@ -1111,3 +1111,21 @@ ne s'affiche pas quand **tous** les adultes actifs l'excluent
 comptent. « Végétarien » et « végétalien » excluent viande et poisson. Un régime
 est une valeur déclarée librement : une faute de frappe dans `diets` ne masque
 rien. Les enfants ne pèsent pas dans ce calcul, comme dans les repères.
+
+## 31. Les grammes d'un ingrédient à plusieurs aliments valent pour toutes les recettes
+
+*28/10/2026, migration 030.* Quand un ingrédient Jow est rattaché à plusieurs
+aliments (le zeste et la pulpe d'un citron), `jow_food_link_item.grams` est
+porté par l'**ingrédient Jow**, donc commun à toutes les recettes qui
+l'emploient. Or une recette peut en demander 5 g de zeste, une autre 20 g.
+
+- **Ce que ça coûte** : des grammes saisis pour une recette s'appliquent à
+  l'autre, sans le dire. Facultatif exprès — vide (`NULL`), la ligne garde sa
+  masse entière et se classe seulement si les aliments s'accordent.
+- **Ce que ça évite** : couper la quantité en deux « à la louche », qui
+  fabriquerait une valeur sans source.
+- **Ce qui le lèverait** : une répartition par ligne de recette
+  (`recipe_ingredient`) plutôt que par ingrédient Jow, si l'usage montre que les
+  grammes varient vraiment d'une recette à l'autre.
+- **Aussi** : une ligne sans identifiant Jow (recette manuelle) reste limitée à
+  un aliment.
