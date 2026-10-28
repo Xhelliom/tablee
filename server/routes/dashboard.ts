@@ -19,6 +19,8 @@ import {
   mealsForRange, weekGrid,
 } from '../repo/dashboard.ts';
 import { listMeals } from '../repo/meals.ts';
+import { completeDays, markDayComplete, unmarkDayComplete } from '../repo/days.ts';
+import { isoDate, uuid } from '../http/validate.ts';
 import { mondayOf, nextDay, shiftDay, startOfDay, todayIn } from '../http/tz.ts';
 import type { AppContext } from '../app.ts';
 
@@ -31,12 +33,13 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       throw ApiError.badRequest('« date » doit être une date AAAA-MM-JJ');
     }
 
-    const [eaters, references, meals, plantAverage, weekMeals] = await Promise.all([
+    const [eaters, references, meals, plantAverage, weekMeals, complete] = await Promise.all([
       listEaters(request.db, householdId),
       loadReferences(request.db),
       mealsForDay(request.db, householdId, date, timezone),
       householdPlantAverage(request.db, householdId, 7),
       mealsForRange(request.db, householdId, shiftDay(date, -6), 7, timezone),
+      completeDays(request.db, householdId, shiftDay(date, -6), date),
     ]);
 
     const byMember = new Map<string, typeof meals>();
@@ -55,6 +58,8 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
         // calories ni de poids sur un profil mineur.
         minor: isMinor(eater.birthDate),
       },
+      /** « J'ai tout saisi » pour ce jour-là : un état de la saisie, jamais un compte. */
+      complete: complete.has(`${date} ${eater.id}`),
       balance: bilanJournalier({
         sex: eater.sex,
         age: ageAt(eater.birthDate, new Date(`${date}T12:00:00Z`)),
@@ -63,6 +68,7 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
         householdPlantAverage7d: plantAverage,
         energyWeek: weekDates.map((day) =>
           weekMeals.filter((row) => row.eaterId === eater.id && row.date === day)),
+        completeWeek: weekDates.map((day) => complete.has(`${day} ${eater.id}`)),
       }),
     }));
 
@@ -84,6 +90,23 @@ export function dashboardRoutes(app: FastifyInstance, _ctx: AppContext): void {
       /** Les repères manquent-ils entièrement ? L'écran doit pouvoir le dire. */
       referencesLoaded: references.length > 0,
     };
+  });
+
+  /**
+   * Dette n° 20 — « j'ai tout saisi ce jour-là », par convive (028). Tout
+   * membre le pose ou le retire, comme il saisit un repas pour un autre.
+   */
+  app.put<{ Params: { id: string; date: string } }>('/api/eaters/:id/days/:date/complete', async (request) => {
+    const marked = await markDayComplete(request.db, request.householdId(),
+      uuid(request.params.id, 'id'), isoDate(request.params.date, 'date'));
+    if (!marked) throw ApiError.notFound('convive introuvable');
+    return { complete: true };
+  });
+
+  app.delete<{ Params: { id: string; date: string } }>('/api/eaters/:id/days/:date/complete', async (request) => {
+    await unmarkDayComplete(request.db, request.householdId(),
+      uuid(request.params.id, 'id'), isoDate(request.params.date, 'date'));
+    return { complete: false };
   });
 
   /** V2 — grille 7 jours × membres. */

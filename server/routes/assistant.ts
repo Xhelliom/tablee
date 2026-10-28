@@ -20,6 +20,7 @@ import {
   describePriorities, describeRecipes, readIdeas, readProposals, recipeCandidates,
 } from '../llm/recettes.ts';
 import { householdPlantAverage, householdTimezone } from '../repo/dashboard.ts';
+import { completeDays } from '../repo/days.ts';
 import { listEaters } from '../repo/eaters.ts';
 import { listMeals } from '../repo/meals.ts';
 import { listRecipes } from '../repo/recipes.ts';
@@ -131,7 +132,7 @@ async function readWeek(request: FastifyRequest): Promise<{ facts: HouseholdFact
   const { householdId } = identity;
   const timezone = await householdTimezone(request.db, householdId);
   const today = todayIn(timezone);
-  const [everyone, references, plant7d, plant28d, recent] = await Promise.all([
+  const [everyone, references, plant7d, plant28d, recent, complete] = await Promise.all([
     listEaters(request.db, householdId, { includeInactive: true }),
     loadReferences(request.db),
     householdPlantAverage(request.db, householdId, 7),
@@ -140,6 +141,7 @@ async function readWeek(request: FastifyRequest): Promise<{ facts: HouseholdFact
       request.db, householdId,
       startOfDay(shiftDay(today, -7), timezone), startOfDay(nextDay(today), timezone),
     ),
+    completeDays(request.db, householdId, shiftDay(today, -7), shiftDay(today, -1)),
   ]);
   const eaters = everyone.filter((eater) => eater.active);
 
@@ -157,9 +159,14 @@ async function readWeek(request: FastifyRequest): Promise<{ facts: HouseholdFact
     }
   }
 
+  // Dette n° 20 : dès qu'une journée est marquée complète, seules celles-là
+  // comptent — une journée dont seul le dîner est saisi n'est pas un manque.
+  const completeOnly = [...journées.keys()].some((key) => complete.has(key));
+  const counted = [...journées].filter(([key]) => !completeOnly || complete.has(key));
+
   // Des moyennes du foyer, et rien par personne : voir l'en-tête de conseil.ts.
   const percents: HouseholdFacts['percents'] = { proteinG: [], carbG: [], fatG: [], fiberG: [] };
-  for (const { day, eaterId, meals } of journées.values()) {
+  for (const [, { day, eaterId, meals }] of counted) {
     const eater = eaters.find((candidate) => candidate.id === eaterId);
     if (eater === undefined) continue;
     const { bars } = bilanJournalier({
@@ -186,6 +193,7 @@ async function readWeek(request: FastifyRequest): Promise<{ facts: HouseholdFact
       mealCount: recent.length,
       dishes,
       percents,
+      completeOnly,
       plant7d,
       plant28d,
     },

@@ -211,8 +211,9 @@ function NutrientRow({
 
 /**
  * L'énergie en moyenne sur 7 jours (majeurs seulement : la ligne n'est pas
- * rendue sans `energyAverage7d`, I5). Dit toujours que c'est un minorant : une
- * journée partiellement saisie compte comme entière (dette n° 20).
+ * rendue sans `energyAverage7d`, I5). Sans journée marquée complète, dit que
+ * c'est un minorant : une journée partiellement saisie compte comme entière
+ * (dette n° 20).
  */
 function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElement {
   return (
@@ -223,7 +224,11 @@ function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElemen
       <div className="spread" style={{ gap: 10 }}>
         <Name color={NUTRIENT_COLOR.kcal} label="Énergie, moyenne sur 7 jours" />
         <span className="meta">
-          {energy.days > 0 ? `${energy.days} jour${energy.days > 1 ? 's' : ''} renseigné${energy.days > 1 ? 's' : ''}` : ''}
+          {energy.days > 0
+            ? energy.completeOnly
+              ? `${energy.days} journée${energy.days > 1 ? 's' : ''} complète${energy.days > 1 ? 's' : ''}`
+              : `${energy.days} jour${energy.days > 1 ? 's' : ''} renseigné${energy.days > 1 ? 's' : ''}`
+            : ''}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -247,7 +252,9 @@ function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElemen
       <p className="meta">
         {energy.average === null
           ? 'Indisponible : aucun repas des 7 derniers jours n’a d’énergie connue.'
-          : 'Une journée saisie en partie compte comme entière : la moyenne est un minimum, peut-être plus haute en vrai.'}
+          : energy.completeOnly
+            ? 'Sur les seules journées marquées « tout saisi ».'
+            : 'Une journée saisie en partie compte comme entière : la moyenne est un minimum, peut-être plus haute en vrai.'}
       </p>
       <EnergySlots bySlot={energy.bySlot} />
     </div>

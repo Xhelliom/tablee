@@ -69,6 +69,21 @@ describe('bilanJournalier', () => {
     assert.equal(result.energyAverage7d?.percent, 57.1);
   });
 
+  it('ne compte que les journées complètes dès qu’il y en a une (dette n° 20)', () => {
+    const week = [[repas({ kcal: 400 })], [repas({ kcal: 2000 })], [repas({ kcal: 1800 })]];
+    const sans = bilanJournalier({ sex: 'M', age: 40, references: REPERES_DE_TEST, meals: [], energyWeek: week });
+    assert.equal(sans.energyAverage7d?.average, 1400);
+    assert.equal(sans.energyAverage7d?.completeOnly, false);
+
+    const avec = bilanJournalier({
+      sex: 'M', age: 40, references: REPERES_DE_TEST, meals: [],
+      energyWeek: week, completeWeek: [false, true, true],
+    });
+    assert.equal(avec.energyAverage7d?.average, 1900);
+    assert.equal(avec.energyAverage7d?.days, 2);
+    assert.equal(avec.energyAverage7d?.completeOnly, true);
+  });
+
   it('répartit l’énergie des 7 jours par créneau, part figée comprise, sans repère', () => {
     const result = bilanJournalier({
       sex: 'M', age: 40, references: REPERES_DE_TEST, meals: [],

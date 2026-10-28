@@ -29,7 +29,7 @@ import { MealCard } from '../components/MealCard.tsx';
 import { NutrientRing } from '../components/NutrientRing.tsx';
 import { RecipeScores } from '../components/RecipeScores.tsx';
 import { SeasonStrip } from '../components/SeasonStrip.tsx';
-import { IconBowl, IconChevron, IconPlus } from '../icons.tsx';
+import { IconBowl, IconCheck, IconChevron, IconPlus } from '../icons.tsx';
 import {
   BAR_NUTRIENTS, NUTRIENT_LABELS, SLOT_ORDER, currentSlot, eatenAt, localDate, longDate,
 } from '../design/vocabulary.ts';
@@ -125,6 +125,15 @@ export function TodayScreen(): React.ReactElement {
             referencesLoaded={data.referencesLoaded}
             when={day === null ? 'aujourd’hui' : 'ce jour-là'}
           />
+          {shown.balance.mealCount > 0 ? (
+            <DayComplete
+              key={`${shown.eater.id} ${data.date}`}
+              entry={shown}
+              date={data.date}
+              when={day === null ? 'aujourd’hui' : 'ce jour-là'}
+              onChange={() => setReload((n) => n + 1)}
+            />
+          ) : null}
         </section>
       )}
 
@@ -257,6 +266,46 @@ interface Tally {
  * sur 4 » dit ce qui manque sur la table. Rien avant le premier repas du jour :
  * à 7 h, tout est à compléter, et le dire n'apprend rien.
  */
+/**
+ * Dette n° 20 — « j'ai tout saisi », par convive et par jour. Les moyennes sur
+ * 7 jours ne portent alors que sur ces journées. Une information sur la
+ * saisie : jamais de compte ni de série à l'écran (I5).
+ */
+function DayComplete({ entry, date, when, onChange }: {
+  entry: Entry; date: string; when: string; onChange: () => void;
+}): React.ReactElement {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const path = `/api/eaters/${entry.eater.id}/days/${date}/complete`;
+  const toggle = (): void => {
+    setBusy(true);
+    setFailed(false);
+    void (entry.complete ? api.delete(path) : api.put(path, {}))
+      .then(onChange)
+      .catch(() => setFailed(true))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button type="button" className="btn btn--quiet" aria-pressed={entry.complete}
+        disabled={busy} onClick={toggle}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {entry.complete ? <IconCheck size={16} /> : null}
+        {entry.complete
+          ? `Tout est saisi pour ${entry.eater.firstName} ${when}`
+          : `J’ai tout saisi pour ${entry.eater.firstName} ${when}`}
+      </button>
+      <p className="meta">
+        {failed
+          ? 'Pas enregistré — réessayez dans un instant.'
+          : entry.complete
+            ? 'Les moyennes sur 7 jours comptent cette journée. Toucher pour annuler.'
+            : 'Dès qu’une journée est marquée ainsi, les moyennes sur 7 jours ne comptent que celles-là.'}
+      </p>
+    </div>
+  );
+}
+
 function HouseholdLines({ dashboard }: { dashboard: Entry[] }): React.ReactElement | null {
   if (!dashboard.some((entry) => entry.balance.mealCount > 0)) return null;
 

@@ -105,14 +105,18 @@ export interface DailyMeal extends Macros {
  * non saisi, pas un jour à zéro), contre le repère BNM. Absente sous 18 ans :
  * I5, comme la barre du jour.
  *
- * C'est un minorant : une journée partiellement saisie compte comme entière
- * (dette n° 20), et un repas sans énergie connue n'ajoute rien.
+ * Dès qu'une journée de la fenêtre est marquée complète (028), seules les
+ * journées complètes comptent. Sinon c'est un minorant : une journée
+ * partiellement saisie compte comme entière (dette n° 20). Dans les deux cas,
+ * un repas sans énergie connue n'ajoute rien.
  */
 export interface EnergyAverage {
-  /** kcal par jour renseigné, borne basse. `null` si aucun repas n'a d'énergie. */
+  /** kcal par jour compté, borne basse. `null` si aucun repas n'a d'énergie. */
   average: number | null;
   /** Jours comptés dans la moyenne, sur 7 au plus. */
   days: number;
+  /** Les jours comptés sont-ils les seuls marqués complets ? */
+  completeOnly: boolean;
   reference: NutrientReference | null;
   percent: number | null;
   /**
@@ -141,6 +145,8 @@ export interface BalanceInput {
   householdPlantAverage7d?: number | null;
   /** Les repas de chacun des 7 derniers jours, jour par jour. */
   energyWeek?: DailyMeal[][];
+  /** Pour chaque jour de `energyWeek`, s'il est marqué complet. */
+  completeWeek?: boolean[];
 }
 
 export function bilanJournalier(input: BalanceInput): DailyBalance {
@@ -162,14 +168,17 @@ export function bilanJournalier(input: BalanceInput): DailyBalance {
   };
 }
 
-function energyAverage(input: BalanceInput, week: DailyMeal[][]): EnergyAverage {
+function energyAverage(input: BalanceInput, allDays: DailyMeal[][]): EnergyAverage {
+  const complete = allDays.filter((_, i) => input.completeWeek?.[i] === true);
+  const week = complete.length > 0 ? complete : allDays;
   const totals = week
     .map((meals) => bar('kcal', { ...input, meals }).consumed)
     .filter((kcal): kcal is number => kcal !== null);
   const average = totals.length === 0 ? null : round(totals.reduce((a, b) => a + b, 0) / totals.length);
   const reference = findReference(input.references, input.sex, input.age, 'kcal');
   return {
-    average, days: totals.length, reference, percent: percentOf(average, reference),
+    average, days: totals.length, completeOnly: complete.length > 0,
+    reference, percent: percentOf(average, reference),
     bySlot: energyBySlot(week.flat()),
   };
 }
