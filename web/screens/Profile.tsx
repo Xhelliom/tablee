@@ -36,6 +36,7 @@ import { coefLabel } from '../components/EaterForm.tsx';
 import { DietIcon } from '../components/DietIcon.tsx';
 import { dietLabel } from '../design/vocabulary.ts';
 import { ÉditionFiche, Mesures } from './Eaters.tsx';
+import { PoidsTendance } from '../components/PoidsTendance.tsx';
 
 export function ProfileScreen(): ReactElement {
   const { user, household, households, switchHousehold, eaters, refreshEaters } = useSession();
@@ -132,6 +133,7 @@ export function ProfileScreen(): ReactElement {
                   </Ligne>
                 </dl>
                 <Mesures eater={fiche} />
+                <PoidsTendance eater={fiche} />
                 <button
                   type="button" className="btn btn--quiet" style={{ marginTop: 12 }}
                   onClick={() => setÉdition(true)}

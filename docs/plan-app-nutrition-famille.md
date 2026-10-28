@@ -809,6 +809,20 @@ vocabulaire système est la moitié de l'effet tableau de bord.
 > 3. **Visible de soi et des parents.** Une nounou a besoin des allergènes, pas
 >    du poids des parents.
 >
+> **⚠️ Renversé le 18/09/2026, forme validée avec le propriétaire le
+> 28/10/2026 (migration 029) — la condition 2, pour le poids des majeurs.** Un
+> poids écrasé à chaque saisie ne dit rien : il bouge d'un matin à l'autre avec
+> l'eau et le sel. `eater.weight_kg` et `weight_recorded_at` deviennent une
+> table de pesées datées (`weight_measure`, une par convive et par jour), et
+> l'écran trace leur **tendance** : moyenne exponentielle à 10 % par jour,
+> pondérée par l'écart en jours, sur 90 jours. Ce qui tient toujours : aucune
+> cible, aucun écart chiffré, aucun classement ; les pesées brutes ne se
+> montrent que dans « Corriger une pesée » ; les conditions 1 et 3 s'appliquent
+> telles quelles aux pesées, et une date corrigée qui rend le profil mineur les
+> efface **toutes**. Le poids ne part toujours pas au LLM (I3) — un test vérifie
+> qu'aucun fichier de `server/llm/` ne lit les pesées. Le texte d'origine de la
+> condition 2 est conservé ci-dessus.
+>
 > ⚠️ **Aucun calcul ne le lit encore, et c'est volontaire.** Dériver la RNP des
 > protéines demanderait une ligne `nutrient_reference` de plus, avec sa chaîne
 > de sources — et le contenu de cette table ne se décide pas seul (CLAUDE.md).
@@ -1530,6 +1544,11 @@ chose à dire**. Jamais un emplacement fixe affichant « rien à signaler ».
 sur la fiche d'un enfant transforme les repas en performance. La gamification
 peut porter sur la découverte et la variété — jamais sur la régularité ni sur la
 note (voir I5).
+
+> **⚠️ Renversé le 18/09/2026 pour le poids des majeurs, et pour lui seul**
+> (forme validée le 28/10/2026, migration 029) : une courbe de tendance par
+> majeur, sans cible ni classement. Voir l'encart du §9. Le reste de ce
+> paragraphe tient, et sur un profil mineur sans exception.
 
 C'est aussi pourquoi la diversité est un **compteur qui monte** et non un score :
 on accumule, on ne juge personne.

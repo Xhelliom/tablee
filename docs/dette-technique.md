@@ -259,8 +259,13 @@ propres au cluster. La passation les liste comme étant à remplacer.
 
 ## 10. Le poids est stocké et lu par personne
 
-**Où** — `eater.weight_kg`, `.height_cm` (migration 009), saisis dans
-`web/components/EaterForm.tsx`.
+**Où** — `weight_measure` (029, autrefois `eater.weight_kg`) et
+`eater.height_cm` (009). La taille se saisit dans `web/components/EaterForm.tsx`,
+les pesées dans `web/components/PoidsTendance.tsx`.
+
+> **Mis à jour le 28/10/2026.** Le poids rend désormais quelque chose : sa
+> tendance lissée, sur la fiche (029). La ligne dérivée des protéines, elle,
+> n'est toujours pas écrite ; le reste de cette entrée tient.
 
 Ces colonnes existent parce que la RNP des protéines de l'ANSES s'exprime **par
 kilogramme de poids corporel** — 0,83 g/kg/j chez l'adulte —, ce qui est
@@ -282,7 +287,8 @@ propriétaire du dépôt, comme le reste de `nutrient_reference`.
 
 ## 11. « Poids réservé aux majeurs » n'est pas dans la base
 
-**Où** — `server/routes/eaters.ts`, fonctions `corps()` et `present()`.
+**Où** — `server/routes/eaters.ts` (`corps()`, `present()`, la date
+corrigée) et, depuis la 029, `server/routes/weights.ts` pour les pesées.
 
 L'âge se dérive de `birth_date` et de la date du jour. Un `check` Postgres qui
 l'utiliserait serait non-immutable — donc refusé — et de toute façon faux le
