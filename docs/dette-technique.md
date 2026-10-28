@@ -727,6 +727,17 @@ corrigé ligne à ligne : c'est la règle du §11, elle ne distingue pas.
 **Ce qui le lèverait.** Une passe de détection de visages **côté téléphone**
 avant l'envoi (`FaceDetector` n'est pas disponible partout).
 
+> **Tranché le 28/10/2026, point par point.**
+> - *Aucun filtre sur l'image* — **repris** : c'est un trou dans I3, pas un
+>   confort. Carte « Détecter un visage sur la photo d'un plat avant de
+>   l'envoyer à l'IA » (board, `a6de97a4`).
+> - *La photo n'est pas conservée* — **accepté** : décision du propriétaire du
+>   17/09/2026, c'est ce qui protège la cuisine et ce qu'elle cadre.
+> - *Confiance « basse » même après correction* — **accepté** : c'est la règle
+>   du §11 de la spec (`meal.source == 'photo'`). Des grammes corrigés à la
+>   main restent estimés sur une image ; la changer est une décision de spec,
+>   pas une dette.
+
 ---
 
 ## 24. L'énergie est chiffrée par personne, et 145 aliments n'en ont pas
