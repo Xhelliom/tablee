@@ -172,6 +172,19 @@ export interface WeightsResponse {
   pesees: { day: string; weightKg: number }[];
 }
 
+/**
+ * `GET /api/eaters/:id/energy-need` — majeurs seulement, même garde que les
+ * pesées. Une estimation à côté du BNM, jamais une consigne : `kcal` vaut
+ * `null` sous les seuils, qui voyagent avec pour que l'écran dise ce qui manque.
+ */
+export interface EnergyNeed {
+  kcal: number | null;
+  confidence: Confidence | null;
+  completeDays: number;
+  weighings: number;
+  seuils: { windowDays: number; completeDays: number; weighings: number; spanDays: number };
+}
+
 export interface NutrientReference {
   nutrient: string;
   value: number;

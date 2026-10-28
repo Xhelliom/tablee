@@ -24,13 +24,14 @@
  * Et ce qu'il refuse, comme `NutrientBars` : une barre à zéro pour une valeur
  * inconnue, et le milieu d'un intervalle dessiné comme s'il était mesuré.
  */
-import { useState } from 'react';
-import type { BarState, DailyBalance, EnergyAverage, Nutrient, NutrientBar, PlantBar } from '../api.ts';
+import { useEffect, useState } from 'react';
+import { api, type BarState, type DailyBalance, type EnergyAverage, type EnergyNeed, type Nutrient, type NutrientBar, type PlantBar } from '../api.ts';
 import { Avatar } from './Avatar.tsx';
 import { IconCheckCircle, IconInfo, IconPlusCircle, IconUpCircle } from '../icons.tsx';
 import { BILAN_NUTRIENTS, NUTRIENT_COLOR, NUTRIENT_LABELS, SLOT_LABELS, SLOT_ORDER } from '../design/vocabulary.ts';
 import { formatPercentRange, formatQuantity } from '../design/quantities.ts';
 import { ReferenceSheet } from './ReferenceSheet.tsx';
+import { ConfidenceBadge } from './Confidence.tsx';
 
 /** Le haut de l'échelle, en % du repère. */
 export const SCALE = 160;
@@ -64,8 +65,11 @@ export function BilanCard({
   balance,
   referencesLoaded,
   when,
+  canSeeWeight = false,
 }: {
   eaterId: string;
+  /** Parent, ou sa propre fiche : la règle de `PoidsTendance`. Le besoin estimé se déduit du poids. */
+  canSeeWeight?: boolean;
   firstName: string;
   balance: DailyBalance;
   /** Sans repères chargés, « indisponible pour cet âge » serait faux. */
@@ -122,7 +126,7 @@ export function BilanCard({
       </div>
 
       {balance.energyAverage7d !== undefined ? (
-        <EnergyWeekRow energy={balance.energyAverage7d} />
+        <EnergyWeekRow eaterId={eaterId} energy={balance.energyAverage7d} canSeeWeight={canSeeWeight} />
       ) : null}
 
       <PlantRow plant={balance.plant} />
@@ -215,7 +219,9 @@ function NutrientRow({
  * c'est un minorant : une journée partiellement saisie compte comme entière
  * (dette n° 20).
  */
-function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElement {
+function EnergyWeekRow({ eaterId, energy, canSeeWeight }: {
+  eaterId: string; energy: EnergyAverage; canSeeWeight: boolean;
+}): React.ReactElement {
   return (
     <div style={{
       marginTop: 16, paddingTop: 14, borderTop: '.5px solid var(--border)',
@@ -257,6 +263,46 @@ function EnergyWeekRow({ energy }: { energy: EnergyAverage }): React.ReactElemen
             : 'Une journée saisie en partie compte comme entière : la moyenne est un minimum, peut-être plus haute en vrai.'}
       </p>
       <EnergySlots bySlot={energy.bySlot} />
+      {canSeeWeight ? <BesoinEstime eaterId={eaterId} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Le besoin estimé depuis les pesées et les journées complètes, **à côté** du
+ * BNM, jamais à sa place (décidé le 28/10/2026). Une estimation avec sa
+ * confiance, pas une consigne : ni écart, ni « il manque ». Rendu seulement
+ * dans la ligne d'énergie, donc jamais sur un mineur (I5), et seulement pour
+ * qui peut voir le poids de cette personne (`canSeeWeight`).
+ */
+function BesoinEstime({ eaterId }: { eaterId: string }): React.ReactElement | null {
+  const [need, setNeed] = useState<EnergyNeed | null>(null);
+
+  useEffect(() => {
+    setNeed(null);
+    api.get<EnergyNeed>(`/api/eaters/${eaterId}/energy-need`).then(setNeed, () => setNeed(null));
+  }, [eaterId]);
+
+  if (need === null) return null;
+  const { seuils } = need;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span className="meta">D’après vos pesées et vos journées complètes</span>
+      {need.kcal !== null && need.confidence !== null ? (
+        <p style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span>
+            Besoin estimé : environ <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatQuantity(need.kcal, 'kcal')}
+            </strong> par jour
+          </span>
+          <ConfidenceBadge confidence={need.confidence} />
+        </p>
+      ) : null}
+      <p className="meta">
+        {need.kcal !== null
+          ? `Sur ${need.completeDays} journées complètes et ${need.weighings} pesées des ${seuils.windowDays} derniers jours. Une estimation, pas une consigne : le repère de la barre reste celui de l’ANSES.`
+          : `Pas encore d’estimation : il faut, sur ${seuils.windowDays} jours, au moins ${seuils.completeDays} journées complètes (ici ${need.completeDays}) et ${seuils.weighings} pesées étalées sur ${seuils.spanDays} jours (ici ${need.weighings}).`}
+      </p>
     </div>
   );
 }

@@ -998,6 +998,49 @@ si le propriétaire veut la deuxième dimension.
 
 ---
 
+## 30. Le besoin estimé d'un majeur : un facteur de population, des seuils choisis
+
+**Où** — `server/nutrition/besoin.ts`, `GET /api/eaters/:id/energy-need`
+(`server/routes/weights.ts`), `BesoinEstime` dans `web/components/Bilan.tsx`.
+
+**La décision, et par qui.** Le 28/10/2026, le propriétaire a tranché :
+l'estimation s'affiche **à côté** du BNM, sous la barre « Énergie, moyenne sur
+7 jours », et ne la remplace pas. La barre reste en % d'un repère sourcé ;
+l'estimation porte sa confiance (`moyenne` au mieux, jamais `haute`) et ne dit
+ni écart ni « il manque ». Majeurs seulement : la ligne d'énergie n'existe pas
+sur un mineur (écran), la route ne calcule rien sur un mineur (lecture), et
+une date corrigée efface les pesées dont l'estimation dépend (029).
+
+**Le calcul.** Apport moyen des seules journées marquées complètes sur 28
+jours, moins la pente de la **tendance** du poids (première et dernière pesée
+de la fenêtre) multipliée par 32,2 MJ/kg — la règle « 3 500 kcal par livre »,
+telle que Hall KD la cite et la discute (*Int J Obes* 2008;32:573-576,
+doi:10.1038/sj.ijo.0803720). Choisi par le propriétaire parmi les valeurs de
+l'article.
+
+**Ce que ça approxime.**
+
+- **Le facteur surestime chez les plus minces.** Hall montre que la règle vaut
+  au-delà de 30 kg de masse grasse et surestime en deçà (24,7 MJ/kg dans son
+  exemple à 20 kg). L'app ne connaît pas la masse grasse. L'erreur ne pèse que
+  si le poids bouge : la confiance tombe à `basse` dès que la tendance a varié
+  de plus de 1 kg sur la fenêtre.
+- **Les seuils sont des choix, pas une source** : 14 journées complètes, 4
+  pesées étalées sur au moins 14 jours, 28 jours de fenêtre ; `moyenne` à
+  partir de 21 journées complètes. L'écran les annonce quand l'estimation se
+  tait.
+- **La tendance retarde** : c'est une moyenne exponentielle à 10 % par jour,
+  sa pente sur 4 semaines encaisse encore une partie du mois précédent.
+- **L'apport est une borne basse**, comme la moyenne du bilan : un repas dont
+  l'énergie n'est connue qu'en partie compte pour son minimum, et le besoin
+  sort plutôt bas.
+
+**Ce qui le lèverait.** Une masse grasse mesurée (le facteur de Hall en
+dépend), ou un repère publié de besoin individuel : ni l'un ni l'autre n'est
+en vue.
+
+---
+
 ## Levées
 
 Gardées ici parce qu'une dette levée explique souvent pourquoi le code a la

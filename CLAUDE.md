@@ -123,6 +123,10 @@ pas filtré par la RLS.
   s'appliquent aux pesées, la date corrigée efface **toutes** les pesées. Le
   « ni séries » tient pour tout le reste, et sur un profil mineur sans
   exception. Lire l'en-tête de la 029 avant d'y toucher.
+  **Le 28/10/2026, le besoin estimé d'un majeur** (`server/nutrition/besoin.ts`)
+  se déduit de ces pesées et des journées complètes. Il s'affiche **à côté**
+  du BNM, jamais à sa place — décision du propriétaire —, avec sa confiance,
+  et son facteur (32,2 MJ/kg) est sourcé chez Hall 2008. Dette n° 30.
   **Depuis la 017, l'énergie a une barre chiffrée — majeurs seulement**, sur
   demande du propriétaire, et avec les mêmes trois filets : le seed n'écrit
   aucun repère `kcal` avant 18 ans, `bilanJournalier` ne construit pas la barre
