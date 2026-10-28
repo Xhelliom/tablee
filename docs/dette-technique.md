@@ -576,17 +576,40 @@ base au dépôt.
 
 ---
 
-## 20. L'assistant de recettes vise des moyennes saisies, et ses idées n'ont pas de source
+## 20. Les moyennes sur 7 jours visent ce qui a été saisi, et les idées de l'assistant n'ont pas de source
 
 **Où** — `server/llm/recettes.ts`, `POST /api/assistant/recipes`, le bouton
 « Demander à l'assistant des recettes » de l'accueil.
 
 **Des moyennes de ce qui a été saisi.** Le modèle vise le repère le moins
-atteint sur les sept jours précédents. Une journée dont seul le dîner a été
-saisi y compte comme une journée entière : le pourcentage est un minorant, et
-le modèle peut viser un manque qui n'existe pas. La route refuse une semaine
-vide, pas une semaine lacunaire ; le résumé dit que la saisie peut être
-incomplète, il ne sait pas laquelle.
+atteint sur les sept jours précédents, et le bilan d'un majeur montre son
+énergie moyenne sur 7 jours. Une journée dont seul le dîner a été saisi y
+comptait comme une journée entière : le pourcentage est un minorant, et le
+modèle peut viser un manque qui n'existe pas.
+
+**Levée en partie le 28/10/2026 — « j'ai tout saisi ».** Migration 028
+(`day_complete`, sous RLS), `server/repo/days.ts`, bouton sous le bilan de
+l'accueil. Un convive, un jour : le geste dit que **la saisie** de cette
+journée est complète. Dès qu'une journée de la fenêtre est marquée, la moyenne
+d'énergie (`energyAverage7d`, `completeOnly`) et les pourcentages envoyés à
+l'assistant (`readWeek`, `HouseholdFacts.completeOnly`) ne portent plus que
+sur les journées complètes, et disent sur combien. Ce qui reste :
+
+- **Rien ne force le geste.** Sans aucune journée marquée, on retombe sur
+  l'ancien comportement — toutes les journées saisies, et l'écran redit que
+  c'est un minimum. Le seuil « au moins une journée complète » est un choix,
+  pas une source : une seule journée complète l'emporte sur six lacunaires,
+  et la moyenne devient celle d'un jour. L'écran dit « 1 journée complète » ;
+  il ne dit pas que c'est peu.
+- **Par convive et par jour**, comme le demandait la carte, sans confirmation
+  explicite du propriétaire sur le grain. Un geste par foyer serait plus
+  léger à poser et faux dès qu'un enfant mange à la cantine.
+- **La part végétale (7 et 28 jours) n'est pas restreinte** : elle est un
+  rapport de grammes, pas une somme, et une journée lacunaire ne la tire pas
+  vers le bas de la même façon.
+- **Jamais un compte ni une série** : la journée marquée ne s'affiche que sur
+  elle-même, et rien ne dit « 5 jours complets d'affilée » (I5). C'est une
+  information sur la saisie, pas sur la personne.
 
 **Des idées sans source.** Au-delà des recettes Jow du foyer, qu'il désigne
 par numéro et dont les valeurs viennent de Jow, le modèle avance une ou deux
@@ -607,8 +630,8 @@ personne ne cuisine sans en lire la recette.
 qui ne convient pas au foyer : une suggestion de trop, jamais une valeur fausse
 affichée.
 
-**Ce qui le lèverait.** Écarter les journées manifestement incomplètes demande
-un seuil qu'aucune source ne donne : il se décide avec le foyer. Rapprocher une
+**Ce qui le lèverait.** Pour les moyennes : que le foyer prenne l'habitude du
+geste, et un nombre minimal de journées complètes décidé avec lui. Rapprocher une
 idée d'une vraie recette demanderait de chercher dans Jow, ce que l'app ne fait
 pas (I7 : pages publiques seulement).
 

@@ -21,9 +21,17 @@ const base: DailyBalance = { bars: [], mealCount: 0, plant: {
 
 describe('BilanCard — moyenne d’énergie', () => {
   it('l’affiche, avec la mise en garde « minimum », quand elle existe', () => {
-    const html = rendu({ ...base, energyAverage7d: { average: 1200, days: 2, reference: null, percent: null, bySlot: {} } });
+    const html = rendu({ ...base, energyAverage7d: { average: 1200, days: 2, completeOnly: false, reference: null, percent: null, bySlot: {} } });
     assert.match(html, /Énergie, moyenne sur 7 jours/);
     assert.match(html, /est un minimum/);
+  });
+
+  it('dit sur combien de journées complètes elle porte, sans parler de minimum', () => {
+    const html = rendu({ ...base, energyAverage7d: {
+      average: 1900, days: 2, completeOnly: true, reference: null, percent: null, bySlot: {},
+    } });
+    assert.match(html, /2 journées complètes/);
+    assert.doesNotMatch(html, /est un minimum/);
   });
 
   it('n’affiche rien à sa place quand elle est absente (mineur)', () => {
@@ -35,7 +43,7 @@ describe('BilanCard — moyenne d’énergie', () => {
 
   it('répartit par moment de la journée et dit que les collations peuvent manquer', () => {
     const html = rendu({ ...base, energyAverage7d: {
-      average: 1200, days: 2, reference: null, percent: null, bySlot: { diner: 60, dejeuner: 40 },
+      average: 1200, days: 2, completeOnly: false, reference: null, percent: null, bySlot: { diner: 60, dejeuner: 40 },
     } });
     assert.match(html, /Déjeuner <strong[^>]*>40 %/);
     assert.ok(html.indexOf('Déjeuner') < html.indexOf('Dîner'), 'ordre de la journée');

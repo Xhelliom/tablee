@@ -1293,6 +1293,7 @@ Toutes les routes sous `/api`, authentifiées par cookie de session, scopées au
 | `POST` | `/api/templates` | Créer depuis un repas existant |
 | `POST` | `/api/templates/:id/apply` | Applique → crée un repas |
 | `GET` | `/api/dashboard?date=` | Bilan du jour, par membre, en % des repères |
+| `PUT` / `DELETE` | `/api/eaters/:id/days/:date/complete` | « J'ai tout saisi » ce jour-là, par convive (028, dette n° 20) |
 | `GET` | `/api/insights/weekly?week=` | Synthèse hebdo (V3) |
 | `POST` | `/api/notes` | Ajouter une `family_note` (V3) |
 

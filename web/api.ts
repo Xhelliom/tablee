@@ -223,6 +223,8 @@ export interface PlantBar {
 export interface EnergyAverage {
   average: number | null;
   days: number;
+  /** Seules les journées marquées complètes sont comptées (dette n° 20). */
+  completeOnly: boolean;
   reference: NutrientReference | null;
   percent: number | null;
   /** Part de l'énergie des 7 jours par créneau, 0-100 ; une répartition, sans repère. */
@@ -313,6 +315,8 @@ export interface DashboardResponse {
   year: number;
   dashboard: {
     eater: { id: string; firstName: string; color: string | null; age: number; minor: boolean };
+    /** « J'ai tout saisi » pour ce jour-là. Un état de la saisie, jamais un compte. */
+    complete: boolean;
     balance: DailyBalance;
   }[];
   meals: Meal[];
