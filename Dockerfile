@@ -28,7 +28,7 @@
 # par une PR, en diff, et chaque montée se vérifie sur le Pi. Un seul `FROM`
 # épinglé, et pas un `ARG` : Dependabot ne réécrit que les lignes `FROM`.
 # Dette n° 26.
-FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS node
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS node
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Construction du front
