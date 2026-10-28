@@ -114,6 +114,15 @@ pas filtré par la RLS.
   une cible. Sur un profil mineur le champ n'est pas grisé, il est absent :
   l'API refuse (422), la lecture masque, et une date corrigée qui rend le profil
   mineur efface la valeur. Ne pas « harmoniser » ces trois filets en un seul.
+  **Renversé pour le poids des majeurs, et pour lui seul** — proposé et retenu
+  par le propriétaire le 18/09/2026, forme validée le 28/10/2026 (migration
+  029) : le poids est une suite de pesées datées, et l'écran en trace la
+  **tendance lissée** (moyenne exponentielle à 10 % par jour), jamais les
+  pesées brutes. Ni cible, ni écart, ni classement ; un `adulte` ne voit que
+  sa courbe, un `parent` celles des majeurs ; les trois filets ci-dessus
+  s'appliquent aux pesées, la date corrigée efface **toutes** les pesées. Le
+  « ni séries » tient pour tout le reste, et sur un profil mineur sans
+  exception. Lire l'en-tête de la 029 avant d'y toucher.
   **Depuis la 017, l'énergie a une barre chiffrée — majeurs seulement**, sur
   demande du propriétaire, et avec les mêmes trois filets : le seed n'écrit
   aucun repère `kcal` avant 18 ans, `bilanJournalier` ne construit pas la barre

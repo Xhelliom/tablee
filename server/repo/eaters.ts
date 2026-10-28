@@ -37,10 +37,7 @@ export interface Eater {
    * modifiable.
    */
   linkLocked: boolean;
-  /** Majeurs uniquement (I5). Une mesure, jamais une cible. */
-  weightKg: number | null;
-  /** Quand ce poids a été saisi. Un poids sans date dérive. */
-  weightRecordedAt: string | null;
+  /** Majeurs uniquement (I5). Le poids, lui, vit dans `weight_measure` (029). */
   heightCm: number | null;
 }
 
@@ -48,7 +45,6 @@ interface Row {
   id: string; first_name: string; birth_date: string; sex: 'F' | 'M';
   portion_coef: number; diets: string[]; color: string | null; active: boolean;
   user_id: string | null; claim_email: string | null; link_locked: boolean;
-  weight_kg: number | null; weight_recorded_at: Date | string | null;
   height_cm: number | null;
 }
 
@@ -64,16 +60,11 @@ const toEater = (row: Row): Eater => ({
   userId: row.user_id,
   claimEmail: row.claim_email,
   linkLocked: row.link_locked ?? false,
-  weightKg: row.weight_kg,
-  weightRecordedAt:
-    row.weight_recorded_at === null
-      ? null
-      : new Date(row.weight_recorded_at).toISOString(),
   heightCm: row.height_cm,
 });
 
 const COLUMNS = `id, first_name, birth_date, sex, portion_coef, diets, color, active,
-                 user_id, claim_email, link_locked, weight_kg, weight_recorded_at, height_cm`;
+                 user_id, claim_email, link_locked, height_cm`;
 
 const SELECT = `select ${COLUMNS} from eater`;
 
@@ -124,7 +115,6 @@ export interface MemberInput {
   userId?: string | null;
   /** L'adresse à qui l'assiette est réservée, en attendant l'inscription. */
   claimEmail?: string | null;
-  weightKg?: number | null;
   heightCm?: number | null;
 }
 
@@ -135,17 +125,15 @@ export async function createEater(
 ): Promise<Eater> {
   const { rows } = await db.query<Row>(
     `insert into eater (household_id, first_name, birth_date, sex, portion_coef,
-                        diets, color, user_id, claim_email,
-                        weight_kg, weight_recorded_at, height_cm)
+                        diets, color, user_id, claim_email, height_cm)
      values ($1, $2, $3::date, $4, coalesce($5::numeric, 1.00),
-             coalesce($6::text[], '{}'), $7, $8, lower($9),
-             $10, case when $10::numeric is null then null else now() end, $11)
+             coalesce($6::text[], '{}'), $7, $8, lower($9), $10)
      returning ${COLUMNS}`,
     [
       householdId, input.firstName, input.birthDate, input.sex,
       input.portionCoef ?? null, input.diets ?? null, input.color ?? null,
       input.userId ?? null, input.claimEmail ?? null,
-      input.weightKg ?? null, input.heightCm ?? null,
+      input.heightCm ?? null,
     ],
   );
   const row = rows[0];
@@ -213,16 +201,6 @@ export async function updateEater(
     sets.push(`claim_email = lower($${params.length})`);
   }
   if (patch.heightCm !== undefined) set('height_cm', patch.heightCm);
-  // La date de pesée suit le poids, et ne se saisit pas : un poids sans date
-  // dérive en silence, et une date que le client choisirait ne dirait plus
-  // quand la valeur a été écrite.
-  if (patch.weightKg !== undefined) {
-    params.push(patch.weightKg);
-    sets.push(`weight_kg = $${params.length}`);
-    sets.push(
-      `weight_recorded_at = case when $${params.length}::numeric is null then null else now() end`,
-    );
-  }
 
   if (sets.length === 0) {
     const [existing] = await findMembers(db, householdId, [id]);

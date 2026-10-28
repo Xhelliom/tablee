@@ -67,8 +67,7 @@ export interface ProfileDraft {
   /** `true` tant que personne n'a touché aux portions : la proposition suit l'âge. */
   coefAuto: boolean;
   diets: string[];
-  /** Saisis en texte : un champ vide vaut « inconnu », jamais zéro. */
-  weightKg: string;
+  /** Saisie en texte : un champ vide vaut « inconnu », jamais zéro. */
   heightCm: string;
 }
 
@@ -79,7 +78,6 @@ export const emptyDraft = (firstName = ''): ProfileDraft => ({
   portionCoef: 1,
   coefAuto: true,
   diets: [],
-  weightKg: '',
   heightCm: '',
 });
 
@@ -102,7 +100,7 @@ export function draftToBody(draft: ProfileDraft): Record<string, unknown> {
     diets: draft.diets,
     // Rien n'est envoyé pour un mineur — pas même `null` : le serveur refuse
     // le champ, et l'envoyer vide ferait échouer une fiche parfaitement valide.
-    ...(mineur ? {} : { weightKg: nombre(draft.weightKg), heightCm: nombre(draft.heightCm) }),
+    ...(mineur ? {} : { heightCm: nombre(draft.heightCm) }),
   };
 }
 
@@ -220,22 +218,15 @@ export function ProfileFields({ value, onChange, idPrefix, showBody = true }: Pr
       */}
       {showBody && age !== null && !mineur ? (
         <div>
-          <span className="label">Poids et taille — facultatif</span>
-          <div className="grid2">
-            <input
-              className="field" inputMode="decimal" placeholder="kg"
-              aria-label="Poids en kilogrammes" value={value.weightKg}
-              onChange={(e) => set({ weightKg: e.target.value })}
-            />
-            <input
-              className="field" inputMode="numeric" placeholder="cm"
-              aria-label="Taille en centimètres" value={value.heightCm}
-              onChange={(e) => set({ heightCm: e.target.value })}
-            />
-          </div>
+          <span className="label">Taille — facultatif</span>
+          <input
+            className="field" inputMode="numeric" placeholder="cm"
+            aria-label="Taille en centimètres" value={value.heightCm}
+            onChange={(e) => set({ heightCm: e.target.value })}
+          />
           <p className="meta" style={{ marginTop: 6, lineHeight: 1.45 }}>
-            Une mesure, pas un objectif : aucun poids cible, aucune courbe,
-            aucun écart affiché. Demandé aux adultes seulement.
+            Demandée aux adultes seulement. Le poids se note en pesées datées,
+            sur la fiche : seule leur tendance s’affiche, sans cible.
           </p>
         </div>
       ) : null}

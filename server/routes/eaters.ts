@@ -23,6 +23,7 @@ import {
 import {
   createEater, findMembers, listEaters, updateEater, type Eater,
 } from '../repo/eaters.ts';
+import { deleteAllWeights } from '../repo/weights.ts';
 import { assertParent, type Identity } from '../auth/identity.ts';
 import type { HouseholdDb } from '../db.ts';
 import type { AppContext } from '../app.ts';
@@ -58,7 +59,7 @@ function present(
   const cache = minor || (viewer.role !== 'parent' && !isMe);
   return {
     ...eater,
-    ...(cache ? { weightKg: null, weightRecordedAt: null, heightCm: null } : {}),
+    ...(cache ? { heightCm: null } : {}),
     age: ageAt(eater.birthDate),
     minor,
     isMe,
@@ -121,13 +122,19 @@ async function compteDuFoyer(
   return rows[0]?.id ?? null;
 }
 
-/** Poids et taille : majeurs seulement, et jamais une cible (I5). */
+/**
+ * Taille : majeurs seulement (I5). Le poids n'est plus un champ de la fiche
+ * mais une suite de pesées (029, `routes/weights.ts`) ; un client resté sur
+ * l'ancienne forme est refusé plutôt que perdu en silence.
+ */
 function corps(
   input: Record<string, unknown>,
   birthDate: string,
-): { weightKg?: number | null; heightCm?: number | null } {
-  const donné = input['weightKg'] !== undefined || input['heightCm'] !== undefined;
-  if (!donné) return {};
+): { heightCm?: number | null } {
+  if (input['weightKg'] !== undefined) {
+    throw ApiError.badRequest('le poids se saisit désormais comme une pesée datée');
+  }
+  if (input['heightCm'] === undefined) return {};
 
   if (isMinor(birthDate)) {
     throw new ApiError(
@@ -137,20 +144,9 @@ function corps(
   }
 
   return {
-    ...(input['weightKg'] === undefined
-      ? {}
-      : {
-          weightKg: input['weightKg'] === null
-            ? null
-            : num(input['weightKg'], 'weightKg', { min: 1, max: 400 }),
-        }),
-    ...(input['heightCm'] === undefined
-      ? {}
-      : {
-          heightCm: input['heightCm'] === null
-            ? null
-            : num(input['heightCm'], 'heightCm', { min: 31, max: 260 }),
-        }),
+    heightCm: input['heightCm'] === null
+      ? null
+      : num(input['heightCm'], 'heightCm', { min: 31, max: 260 }),
   };
 }
 
@@ -253,9 +249,9 @@ export function eaterRoutes(app: FastifyInstance, _ctx: AppContext): void {
     // Une date corrigée peut faire redevenir mineur un profil qui portait un
     // poids. On ne le garde pas « au cas où » : I5 dit qu'il n'a rien à faire
     // là, et une donnée de santé d'enfant conservée par inadvertance est
-    // exactement ce que l'interdit vise.
-    const redevenuMineur =
-      isMinor(birthDate) && (existant.weightKg !== null || existant.heightCm !== null);
+    // exactement ce que l'interdit vise. Toutes ses pesées partent avec (029).
+    const redevenuMineur = isMinor(birthDate) && existant.heightCm !== null;
+    if (isMinor(birthDate)) await deleteAllWeights(request.db, identity.householdId, id);
 
     const eater = await updateEater(request.db, identity.householdId, id, {
       ...(input['firstName'] !== undefined && { firstName: str(input['firstName'], 'firstName', { max: 80 }) }),
@@ -267,7 +263,7 @@ export function eaterRoutes(app: FastifyInstance, _ctx: AppContext): void {
       ...(input['diets'] !== undefined && { diets: stringArray(input['diets'], 'diets') }),
       ...(input['color'] !== undefined && { color: optionalStr(input['color'], 'color', { max: 20 }) }),
       ...(input['active'] !== undefined && { active: input['active'] === true }),
-      ...(redevenuMineur ? { weightKg: null, heightCm: null } : corps(input, birthDate)),
+      ...(redevenuMineur ? { heightCm: null } : corps(input, birthDate)),
     }).catch(traduireCollision);
 
     if (eater === null) throw ApiError.notFound('membre introuvable');

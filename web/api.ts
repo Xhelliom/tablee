@@ -156,12 +156,20 @@ export interface Eater {
   claimEmail: string | null;
   /**
    * Majeurs uniquement, et **toujours `null` sur un profil mineur** — le
-   * serveur les retire à la lecture (I5). Une mesure, jamais une cible : ni
-   * barre, ni série, ni écart à un poids « idéal ».
+   * serveur la retire à la lecture (I5). Le poids n'est plus ici : il vit en
+   * pesées datées (029), voir `WeightsResponse`.
    */
-  weightKg: number | null;
-  weightRecordedAt: string | null;
   heightCm: number | null;
+}
+
+/**
+ * `GET /api/eaters/:id/weights` — majeurs seulement (029). `tendance` est la
+ * moyenne lissée, la seule chose qui se trace ; `pesees` ne sert qu'à corriger
+ * une saisie. Ni cible ni écart : la réponse n'en porte pas.
+ */
+export interface WeightsResponse {
+  tendance: { day: string; kg: number }[];
+  pesees: { day: string; weightKg: number }[];
 }
 
 export interface NutrientReference {

@@ -31,6 +31,7 @@ import { foodRoutes } from './routes/foods.ts';
 import { householdRoutes } from './routes/household.ts';
 import { mealRoutes } from './routes/meals.ts';
 import { eaterRoutes } from './routes/eaters.ts';
+import { weightRoutes } from './routes/weights.ts';
 import { recipeRoutes } from './routes/recipes.ts';
 import { templateRoutes } from './routes/templates.ts';
 import { pushRoutes } from './routes/push.ts';
@@ -320,6 +321,7 @@ export function buildApp(
     authRoutes(api, ctx);
     adminRoutes(api, ctx);
     eaterRoutes(api, ctx);
+    weightRoutes(api, ctx);
     householdRoutes(api, ctx);
     recipeRoutes(api, ctx);
     foodRoutes(api, ctx);

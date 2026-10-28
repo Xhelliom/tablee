@@ -27,6 +27,7 @@ import type { ReactElement } from 'react';
 import { api, ApiError, type DailyBalance, type DashboardResponse, type Eater } from '../api.ts';
 import { useSession } from '../session.tsx';
 import { NutrientBars } from '../components/NutrientBars.tsx';
+import { PoidsTendance } from '../components/PoidsTendance.tsx';
 import { IconPlus } from '../icons.tsx';
 import { DietIcon } from '../components/DietIcon.tsx';
 import { dietLabel, NUTRIENT_COLOR } from '../design/vocabulary.ts';
@@ -45,7 +46,6 @@ const draftFrom = (eater: Eater): ProfileDraft => ({
   portionCoef: eater.portionCoef,
   coefAuto: false,
   diets: eater.diets,
-  weightKg: eater.weightKg === null ? '' : String(eater.weightKg),
   heightCm: eater.heightCm === null ? '' : String(eater.heightCm),
 });
 
@@ -195,6 +195,7 @@ function FicheConvive({
           <NutrientBars balance={balance} firstName={eater.firstName} />
         ) : null}
       </div>
+      <PoidsTendance eater={eater} />
 
       {édition ? (
         <ÉditionFiche
@@ -247,28 +248,13 @@ function FicheConvive({
 }
 
 /**
- * Poids et taille, quand ils existent.
- *
- * Datés, et sans comparaison d'aucune sorte : « pesé le 14/09 » dit ce que la
- * valeur est — une mesure d'un jour — là où un nombre nu se lirait comme un
- * état permanent. Rien ne s'affiche sur un profil mineur : le serveur ne rend
- * même pas la valeur (I5).
+ * La taille, quand elle existe. Rien ne s'affiche sur un profil mineur : le
+ * serveur ne rend même pas la valeur (I5). Le poids a sa courbe à part,
+ * `PoidsTendance` (029).
  */
 export function Mesures({ eater }: { eater: Eater }): ReactElement | null {
-  if (eater.weightKg === null && eater.heightCm === null) return null;
-  const morceaux = [
-    eater.weightKg === null ? null : `${eater.weightKg.toString().replace('.', ',')} kg`,
-    eater.heightCm === null ? null : `${eater.heightCm.toString().replace('.', ',')} cm`,
-  ].filter((m): m is string => m !== null);
-
-  return (
-    <p className="meta" style={{ marginTop: 2 }}>
-      {morceaux.join(' · ')}
-      {eater.weightRecordedAt !== null
-        ? ` — pesé le ${new Date(eater.weightRecordedAt).toLocaleDateString('fr-FR')}`
-        : ''}
-    </p>
-  );
+  if (eater.heightCm === null) return null;
+  return <p className="meta" style={{ marginTop: 2 }}>{eater.heightCm.toString().replace('.', ',')} cm</p>;
 }
 
 /**

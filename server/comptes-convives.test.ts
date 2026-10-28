@@ -280,58 +280,60 @@ describe('assiettes et comptes (009)', { skip: enabled ? false : SKIP_MESSAGE },
 
   // ── I5 ────────────────────────────────────────────────────────────────────
 
-  describe('poids et taille — majeurs seulement (I5)', () => {
-    it('les accepte sur un majeur, avec la date de pesée', async () => {
+  describe('taille — majeurs seulement (I5)', () => {
+    it('l’accepte sur un majeur', async () => {
       const { status, body } = await call('POST', '/api/eaters', parent.cookie, {
-        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', self: true,
-        weightKg: 78.5, heightCm: 181,
+        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', self: true, heightCm: 181,
       });
       assert.equal(status, 201);
-      assert.equal(body.eater.weightKg, 78.5);
       assert.equal(body.eater.heightCm, 181);
-      assert.ok(body.eater.weightRecordedAt !== null, 'un poids sans date dérive');
     });
 
-    it('les refuse sur un mineur', async () => {
+    it('la refuse sur un mineur', async () => {
       const { status, body } = await call('POST', '/api/eaters', parent.cookie, {
-        firstName: 'Léa', birthDate: MINEUR, sex: 'F', weightKg: 28,
+        firstName: 'Léa', birthDate: MINEUR, sex: 'F', heightCm: 130,
       });
       assert.equal(status, 422);
       assert.equal(body.error.code, 'poids_interdit_mineur');
     });
 
-    it('les efface si une date corrigée rend le profil mineur', async () => {
+    it('refuse le poids sur la fiche : il se saisit en pesées (029)', async () => {
+      const { status } = await call('POST', '/api/eaters', parent.cookie, {
+        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', weightKg: 78.5,
+      });
+      assert.equal(status, 400);
+    });
+
+    it('l’efface si une date corrigée rend le profil mineur', async () => {
       const { body: créée } = await call('POST', '/api/eaters', parent.cookie, {
-        firstName: 'Camille', birthDate: MAJEUR, sex: 'F', weightKg: 60,
+        firstName: 'Camille', birthDate: MAJEUR, sex: 'F', heightCm: 165,
       });
       const { body } = await call('PATCH', `/api/eaters/${créée.eater.id}`, parent.cookie, {
         birthDate: MINEUR,
       });
       assert.equal(body.eater.minor, true);
-      assert.equal(body.eater.weightKg, null);
-      assert.equal(body.eater.weightRecordedAt, null);
+      assert.equal(body.eater.heightCm, null);
     });
 
-    it('ne montre pas le poids des autres à un adulte', async () => {
+    it('ne montre pas la taille des autres à un adulte', async () => {
       await call('POST', '/api/eaters', parent.cookie, {
-        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', self: true, weightKg: 78.5,
+        firstName: 'Stéphane', birthDate: MAJEUR, sex: 'M', self: true, heightCm: 181,
       });
       const nounou = await signUp(auth, 'nounou@exemple.test', 'Nounou');
       await inviteAndAccept(auth, parent, nounou, 'adulte');
 
       const [vuParLaNounou] = await eaters(nounou.cookie);
       assert.equal(vuParLaNounou.firstName, 'Stéphane');
-      assert.equal(vuParLaNounou.weightKg, null, 'une nounou a besoin des allergènes, pas du poids');
+      assert.equal(vuParLaNounou.heightCm, null, 'une nounou a besoin des allergènes, pas des mesures');
 
       const [vuParLuiMeme] = await eaters(parent.cookie);
-      assert.equal(vuParLuiMeme.weightKg, 78.5);
+      assert.equal(vuParLuiMeme.heightCm, 181);
     });
 
-    it('ne renvoie jamais 0 pour un poids absent', async () => {
+    it('ne renvoie jamais 0 pour une taille absente', async () => {
       const { body } = await call('POST', '/api/eaters', parent.cookie, {
         firstName: 'Sans poids', birthDate: MAJEUR, sex: 'F',
       });
-      assert.equal(body.eater.weightKg, null);
       assert.equal(body.eater.heightCm, null);
     });
   });
