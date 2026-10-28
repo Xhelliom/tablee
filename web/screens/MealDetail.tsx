@@ -715,6 +715,7 @@ function IngredientRow({
   const [query, setQuery] = useState(ingredient.label);
   const [results, setResults] = useState<FoodSummary[]>([]);
   const [done, setDone] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
   // Une requête par frappe : la réponse d'un « pom » arrivée après celle de
   // « pomme » ne doit pas la recouvrir.
   const dernière = useRef('');
@@ -734,17 +735,25 @@ function IngredientRow({
   };
 
   const link = async (foodId: string): Promise<void> => {
-    const result = await api.post<{ propagated: number; recomputed: number }>(
-      `/api/recipes/ingredients/${ingredient.id}/food`,
-      { foodId },
-    );
+    let result: { propagated: number; recomputed: number };
+    try {
+      result = await api.post<{ propagated: number; recomputed: number }>(
+        `/api/recipes/ingredients/${ingredient.id}/food`,
+        { foodId },
+      );
+    } catch (e) {
+      // Un lien verrouillé par le super-admin répond 403 : le dire plutôt que se taire.
+      setErreur(e instanceof Error ? e.message : 'Rattachement impossible');
+      return;
+    }
+    setErreur(null);
     setOpen(false);
     // Le rattachement vaut pour l'ingrédient Jow, pas pour cette recette : le
     // dire, sinon le geste paraît coûter un tap pour un seul plat.
     setDone(
       result.propagated > 1
-        ? `Rattaché — ${result.propagated} recettes câblées d’un coup`
-        : 'Rattaché, une fois pour toutes',
+        ? `${ingredient.foodId === null ? 'Rattaché' : 'Corrigé'} — ${result.propagated} recettes câblées d’un coup`
+        : ingredient.foodId === null ? 'Rattaché, une fois pour toutes' : 'Corrigé, une fois pour toutes',
     );
     onLinked();
   };
@@ -772,7 +781,9 @@ function IngredientRow({
         // plus. Il remplace la pastille qui l'a ouvert, et reprend ses mots.
         <div className="apparait" style={puits}>
           <div className="spread">
-            <span className="label" style={{ margin: 0 }}>Rattacher à un aliment</span>
+            <span className="label" style={{ margin: 0 }}>
+              {ingredient.foodId === null ? 'Rattacher à un aliment' : 'Corriger l’aliment rattaché'}
+            </span>
             <button type="button" className="appbar__action"
                     style={{ color: 'var(--text-muted)' }}
                     aria-label="Fermer la recherche"
@@ -809,6 +820,7 @@ function IngredientRow({
             // Sous deux caractères rien n'a été cherché : ne pas annoncer un échec.
             <p className="meta" style={{ marginTop: 8 }}>Aucun aliment trouvé.</p>
           ) : null}
+          {erreur !== null ? <p className="meta" role="alert" style={{ marginTop: 8 }}>{erreur}</p> : null}
         </div>
       ) : ingredient.foodId === null ? (
         <button type="button" className="chip chip--warning"
@@ -816,7 +828,15 @@ function IngredientRow({
                 onClick={() => { void search(ingredient.label); }}>
           Rattacher à un aliment
         </button>
-      ) : null}
+      ) : (
+        // Le lien est commun à tous les foyers : la première erreur y reste figée
+        // pour tout le monde tant que personne ne peut la reprendre.
+        <button type="button" className="chip"
+                style={{ marginTop: 5, cursor: 'pointer' }}
+                onClick={() => { void search(ingredient.label); }}>
+          Corriger le rattachement
+        </button>
+      )}
     </div>
   );
 }
